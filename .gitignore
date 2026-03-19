@@ -1,0 +1,9 @@
+data/
+__pycache__/
+.idea/
+.venv/
+.eggs/
+.dbt/
+.target/
+.env
+logs/
