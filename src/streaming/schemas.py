@@ -32,7 +32,6 @@ CPU_SPECIFICATION_SCHEMA = StructType(BASE_HARDWARE_SPECIFICATION_SCHEMA + [
     StructField("number_of_threads", IntegerType(), nullable=True),
     StructField("base_clock_ghz", DoubleType(), nullable=True),
     StructField("boost_clock_ghz", DoubleType(), nullable=True),
-    StructField("ppt_watts", IntegerType(), nullable=True),
     StructField("microarchitecture_type", StringType(), nullable=True),
 ])
 

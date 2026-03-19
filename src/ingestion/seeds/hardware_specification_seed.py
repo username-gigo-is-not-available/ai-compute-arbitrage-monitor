@@ -78,7 +78,6 @@ class HardwareSpecificationSeed(BatchIngestor):
                 base_clock_ghz=data.get("clocks", {}).get("performance", {}).get("base"),
                 boost_clock_ghz=data.get("clocks", {}).get("performance", {}).get("boost"),
                 tdp_watts=specifications.get("tdp"),
-                ppt_watts=specifications.get("ppt"),
                 microarchitecture_type=data.get("microarchitecture"),
             )
         else:

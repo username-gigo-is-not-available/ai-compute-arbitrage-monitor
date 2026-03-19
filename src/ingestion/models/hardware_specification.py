@@ -26,5 +26,4 @@ class CPUSpecification(HardwareSpecification):
     number_of_threads: int | None
     base_clock_ghz: float | None
     boost_clock_ghz: float | None
-    ppt_watts: int | None
     microarchitecture_type: str | None
