@@ -61,10 +61,10 @@ class ElectricityTariffSeed(BatchIngestor):
 
 def main():
     loader: BronzeConfigLoader = BronzeConfigLoader()
-    config: ERCConfig = loader.get_erc()
-    if not config.enabled:
+    erc_config: ERCConfig = loader.get_erc()
+    if not erc_config.enabled:
         return
-    electricity_tariff: ElectricityTariffSeed = ElectricityTariffSeed(config=config, http_config=loader.get_http())
+    electricity_tariff: ElectricityTariffSeed = ElectricityTariffSeed(config=erc_config, http_config=loader.get_http())
     logging.info(f"Starting seed {electricity_tariff.name}...")
     electricity_tariff.run()
 

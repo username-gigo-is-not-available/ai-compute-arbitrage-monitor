@@ -78,10 +78,10 @@ class ElectricityTariffScheduleSeed(BatchIngestor):
 
 def main():
     loader: BronzeConfigLoader = BronzeConfigLoader()
-    config: EVNConfig = loader.get_evn()
-    if not config.enabled:
+    evn_config: EVNConfig = loader.get_evn()
+    if not evn_config.enabled:
         return
-    schedule_seed = ElectricityTariffScheduleSeed(config=config, http_config=loader.get_http())
+    schedule_seed = ElectricityTariffScheduleSeed(config=evn_config, http_config=loader.get_http())
     logging.info(f"Starting seed {schedule_seed.name}...")
     schedule_seed.run()
 
