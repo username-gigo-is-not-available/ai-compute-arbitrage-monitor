@@ -44,15 +44,10 @@ class StreamIngestor(ABC):
             self.logger.warning(f"{self.name} returned no data, skipping publish.")
 
     async def run(self, producer: KafkaProducer) -> None:
-        interval: int = self.config.poll_interval_seconds
-        while True:
-            try:
-                await self.ingest(producer)
-            except Exception as e:
-                self.logger.error(f"Unexpected error in {self.name}: {e}", exc_info=True)
-            finally:
-                self.logger.info(f"Sleeping {interval}s...")
-                await asyncio.sleep(interval)
+        try:
+            await self.ingest(producer)
+        except Exception as e:
+            self.logger.error(f"Unexpected error in {self.name}: {e}", exc_info=True)
 
 
 class BatchIngestor(ABC):
