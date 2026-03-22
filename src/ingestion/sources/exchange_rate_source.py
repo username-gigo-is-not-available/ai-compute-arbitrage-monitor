@@ -47,7 +47,7 @@ class ExchangeRateSource(StreamIngestor):
                 from_currency=from_currency,
                 to_currency=to_currency,
                 rate=float(data.get("conversion_rates").get(to_currency)),
-                timestamp=datetime.strptime(data.get("time_last_update_utc"), self.timestamp_format)
+                rate_timestamp=datetime.strptime(data.get("time_last_update_utc"), self.timestamp_format)
             )
         except (KeyError, ValueError, TypeError) as e:
             self.logger.warning(f"Could not parse exchange rate: {from_currency}/{to_currency}: {e}")

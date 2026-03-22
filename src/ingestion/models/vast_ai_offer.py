@@ -10,16 +10,19 @@ class VastAIOffer(BaseRecord):
     # IDs
     instance_id: int
     # TIME
-    timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    offer_timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
     # PRICES
+    list_price_usd_per_hour: float
     price_usd_per_hour: float
+    deep_learning_score_per_dollar: float
     # GPU
     gpu_architecture: str
     gpu_model_name: str
     gpu_memory_mb: float
     gpu_max_power_watts: float | None = None
     number_of_gpus: int = 1
-    max_cuda_version_supported: float | None = None
+    gpu_max_cuda_version_supported: float | None = None
+    gpu_tflops: float | None = None
     # CPU
     cpu_architecture: str | None = None
     cpu_model_name: str | None = None

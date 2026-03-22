@@ -16,7 +16,7 @@ BASE_HARDWARE_SPECIFICATION_SCHEMA = META_COLUMNS_SCHEMA + [
 
 GPU_SPECIFICATION_SCHEMA = StructType(
     BASE_HARDWARE_SPECIFICATION_SCHEMA + [
-    StructField("chipset_manufacturer", StringType(), nullable=False),
+    StructField("chipset_manufacturer_name", StringType(), nullable=False),
     StructField("chipset_name", StringType(), nullable=False),
     StructField("memory_gb", IntegerType(), nullable=False),
     StructField("memory_type", StringType(), nullable=False),
@@ -60,16 +60,19 @@ COMPUTE_OFFER_SCHEMA = StructType(
     # IDs
     StructField("instance_id", IntegerType(), nullable=False),
     # TIME
-    StructField("timestamp", TimestampType(), nullable=False),
+    StructField("offer_timestamp", TimestampType(), nullable=False),
     # PRICES
     StructField("price_usd_per_hour", FloatType(), nullable=False),
+    StructField("list_price_usd_per_hour", FloatType(), nullable=False),
+    StructField("deep_learning_score_per_dollar", FloatType(), nullable=True),
     # GPU
     StructField("gpu_architecture", StringType(), nullable=False),
     StructField("gpu_model_name", StringType(), nullable=False),
     StructField("gpu_memory_mb", FloatType(), nullable=False),
     StructField("gpu_max_power_watts", FloatType(), nullable=False),
     StructField("number_of_gpus", IntegerType(), nullable=False),
-    StructField("max_cuda_version_supported", FloatType(), nullable=True),
+    StructField("gpu_max_cuda_version_supported", FloatType(), nullable=True),
+    StructField("gpu_tflops", FloatType(), nullable=True),
     # CPU
     StructField("cpu_architecture", StringType(), nullable=False),
     StructField("cpu_model_name", StringType(), nullable=True),
@@ -99,5 +102,5 @@ EXCHANGE_RATE_SCHEMA = StructType(
     StructField("from_currency", StringType(), nullable=False),
     StructField("to_currency", StringType(), nullable=False),
     StructField("rate", FloatType(), nullable=False),
-    StructField("timestamp", TimestampType(), nullable=False),
+    StructField("rate_timestamp", TimestampType(), nullable=False),
 ])

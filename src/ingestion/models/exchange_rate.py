@@ -7,5 +7,5 @@ class ExchangeRate(BaseRecord):
     from_currency: str
     to_currency: str
     rate: float
-    timestamp: datetime
+    rate_timestamp: datetime
 
