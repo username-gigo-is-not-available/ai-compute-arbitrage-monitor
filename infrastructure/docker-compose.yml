@@ -13,7 +13,7 @@ services:
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       CLUSTER_ID: "MkU3OEVBNTcwNTJENDM2Qg"
-      KAFKA_CREATE_TOPICS: "vastai_offers:1:1,exchange_rates:1:1"
+      KAFKA_CREATE_TOPICS: "compute_offers:1:1,exchange_rates:1:1"
 
   kafka-ui:
     image: provectuslabs/kafka-ui:latest

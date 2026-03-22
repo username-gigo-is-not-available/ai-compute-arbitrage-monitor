@@ -16,7 +16,7 @@ sources:
     to_currency: "MKD"
     topic_name: "exchange_rate"
     subdirectory_name: "ExchangeRate"
-    file_name: "exchange_rate"
+    file_name: "exchange_rates"
 
 seeds:
   erc:
