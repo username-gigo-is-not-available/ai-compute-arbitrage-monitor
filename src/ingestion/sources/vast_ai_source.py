@@ -42,8 +42,8 @@ class VastAISource(StreamIngestor):
         try:
             return VastAIOffer(
                 instance_id=data.get("id"),
-                list_price_usd_per_hour=data.get("dph_base"),
-                price_usd_per_hour=data.get("discounted_dph_total"),
+                gpu_price_usd_per_hour=data.get("dph_base"),
+                total_price_usd_per_hour=data.get("discounted_dph_total"),
                 deep_learning_score_per_dollar=data.get("dlperf_per_dphtotal"),
                 gpu_architecture=data.get("gpu_arch"),
                 gpu_model_name=data.get("gpu_name"),

@@ -50,7 +50,7 @@ class ElectricityTariffSeed(BatchIngestor):
         tag: Tag = kwargs.get('data')
         try:
             return ElectricityTariff(
-                tariff_type=tag.select_one(self.config.type_selector).text,
+                tariff_description=tag.select_one(self.config.description_selector).text,
                 price_per_kwh_mkd=tag.select_one(self.config.price_selector).text,
                 valid_from=tag.select_one(self.config.valid_from_selector).text,
             )

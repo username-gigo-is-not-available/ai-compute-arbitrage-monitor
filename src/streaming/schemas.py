@@ -38,7 +38,7 @@ CPU_SPECIFICATION_SCHEMA = StructType(BASE_HARDWARE_SPECIFICATION_SCHEMA + [
 ELECTRICITY_TARIFF_SCHEMA = StructType(
     META_COLUMNS_SCHEMA +
     [
-    StructField("tariff_type", StringType(), nullable=False),
+    StructField("tariff_description", StringType(), nullable=False),
     StructField("price_per_kwh_mkd", FloatType(), nullable=False),
     StructField("valid_from", DateType(), nullable=True),
 ])
@@ -59,11 +59,9 @@ COMPUTE_OFFER_SCHEMA = StructType(
     [
     # IDs
     StructField("instance_id", IntegerType(), nullable=False),
-    # TIME
-    StructField("offer_timestamp", TimestampType(), nullable=False),
     # PRICES
-    StructField("price_usd_per_hour", FloatType(), nullable=False),
-    StructField("list_price_usd_per_hour", FloatType(), nullable=False),
+    StructField("total_price_usd_per_hour", FloatType(), nullable=False),
+    StructField("gpu_price_usd_per_hour", FloatType(), nullable=False),
     StructField("deep_learning_score_per_dollar", FloatType(), nullable=True),
     # GPU
     StructField("gpu_architecture", StringType(), nullable=False),

@@ -9,11 +9,9 @@ from ingestion.models.enums import VerificationFlag
 class VastAIOffer(BaseRecord):
     # IDs
     instance_id: int
-    # TIME
-    offer_timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
     # PRICES
-    list_price_usd_per_hour: float
-    price_usd_per_hour: float
+    total_price_usd_per_hour: float
+    gpu_price_usd_per_hour: float
     deep_learning_score_per_dollar: float
     # GPU
     gpu_architecture: str
