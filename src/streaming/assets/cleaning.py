@@ -32,23 +32,4 @@ def empty_to_null(df: DataFrame, columns: list[str] | None = None) -> DataFrame:
         df = df.withColumn(column, F.when(F.col(column) != "", F.col(column)).otherwise(F.lit(None)))
     return df
 
-def normalize_pcie_interface(df: DataFrame, column: str = "interface_type") -> DataFrame:
-    """Normalize bare PCIe interface strings to versioned equivalents.
 
-    PCIe x16 -> PCIe 3.0 x16 (pre-versioning standard)
-    PCIe x8  -> PCIe 3.0 x8
-    PCIe x1  -> PCIe 3.0 x1
-    """
-    return df.withColumn(
-        column,
-        F.regexp_replace(F.col(column), r"^PCIe (x\d+)$", "PCIe 3.0 $1")
-    )
-
-
-def convert_clock_units(df: DataFrame, column: str) -> DataFrame:
-    """Convert clock unit from MHz to GHz where value > 100."""
-    return df.withColumn(
-        column,
-        F.when(F.col(column) > 100, F.col(column) / 1000)
-        .otherwise(F.col(column))
-    )
