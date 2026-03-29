@@ -48,7 +48,7 @@ class VastAISource(StreamIngestor):
                 gpu_architecture=data.get("gpu_arch"),
                 gpu_model_name=data.get("gpu_name"),
                 gpu_memory_mb=data.get("gpu_ram"),
-                gpu_max_power_watts=data.get("gpu_max_power"),
+                gpu_tdp_watts=data.get("gpu_max_power"),
                 number_of_gpus=data.get("num_gpus", 1),
                 gpu_max_cuda_version_supported=data.get("cuda_max_good"),
                 gpu_tflops=data.get("total_flops"),

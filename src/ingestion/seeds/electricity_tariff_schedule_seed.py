@@ -52,7 +52,7 @@ class ElectricityTariffScheduleSeed(BatchIngestor):
             self.logger.warning("Could not find schedule text element on page.")
             return []
 
-        scraped_text = next(schedule_tag.strings).strip()
+        scraped_text = ''.join()
         if scraped_text != expected_text.strip():
             self.logger.warning(
                 f"Tariff schedule text has changed — manual review required.\n"

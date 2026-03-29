@@ -10,7 +10,6 @@ from config.seeds.evn import EVNConfig
 from config.sources.exchange_rate import ExchangeRateConfig
 from config.http import HttpConfig
 from config.kafka import KafkaConfig
-from config.seeds.open_db import OpenDBConfig
 from config.paths import PathConfig
 from config.sources.vast_ai import VastAIConfig
 from ingestion.models.enums import DataStageType
@@ -76,20 +75,6 @@ class BronzeConfigLoader(ConfigLoader):
             output_directory_path=self._paths.seeds_directory_path_for_stage(DataStageType.BRONZE)
         )
 
-    def get_open_db_cpu(self) -> OpenDBConfig:
-        return OpenDBConfig(
-            **self._raw["seeds"]["open_db_cpu"],
-            input_directory_path=self._paths.open_db_directory_path,
-            output_directory_path=self._paths.seeds_directory_path_for_stage(DataStageType.BRONZE)
-        )
-
-    def get_open_db_gpu(self) -> OpenDBConfig:
-        return OpenDBConfig(
-            **self._raw["seeds"]["open_db_gpu"],
-            input_directory_path=self._paths.open_db_directory_path,
-            output_directory_path=self._paths.seeds_directory_path_for_stage(DataStageType.BRONZE)
-        )
-
 
 class SilverConfigLoader(ConfigLoader):
     def __init__(self, config_path: Path = Path(os.getenv("SETTINGS_PATH", "settings.yaml"))):
@@ -118,20 +103,6 @@ class SilverConfigLoader(ConfigLoader):
     def get_evn(self) -> EVNConfig:
         return EVNConfig(
             **self._raw["seeds"]["evn"],
-            input_directory_path=self._paths.seeds_directory_path_for_stage(DataStageType.BRONZE),
-            output_directory_path=self._paths.seeds_directory_path_for_stage(DataStageType.SILVER)
-        )
-
-    def get_open_db_cpu(self) -> OpenDBConfig:
-        return OpenDBConfig(
-            **self._raw["seeds"]["open_db_cpu"],
-            input_directory_path=self._paths.seeds_directory_path_for_stage(DataStageType.BRONZE),
-            output_directory_path=self._paths.seeds_directory_path_for_stage(DataStageType.SILVER)
-        )
-
-    def get_open_db_gpu(self) -> OpenDBConfig:
-        return OpenDBConfig(
-            **self._raw["seeds"]["open_db_gpu"],
             input_directory_path=self._paths.seeds_directory_path_for_stage(DataStageType.BRONZE),
             output_directory_path=self._paths.seeds_directory_path_for_stage(DataStageType.SILVER)
         )

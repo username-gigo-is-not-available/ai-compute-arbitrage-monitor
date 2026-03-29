@@ -2,15 +2,11 @@ from pyspark.sql.streaming import StreamingQuery
 
 from config.loader import SilverConfigLoader
 from streaming.init import initialize_spark
-from streaming.pipelines.cpu_specification import CPUPipeline
 from streaming.pipelines.electricity_tariffs import ElectricityTariffsPipeline
 from streaming.pipelines.electricity_tariffs_schedule import ElectricityTariffsSchedulePipeline
 from streaming.pipelines.exchange_rate import ExchangeRatePipeline
-from streaming.pipelines.gpu_specification import GPUPipeline
 from streaming.pipelines.vast_ai import VastAIOffersPipeline
 from streaming.schemas import (
-    CPU_SPECIFICATION_SCHEMA,
-    GPU_SPECIFICATION_SCHEMA,
     ELECTRICITY_TARIFF_SCHEMA,
     ELECTRICITY_TARIFF_SCHEDULE_SCHEMA,
     COMPUTE_OFFER_SCHEMA,
@@ -30,8 +26,6 @@ if __name__ == "__main__":
     exchange_rate_config = loader.get_exchange_rate()
 
     batch_pipelines = [
-        (cpu_config, CPUPipeline(session=session, schema=CPU_SPECIFICATION_SCHEMA, config=cpu_config)),
-        (gpu_config, GPUPipeline(session=session, schema=GPU_SPECIFICATION_SCHEMA, config=gpu_config)),
         (erc_config, ElectricityTariffsPipeline(session=session, schema=ELECTRICITY_TARIFF_SCHEMA, config=erc_config)),
         (evn_config, ElectricityTariffsSchedulePipeline(session=session, schema=ELECTRICITY_TARIFF_SCHEDULE_SCHEMA,
                                                         config=evn_config)),

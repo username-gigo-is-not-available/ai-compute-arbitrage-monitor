@@ -9,7 +9,7 @@ from typing import Any
 
 from ingestion.models.electricity_tariff import ElectricityTariff
 from ingestion.models.electricity_tariff_schedule import ElectricityTariffSchedule
-from ingestion.models.types import IngestorConfig, HardwareSpecification
+from ingestion.models.types import IngestorConfig
 from ingestion.models.vast_ai_offer import VastAIOffer
 from ingestion.models.exchange_rate import ExchangeRate
 from pubsub.producer import KafkaProducer
@@ -58,14 +58,14 @@ class BatchIngestor(ABC):
         self.logger = logging.getLogger(self.name)
 
     @abstractmethod
-    def load(self) -> list[HardwareSpecification | ElectricityTariff | ElectricityTariffSchedule]:
+    def load(self) -> list[ElectricityTariff | ElectricityTariffSchedule]:
         raise NotImplementedError
 
     @abstractmethod
-    def parse(self, **kwargs) -> HardwareSpecification | ElectricityTariff | ElectricityTariffSchedule | None:
+    def parse(self, **kwargs) -> ElectricityTariff | ElectricityTariffSchedule | None:
         raise NotImplementedError
 
-    def store(self, data: list[HardwareSpecification | ElectricityTariff | ElectricityTariffSchedule]) -> None:
+    def store(self, data: list[ElectricityTariff | ElectricityTariffSchedule]) -> None:
         self.config.output_path.parent.mkdir(parents=True, exist_ok=True)
         output_path: Path = self.config.output_path_with_suffix(".parquet")
         records: list[dict[str, Any]] = JsonSerializer.serialize_batch(data)
