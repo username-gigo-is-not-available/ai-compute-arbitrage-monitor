@@ -12,7 +12,7 @@ ELECTRICITY_TARIFF_SCHEMA = StructType(
     [
         StructField("tariff_description", StringType(), nullable=False),
         StructField("price_per_kwh_mkd", FloatType(), nullable=False),
-        StructField("valid_from", DateType(), nullable=True),
+        StructField("valid_from", DateType(), nullable=False),
     ])
 
 ELECTRICITY_TARIFF_SCHEDULE_SCHEMA = StructType(
@@ -22,6 +22,7 @@ ELECTRICITY_TARIFF_SCHEDULE_SCHEMA = StructType(
         StructField("day_of_week", IntegerType(), nullable=False),
         StructField("start_hour", IntegerType(), nullable=False),
         StructField("end_hour", IntegerType(), nullable=False),
+        StructField("valid_from", DateType(), nullable=False)
     ]
 )
 
@@ -38,7 +39,7 @@ COMPUTE_OFFER_SCHEMA = StructType(
         StructField("gpu_architecture", StringType(), nullable=False),
         StructField("gpu_model_name", StringType(), nullable=False),
         StructField("gpu_memory_mb", FloatType(), nullable=False),
-        StructField("gpu_max_power_watts", FloatType(), nullable=False),
+        StructField("gpu_tdp_watts", FloatType(), nullable=False),
         StructField("number_of_gpus", IntegerType(), nullable=False),
         StructField("gpu_max_cuda_version_supported", FloatType(), nullable=True),
         StructField("gpu_tflops", FloatType(), nullable=True),

@@ -7,3 +7,4 @@ class ElectricityTariffSchedule(BaseRecord):
     day_of_week: int
     start_hour: int
     end_hour: int
+    valid_from: str

@@ -1,4 +1,4 @@
-from dataclasses import field
+from dataclasses import field, dataclass
 from typing import Callable
 
 from pyspark.sql import DataFrame, SparkSession
@@ -6,15 +6,17 @@ from pyspark.sql import DataFrame, SparkSession
 from config.loader import SilverConfigLoader
 from streaming.init import initialize_spark
 from streaming.pipelines.base import BatchPipeline
-from streaming.assets.cleaning import trim_whitespace, empty_to_null
+from streaming.assets.cleaning import trim_whitespace, empty_to_null, parse_valid_from
 from streaming.schemas import ELECTRICITY_TARIFF_SCHEDULE_SCHEMA
 
-
+@dataclass
 class ElectricityTariffsSchedulePipeline(BatchPipeline):
     transform_steps: list[Callable[[DataFrame], DataFrame]] = field(default_factory=lambda: [
         trim_whitespace,
         empty_to_null,
+        parse_valid_from,
     ])
+
 
 if __name__ == '__main__':
     session: SparkSession = initialize_spark()

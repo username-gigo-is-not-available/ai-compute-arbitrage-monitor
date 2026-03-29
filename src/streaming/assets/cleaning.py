@@ -32,4 +32,5 @@ def empty_to_null(df: DataFrame, columns: list[str] | None = None) -> DataFrame:
         df = df.withColumn(column, F.when(F.col(column) != "", F.col(column)).otherwise(F.lit(None)))
     return df
 
-
+def parse_valid_from(df: DataFrame) -> DataFrame:
+    return parse_date(df, column="valid_from", date_format="dd.MM.yyyy")

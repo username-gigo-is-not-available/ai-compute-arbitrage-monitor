@@ -20,20 +20,17 @@ class ElectricityTariffScheduleSeed(BatchIngestor):
         super().__init__(config=config, name=name)
         self.http_config = http_config
         self.schedule: list[dict[str, Any]] = [
-            *[{"day_of_week": day, "tariff_type": TariffType.LOW, "start_hour": 0, "end_hour": 7} for day in
-              range(1, 6)],
-            *[{"day_of_week": day, "tariff_type": TariffType.HIGH, "start_hour": 7, "end_hour": 13} for day in
-              range(1, 6)],
-            *[{"day_of_week": day, "tariff_type": TariffType.LOW, "start_hour": 13, "end_hour": 15} for day in
-              range(1, 6)],
-            *[{"day_of_week": day, "tariff_type": TariffType.HIGH, "start_hour": 15, "end_hour": 22} for day in
-              range(1, 6)],
-            *[{"day_of_week": day, "tariff_type": TariffType.LOW, "start_hour": 22, "end_hour": 24} for day in
-              range(1, 6)],
-            {"day_of_week": 6, "tariff_type": TariffType.LOW, "start_hour": 0, "end_hour": 7},
-            {"day_of_week": 6, "tariff_type": TariffType.HIGH, "start_hour": 7, "end_hour": 22},
-            {"day_of_week": 6, "tariff_type": TariffType.LOW, "start_hour": 22, "end_hour": 24},
-            {"day_of_week": 7, "tariff_type": TariffType.LOW, "start_hour": 0, "end_hour": 24},
+            *[{"day_of_week": day, "tariff_type": TariffType.LOW, "start_hour": 0, "end_hour": 7, "valid_from": "01.01.2026"} for day in
+              range(1, 7)],
+            *[{"day_of_week": day, "tariff_type": TariffType.HIGH, "start_hour": 7, "end_hour": 13, "valid_from": "01.01.2026"} for day in
+              range(1, 7)],
+            *[{"day_of_week": day, "tariff_type": TariffType.LOW, "start_hour": 13, "end_hour": 15, "valid_from": "01.01.2026"} for day in
+              range(1, 7)],
+            *[{"day_of_week": day, "tariff_type": TariffType.HIGH, "start_hour": 15, "end_hour": 22, "valid_from": "01.01.2026"} for day in
+              range(1, 7)],
+            *[{"day_of_week": day, "tariff_type": TariffType.LOW, "start_hour": 22, "end_hour": 24, "valid_from": "01.01.2026"} for day in
+              range(1, 7)],
+            {"day_of_week": 7, "tariff_type": TariffType.LOW, "start_hour": 0, "end_hour": 24, "valid_from": "01.01.2026"},
         ]
 
     def load(self) -> list[ElectricityTariffSchedule]:
@@ -52,7 +49,7 @@ class ElectricityTariffScheduleSeed(BatchIngestor):
             self.logger.warning("Could not find schedule text element on page.")
             return []
 
-        scraped_text = ''.join()
+        scraped_text: str = ' '.join(schedule_tag.text.split())
         if scraped_text != expected_text.strip():
             self.logger.warning(
                 f"Tariff schedule text has changed — manual review required.\n"
@@ -70,6 +67,7 @@ class ElectricityTariffScheduleSeed(BatchIngestor):
                 tariff_type=row["tariff_type"],
                 start_hour=row["start_hour"],
                 end_hour=row["end_hour"],
+                valid_from=row["valid_from"]
             )
         except (KeyError, ValueError, TypeError) as e:
             self.logger.warning(f"Could not parse schedule row {row}: {e}")

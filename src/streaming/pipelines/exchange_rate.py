@@ -1,4 +1,4 @@
-from dataclasses import field
+from dataclasses import field, dataclass
 from typing import Callable
 
 from pyspark.sql import DataFrame, SparkSession
@@ -12,6 +12,7 @@ from streaming.assets.cleaning import trim_whitespace, empty_to_null
 from streaming.schemas import EXCHANGE_RATE_SCHEMA
 
 
+@dataclass
 class ExchangeRatePipeline(StreamPipeline):
     transform_steps: list[Callable[[DataFrame], DataFrame]] = field(default_factory=lambda: [
         trim_whitespace,

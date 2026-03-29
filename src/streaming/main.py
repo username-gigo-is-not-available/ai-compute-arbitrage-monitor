@@ -18,8 +18,6 @@ if __name__ == "__main__":
     loader = SilverConfigLoader()
     kafka_config = loader.get_kafka()
 
-    cpu_config = loader.get_open_db_cpu()
-    gpu_config = loader.get_open_db_gpu()
     erc_config = loader.get_erc()
     evn_config = loader.get_evn()
     vast_ai_config = loader.get_vast_ai()
