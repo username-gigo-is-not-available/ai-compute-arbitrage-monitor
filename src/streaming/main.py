@@ -5,7 +5,7 @@ from streaming.init import initialize_spark
 from streaming.pipelines.electricity_tariffs import ElectricityTariffsPipeline
 from streaming.pipelines.electricity_tariffs_schedule import ElectricityTariffsSchedulePipeline
 from streaming.pipelines.exchange_rate import ExchangeRatePipeline
-from streaming.pipelines.vast_ai import VastAIOffersPipeline
+from streaming.pipelines.compute_offers import ComputeOffersPipeline
 from streaming.schemas import (
     ELECTRICITY_TARIFF_SCHEMA,
     ELECTRICITY_TARIFF_SCHEDULE_SCHEMA,
@@ -30,8 +30,8 @@ if __name__ == "__main__":
     ]
 
     stream_pipelines = [
-        (vast_ai_config, VastAIOffersPipeline(session=session, schema=COMPUTE_OFFER_SCHEMA, config=vast_ai_config,
-                                              kafka_config=kafka_config)),
+        (vast_ai_config, ComputeOffersPipeline(session=session, schema=COMPUTE_OFFER_SCHEMA, config=vast_ai_config,
+                                               kafka_config=kafka_config)),
         (exchange_rate_config,
          ExchangeRatePipeline(session=session, schema=EXCHANGE_RATE_SCHEMA, config=exchange_rate_config,
                               kafka_config=kafka_config)),

@@ -9,6 +9,8 @@ from streaming.pipelines.base import BatchPipeline
 from streaming.assets.cleaning import trim_whitespace, empty_to_null, parse_valid_from
 from streaming.schemas import ELECTRICITY_TARIFF_SCHEDULE_SCHEMA
 
+
+
 @dataclass
 class ElectricityTariffsSchedulePipeline(BatchPipeline):
     transform_steps: list[Callable[[DataFrame], DataFrame]] = field(default_factory=lambda: [

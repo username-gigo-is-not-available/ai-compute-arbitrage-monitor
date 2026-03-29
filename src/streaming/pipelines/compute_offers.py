@@ -16,7 +16,7 @@ def strip_cpu_core_suffix(df: DataFrame) -> DataFrame:
 
 
 @dataclass
-class VastAIOffersPipeline(StreamPipeline):
+class ComputeOffersPipeline(StreamPipeline):
     transform_steps: list[Callable[[DataFrame], DataFrame]] = field(default_factory=lambda: [
         strip_non_ascii,
         trim_whitespace,
@@ -28,11 +28,11 @@ if __name__ == '__main__':
     session: SparkSession = initialize_spark()
     config_loader: SilverConfigLoader = SilverConfigLoader()
     kafka_config: KafkaConfig = config_loader.get_kafka()
-    vast_ai_offers_pipeline: VastAIOffersPipeline = VastAIOffersPipeline(
+    compute_offers_pipeline: ComputeOffersPipeline = ComputeOffersPipeline(
         session=session,
         schema=COMPUTE_OFFER_SCHEMA,
         config=config_loader.get_vast_ai(),
         kafka_config=kafka_config
     )
-    vast_ai_query: StreamingQuery = vast_ai_offers_pipeline.run()
-    vast_ai_query.awaitTermination()
+    query: StreamingQuery = compute_offers_pipeline.run()
+    query.awaitTermination()

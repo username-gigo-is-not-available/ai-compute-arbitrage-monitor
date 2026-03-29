@@ -30,6 +30,6 @@ if __name__ == '__main__':
         config=config_loader.get_exchange_rate(),
         kafka_config=kafka_config
     )
-    exchange_rate_query: StreamingQuery = exchange_rate_pipeline.run()
+    query: StreamingQuery = exchange_rate_pipeline.run()
 
-    exchange_rate_query.awaitTermination()
+    query.awaitTermination()
