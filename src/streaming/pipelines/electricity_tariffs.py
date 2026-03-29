@@ -3,6 +3,7 @@ from typing import Callable
 from pyspark.sql import DataFrame, SparkSession
 
 from config.loader import SilverConfigLoader
+from streaming.assets.filtering import deduplicate
 from streaming.init import initialize_spark
 from streaming.pipelines.base import BatchPipeline
 from streaming.assets.cleaning import trim_whitespace, replace_substring, parse_date, empty_to_null, parse_valid_from
@@ -12,6 +13,9 @@ from streaming.schemas import ELECTRICITY_TARIFF_SCHEMA
 def fix_decimal_separator(df: DataFrame) -> DataFrame:
     return replace_substring(df, column="price_per_kwh_mkd", current=",", replacement=".")
 
+def deduplicate_electricity_tariffs(df: DataFrame) -> DataFrame:
+    return deduplicate(df, columns=['tariff_description', 'valid_from'])
+
 
 @dataclass
 class ElectricityTariffsPipeline(BatchPipeline):
@@ -20,6 +24,7 @@ class ElectricityTariffsPipeline(BatchPipeline):
         empty_to_null,
         fix_decimal_separator,
         parse_valid_from,
+        deduplicate_electricity_tariffs
     ])
 
 

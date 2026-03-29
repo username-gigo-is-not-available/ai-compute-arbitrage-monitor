@@ -6,10 +6,15 @@ from pyspark.sql.streaming import StreamingQuery
 
 from config.kafka import KafkaConfig
 from config.loader import SilverConfigLoader
+from streaming.assets.filtering import deduplicate
 from streaming.init import initialize_spark
 from streaming.pipelines.base import StreamPipeline
 from streaming.assets.cleaning import trim_whitespace, empty_to_null
 from streaming.schemas import EXCHANGE_RATE_SCHEMA
+
+
+def deduplicate_exchange_rate(df: DataFrame) -> DataFrame:
+    return deduplicate(df, columns=['from_currency', 'to_currency', 'rate_timestamp'])
 
 
 @dataclass
@@ -17,6 +22,7 @@ class ExchangeRatePipeline(StreamPipeline):
     transform_steps: list[Callable[[DataFrame], DataFrame]] = field(default_factory=lambda: [
         trim_whitespace,
         empty_to_null,
+        deduplicate_exchange_rate
     ])
 
 

@@ -5,6 +5,7 @@ from pyspark.sql.streaming import StreamingQuery
 
 from config.kafka import KafkaConfig
 from config.loader import SilverConfigLoader
+from streaming.assets.filtering import deduplicate
 from streaming.init import initialize_spark
 from streaming.pipelines.base import StreamPipeline
 from streaming.assets.cleaning import strip_non_ascii, trim_whitespace, replace_substring, empty_to_null
@@ -15,6 +16,9 @@ def strip_cpu_core_suffix(df: DataFrame) -> DataFrame:
     return replace_substring(df, column="cpu_model_name", current=r"\s+\d+-Core(s)? Processor$", replacement="")
 
 
+def deduplicate_compute_offers(df: DataFrame) -> DataFrame:
+    return deduplicate(df, columns=["instance_id", "ingested_at"])
+
 @dataclass
 class ComputeOffersPipeline(StreamPipeline):
     transform_steps: list[Callable[[DataFrame], DataFrame]] = field(default_factory=lambda: [
@@ -22,6 +26,7 @@ class ComputeOffersPipeline(StreamPipeline):
         trim_whitespace,
         empty_to_null,
         strip_cpu_core_suffix,
+        deduplicate_compute_offers
     ])
 
 if __name__ == '__main__':
