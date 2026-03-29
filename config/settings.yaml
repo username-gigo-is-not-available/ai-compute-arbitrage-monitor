@@ -33,16 +33,8 @@ seeds:
       Ниската тарифа е од 13:00 до 15:00 часот и од 22:00 до 07:00
       часот секој ден, како и од 22:00 часот (сабота) до 07:00
       часот (понеделник) преку викенд.
-
-  open_db_cpu:
-    enabled: true
-    subdirectory_name: "CPU"
-    file_name: "cpu_specifications"
-
-  open_db_gpu:
-    enabled: true
-    subdirectory_name: "GPU"
-    file_name: "gpu_specifications"
+      Според одлуките на Регулаторната комисија за енергетика и водни услуги на Република Северна Македонија,
+      цените ќе се применуваат почнувајќи од 01.01.2026.
 
 logging:
   level: "INFO"
@@ -58,7 +50,6 @@ kafka:
 
 paths:
   base_directory_path: "../data"
-  open_db_subdirectory_path: "buildcores-open-db/open-db"
   seeds_directory_name: "seeds"
   sources_directory_name: "sources"
   checkpoints_directory_name: "checkpoints"
