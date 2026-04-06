@@ -10,3 +10,5 @@ logs/
 *.egg-info/
 .geminiignore
 src/transform/dev.duckdb
+src/transform/dbt_packages
+src/transform/target
