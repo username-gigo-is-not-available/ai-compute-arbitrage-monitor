@@ -1,7 +1,7 @@
 import asyncio
 import logging
 import ssl
-from datetime import datetime
+from datetime import datetime, UTC
 from http import HTTPStatus
 from typing import Any
 
@@ -44,10 +44,11 @@ class ExchangeRateSource(StreamIngestor):
         data: dict[str, Any] = kwargs.get('data')
         try:
             return ExchangeRate(
+                ingested_at=datetime.now(UTC),
                 from_currency=from_currency,
                 to_currency=to_currency,
-                rate=float(data.get("conversion_rates").get(to_currency)),
-                rate_timestamp=datetime.strptime(data.get("time_last_update_utc"), self.timestamp_format)
+                value=float(data.get("conversion_rates").get(to_currency)),
+                timestamp=datetime.strptime(data.get("time_last_update_utc"), self.timestamp_format)
             )
         except (KeyError, ValueError, TypeError) as e:
             self.logger.warning(f"Could not parse exchange rate: {from_currency}/{to_currency}: {e}")
@@ -61,7 +62,7 @@ class ExchangeRateSource(StreamIngestor):
         )
         producer.flush()
         self.logger.info(
-            f"Published {data.from_currency}/{data.to_currency} = {data.rate} to '{self.config.topic_name}'")
+            f"Published {data.from_currency}/{data.to_currency} = {data.value} to '{self.config.topic_name}'")
 
 
 async def main():
