@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime, UTC
 from http import HTTPStatus
 from typing import Any
 
@@ -56,13 +57,16 @@ class ElectricityTariffScheduleSeed(BatchIngestor):
                 f"Expected: {expected_text}\n"
                 f"Got:      {scraped_text}"
             )
-
-        return [record for row in self.schedule if (record := self.parse(data=row))]
+            return []
+        ingested_at: datetime = datetime.now(UTC)
+        return [record for row in self.schedule if (record := self.parse(data=row, timestamp=ingested_at))]
 
     def parse(self, **kwargs) -> ElectricityTariffSchedule | None:
         row: dict = kwargs.get("data")
+        ingested_at: datetime = kwargs.get("timestamp")
         try:
             return ElectricityTariffSchedule(
+                ingested_at=ingested_at,
                 day_of_week=row["day_of_week"],
                 tariff_type=row["tariff_type"],
                 start_hour=row["start_hour"],
