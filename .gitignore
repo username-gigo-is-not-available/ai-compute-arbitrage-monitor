@@ -9,4 +9,4 @@ __pycache__/
 logs/
 *.egg-info/
 .geminiignore
-identifier.db
+src/transform/dev.duckdb
