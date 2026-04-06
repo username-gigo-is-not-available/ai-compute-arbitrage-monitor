@@ -50,3 +50,8 @@ class TariffType(StrEnum):
 class DayType(StrEnum):
     WEEKDAY = auto()
     WEEKEND = auto()
+
+class OfferType(StrEnum):
+    ON_DEMAND = auto()
+    BID = auto()
+    RESERVED = auto()
