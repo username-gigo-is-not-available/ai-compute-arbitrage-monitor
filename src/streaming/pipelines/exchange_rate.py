@@ -14,7 +14,7 @@ from streaming.schemas import EXCHANGE_RATE_SCHEMA
 
 
 def deduplicate_exchange_rate(df: DataFrame) -> DataFrame:
-    return deduplicate(df, columns=['from_currency', 'to_currency', 'rate_timestamp'])
+    return deduplicate(df, columns=['from_currency', 'to_currency', 'timestamp'])
 
 
 @dataclass

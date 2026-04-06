@@ -17,7 +17,8 @@ def strip_cpu_core_suffix(df: DataFrame) -> DataFrame:
 
 
 def deduplicate_compute_offers(df: DataFrame) -> DataFrame:
-    return deduplicate(df, columns=["instance_id", "ingested_at"])
+    return deduplicate(df, columns=["offer_id", "offer_type"])
+
 
 @dataclass
 class ComputeOffersPipeline(StreamPipeline):
@@ -28,6 +29,7 @@ class ComputeOffersPipeline(StreamPipeline):
         strip_cpu_core_suffix,
         deduplicate_compute_offers
     ])
+
 
 if __name__ == '__main__':
     session: SparkSession = initialize_spark()

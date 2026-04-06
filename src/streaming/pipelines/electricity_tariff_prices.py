@@ -11,29 +11,29 @@ from streaming.schemas import ELECTRICITY_TARIFF_SCHEMA
 
 
 def fix_decimal_separator(df: DataFrame) -> DataFrame:
-    return replace_substring(df, column="price_per_kwh_mkd", current=",", replacement=".")
+    return replace_substring(df, column="price_mkd_per_kwh", current=",", replacement=".")
 
-def deduplicate_electricity_tariffs(df: DataFrame) -> DataFrame:
+def deduplicate_electricity_tariffs_prices(df: DataFrame) -> DataFrame:
     return deduplicate(df, columns=['tariff_description', 'valid_from'])
 
 
 @dataclass
-class ElectricityTariffsPipeline(BatchPipeline):
+class ElectricityTariffPricesPipeline(BatchPipeline):
     transform_steps: list[Callable[[DataFrame], DataFrame]] = field(default_factory=lambda: [
         trim_whitespace,
         empty_to_null,
         fix_decimal_separator,
         parse_valid_from,
-        deduplicate_electricity_tariffs
+        deduplicate_electricity_tariffs_prices
     ])
 
 
 if __name__ == '__main__':
     session: SparkSession = initialize_spark()
     config_loader: SilverConfigLoader = SilverConfigLoader()
-    electricity_tariffs_pipeline: ElectricityTariffsPipeline = ElectricityTariffsPipeline(
+    electricity_tariff_prices_pipeline: ElectricityTariffPricesPipeline = ElectricityTariffPricesPipeline(
         session=session,
         schema=ELECTRICITY_TARIFF_SCHEMA,
         config=config_loader.get_erc()
     )
-    electricity_tariffs_pipeline.run()
+    electricity_tariff_prices_pipeline.run()
