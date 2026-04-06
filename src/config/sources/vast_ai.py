@@ -4,6 +4,7 @@ import os
 from pydantic import Field
 
 from config.file_config import FileConfig
+from ingestion.models.enums import OfferType
 
 
 class VastAIConfig(FileConfig):
@@ -22,6 +23,7 @@ class VastAIConfig(FileConfig):
     def header(self) -> dict[str, str]:
         return {"Authorization": f"Bearer {self.api_key}"}
 
-    @property
-    def params(self) -> dict[str, str]:
-        return {"q": json.dumps({"limit": self.limit})}
+
+    def params(self, offer_type: OfferType) -> dict[str, str]:
+        return {"q": json.dumps({"limit": self.limit, "type": offer_type.value})}
+

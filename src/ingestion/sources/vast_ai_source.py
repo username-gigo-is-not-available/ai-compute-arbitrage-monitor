@@ -1,5 +1,6 @@
 import asyncio
 import logging
+from datetime import datetime, UTC
 from http import HTTPStatus
 from typing import Any
 
@@ -9,6 +10,7 @@ from pydantic import ValidationError
 from config.loader import BronzeConfigLoader
 from config.sources.vast_ai import VastAIConfig
 from ingestion.base import StreamIngestor
+from ingestion.models.enums import OfferType
 from ingestion.models.vast_ai_offer import VastAIOffer
 from pubsub.producer import KafkaProducer
 
@@ -20,31 +22,44 @@ class VastAISource(StreamIngestor):
 
     async def poll(self) -> list[VastAIOffer]:
         async with ClientSession() as session:
-            async with session.get(
-                    self.config.url,
-                    headers=self.config.header,
-                    params=self.config.params
-            ) as response:
-                if response.status != HTTPStatus.OK:
-                    self.logger.error(f"Vast.AI API returned HTTP {response.status}")
-                    return []
+            offers = []
+            for offer_type in OfferType:
+                async with session.get(
+                        self.config.url,
+                        headers=self.config.header,
+                        params=self.config.params(offer_type=offer_type)
+                ) as response:
+                    if response.status != HTTPStatus.OK:
+                        self.logger.error(f"Vast.AI API returned HTTP {response.status}")
+                        return []
 
-                data: dict[str, Any] = await response.json(encoding="utf-8")
-                offers = []
-                for row in data.get("offers", []):
-                    offer = self.parse(data=row)
-                    if offer:
-                        offers.append(offer)
-                return offers
+                    data: dict[str, Any] = await response.json(encoding="utf-8")
+                    ingested_at: datetime = datetime.now(UTC)
+                    for row in data.get("offers", []):
+                        offer = self.parse(data=row, timestamp=ingested_at, offer_type=offer_type)
+                        if offer:
+                            offers.append(offer)
+
+            return offers
 
     def parse(self, **kwargs) -> VastAIOffer | None:
         data: dict[str, Any] = kwargs.get("data")
+        ingested_at: datetime = kwargs.get("timestamp")
+        offer_type: OfferType = kwargs.get("offer_type")
         try:
             return VastAIOffer(
-                instance_id=data.get("id"),
-                gpu_price_usd_per_hour=data.get("dph_base"),
-                total_price_usd_per_hour=data.get("discounted_dph_total"),
-                deep_learning_score_per_dollar=data.get("dlperf_per_dphtotal"),
+                ingested_at=ingested_at,
+                offer_id=data.get("ask_contract_id"),
+                machine_id=data.get("machine_id"),
+                host_id=data.get("host_id"),
+                offer_type=offer_type,
+                gpu_price_usd_per_hr=data.get("dph_base"),
+                total_price_usd_per_hr=data.get("discounted_dph_total"),
+                minimum_bid_price_usd=data.get("min_bid", 0),
+                storage_cost_usd_per_hr=data.get("storage_total_cost"),
+                network_upload_cost_usd_per_gbit=data.get("inet_up_cost"),
+                network_download_cost_usd_per_gbit=data.get("inet_down_cost"),
+                deep_learning_score_per_usd=data.get("dlperf_per_dphtotal"),
                 gpu_architecture=data.get("gpu_arch"),
                 gpu_model_name=data.get("gpu_name"),
                 gpu_memory_mb=data.get("gpu_ram"),
@@ -52,14 +67,19 @@ class VastAISource(StreamIngestor):
                 number_of_gpus=data.get("num_gpus", 1),
                 gpu_max_cuda_version_supported=data.get("cuda_max_good"),
                 gpu_tflops=data.get("total_flops"),
+                gpu_bandwidth_gbytes_per_sec=data.get("gpu_mem_bw"),
                 cpu_architecture=data.get("cpu_arch"),
                 cpu_model_name=data.get("cpu_name"),
                 number_of_cpu_cores=data.get("cpu_cores_effective"),
+                cpu_clock_speed_ghz=data.get("cpu_ghz"),
                 ram_mb=data.get("cpu_ram"),
                 disk_model_name=data.get("disk_name"),
                 disk_space_gb=data.get("disk_space"),
-                network_download_mbps=data.get("inet_down"),
-                network_upload_mbps=data.get("inet_up"),
+                disk_bandwidth_mbytes_per_sec=data.get("disk_bw"),
+                pcie_generation=data.get("pci_gen"),
+                pcie_bandwidth_gbytes_per_sec=data.get("pcie_bw"),
+                network_download_mbits_per_sec=data.get("inet_down"),
+                network_upload_mbits_per_sec=data.get("inet_up"),
                 reliability_score=data.get("reliability2"),
                 deep_learning_score=data.get("dlperf"),
                 geolocation=data.get("geolocation"),
@@ -76,7 +96,7 @@ class VastAISource(StreamIngestor):
             producer.produce(
                 topic=self.config.topic_name,
                 payload=offer.model_dump(mode="json"),
-                key=str(offer.instance_id)
+                key=str(offer.offer_id)
             )
         producer.flush()
         self.logger.info(f"Published {len(data)} offers to '{self.config.topic_name}'")
