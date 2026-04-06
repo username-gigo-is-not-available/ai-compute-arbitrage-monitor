@@ -1,0 +1,417 @@
+version: 2
+
+models:
+  - name: stg_compute_offers
+    description: "Staged Vast.ai GPU compute offers - typed and renamed from bronze"
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - offer_id
+              - ingested_at
+    columns:
+      - name: offer_id
+        description: "Vast.ai offer identifier"
+        tests:
+          - not_null
+
+      - name: machine_id
+        description: "Vast.ai machine identifier"
+        tests:
+          - not_null
+
+      - name: host_id
+        description: "Vast.ai host identifier"
+        tests:
+          - not_null
+
+      - name: offer_type
+        description: "Offer type e.g. on-demand, bid, reserved"
+        tests:
+          - not_null
+          - accepted_values:
+              values: ["on_demand", "bid", "reserved"]
+
+      - name: total_price_usd_per_hr
+        description: "Total hourly price including GPU, storage and bandwidth costs (discounted_dph_total)"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: ">= 0"
+
+      - name: gpu_price_usd_per_hr
+        description: "Base GPU rental cost excluding storage and bandwidth (dph_base)"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: "<= total_price_usd_per_hr"
+
+      - name: deep_learning_score_per_usd
+        description: "DL performance per dollar - pre-computed by Vast.ai (dlperf_per_dphtotal)"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: ">= 0"
+
+      - name: minimum_bid_price_usd
+        description: "Minimum bid price in USD for bid-type offers"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: ">= 0"
+
+      - name: storage_cost_usd_per_hr
+        description: "Storage cost component of the hourly price in USD"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: ">= 0"
+
+      - name: network_upload_cost_usd_per_gbit
+        description: "Network upload cost per gigabit in USD"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: ">= 0"
+
+      - name: network_download_cost_usd_per_gbit
+        description: "Network download cost per gigabit in USD"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: ">= 0"
+
+      - name: gpu_architecture
+        description: "GPU architecture family e.g. nvidia, amd"
+        tests:
+          - not_null
+
+      - name: gpu_model_name
+        description: "GPU model name e.g. RTX 4090"
+        tests:
+          - not_null
+
+      - name: gpu_memory_mb
+        description: "GPU VRAM in megabytes"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: "> 0"
+
+      - name: gpu_tdp_watts
+        description: "GPU TDP / max power draw in watts"
+        tests:
+          - not_null:
+              config:
+                severity: warn
+
+      - name: number_of_gpus
+        description: "Number of GPUs in the offer"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: "> 0"
+
+      - name: gpu_max_cuda_version_supported
+        description: "Maximum CUDA version supported by the GPU driver"
+
+      - name: gpu_tflops
+        description: "Raw compute capacity in TFLOPS (total_flops)"
+        tests:
+          - not_null:
+              config:
+                severity: warn
+
+      - name: gpu_bandwidth_gbytes_per_sec
+        description: "GPU memory bandwidth in GB/s"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: "> 0"
+              config:
+                severity: warn
+
+      - name: cpu_architecture
+        description: "CPU architecture e.g. amd64, arm64"
+        tests:
+          - not_null
+
+      - name: cpu_model_name
+        description: "CPU model name"
+        tests:
+          - not_null:
+              config:
+                severity: warn
+
+      - name: number_of_cpu_cores
+        description: "Effective number of CPU cores available"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: "> 0"
+              config:
+                severity: warn
+
+      - name: cpu_clock_speed_ghz
+        description: "CPU clock speed in GHz"
+        tests:
+          - not_null:
+              config:
+                severity: warn
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: "> 0"
+              config:
+                severity: warn
+
+      - name: ram_mb
+        description: "System RAM in megabytes"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: "> 0"
+              config:
+                severity: warn
+
+      - name: disk_model_name
+        description: "Disk model name"
+        tests:
+          - not_null:
+              config:
+                severity: warn
+
+      - name: disk_space_gb
+        description: "Available disk space in gigabytes"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: "> 0"
+
+      - name: disk_bandwidth_mbytes_per_sec
+        description: "Disk sequential read/write bandwidth in MB/s"
+        tests:
+          - not_null:
+              config:
+                severity: warn
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: "> 0"
+              config:
+                severity: warn
+
+      - name: pcie_generation
+        description: "PCIe generation e.g. 3.0, 4.0, 5.0"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: "> 0"
+
+      - name: pcie_bandwidth_gbytes_per_sec
+        description: "PCIe bandwidth in GB/s"
+        tests:
+          - not_null:
+              config:
+                severity: warn
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: "> 0"
+              config:
+                severity: warn
+
+      - name: network_download_mbits_per_sec
+        description: "Network download speed in Mbps"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: "> 0"
+              config:
+                severity: warn
+
+      - name: network_upload_mbits_per_sec
+        description: "Network upload speed in Mbps"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: "> 0"
+              config:
+                severity: warn
+
+      - name: reliability_score
+        description: "Vast.ai host reliability score (reliability2)"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: "> 0"
+
+      - name: deep_learning_score
+        description: "Vast.ai deep learning benchmark score (dlperf)"
+        tests:
+          - not_null:
+              config:
+                severity: warn
+
+      - name: geolocation
+        description: "Host geolocation e.g. Texas, US"
+
+      - name: verification_flag
+        description: "Vast.ai host verification status"
+        tests:
+          - not_null
+          - accepted_values:
+              values: [ 'verified', 'unverified', 'deverified' ]
+
+      - name: rentable_flag
+        description: "Whether the offer is currently rentable"
+        tests:
+          - not_null
+
+      - name: rented_flag
+        description: "Whether the offer is currently rented"
+        tests:
+          - not_null
+
+      - name: ingested_at
+        description: "Timestamp when the record was ingested into bronze"
+        tests:
+          - not_null
+
+      - name: processed_at
+        description: "Timestamp when the record was processed by Spark into silver"
+        tests:
+          - not_null
+
+  - name: stg_electricity_tariff_prices
+    description: "Staged Macedonian EVN electricity tariff prices in MKD"
+    columns:
+      - name: tariff_description
+        description: "Tariff description - by household, business, tier, block"
+        tests:
+          - not_null
+
+      - name: price_mkd_per_kwh
+        description: "Price per kilowatt-hour in Macedonian Denar"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: "> 0"
+
+      - name: valid_from
+        description: "Date from which this tariff price is valid"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: "<= current_date"
+
+      - name: ingested_at
+        tests:
+          - not_null
+
+      - name: processed_at
+        tests:
+          - not_null
+
+  - name: stg_electricity_tariffs_schedule
+    description: "Time-of-use schedule mapping day/hour ranges to tariff types"
+    columns:
+      - name: tariff_type
+        description: "Tariff tier for this time window - low or high"
+        tests:
+          - not_null
+          - accepted_values:
+              values: [ 'low', 'high' ]
+
+      - name: day_of_week
+        description: "ISO day of week - 1=Monday through 7=Sunday"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: ">= 1 and day_of_week <= 7"
+
+      - name: start_hour
+        description: "Start hour of tariff window (0-23)"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: ">= 0 and start_hour < 24"
+
+      - name: end_hour
+        description: "End hour of tariff window (1-24, exclusive upper bound)"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: "> 0 and end_hour <= 24"
+
+      - name: valid_from
+        description: "Date from which this tariff schedule is valid"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: "<= current_date"
+
+      - name: ingested_at
+        tests:
+          - not_null
+
+      - name: processed_at
+        tests:
+          - not_null
+
+  - name: stg_exchange_rates
+    description: "Staged USD to MKD exchange rates"
+    columns:
+      - name: from_currency
+        description: "Source currency"
+        tests:
+          - not_null
+          - accepted_values:
+              values: [ 'USD' ]
+
+      - name: to_currency
+        description: "Target currency"
+        tests:
+          - not_null
+          - accepted_values:
+              values: [ 'MKD' ]
+
+      - name: value
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: "> 0"
+
+      - name: timestamp
+        description: "Timestamp of the exchange rate snapshot"
+        tests:
+          - not_null
+
+      - name: ingested_at
+        tests:
+          - not_null
+
+      - name: processed_at
+        tests:
+          - not_null

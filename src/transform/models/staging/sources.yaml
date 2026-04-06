@@ -1,0 +1,18 @@
+sources:
+  - name: streaming
+    description: "Streaming sources processed by Spark into silver layer"
+    schema: bronze
+    tables:
+      - name: compute_offers
+        description: "Vast.ai GPU compute offers polled every 30 minutes"
+      - name: exchange_rates
+        description: "USD/MKD exchange rate polled every 24 hours"
+
+  - name: batch
+    description: "Reference data seeds processed by Spark into silver layer"
+    schema: bronze
+    tables:
+      - name: electricity_tariff_prices
+        description: "Electricity tariff prices from ERC North Macedonia"
+      - name: electricity_tariff_schedule
+        description: "Electricity tariff schedule (high/low periods) from EVN North Macedonia"

@@ -1,0 +1,632 @@
+version: 2
+
+models:
+  - name: dim_electricity_tariff_prices
+    description: "Electricity tariff price dimension - SCD Type 2 on tariff_description_mk, tracking price changes over time"
+    columns:
+      - name: skey
+        description: "Surrogate key derived from tariff_description_mk and valid_from"
+        tests:
+          - not_null
+          - unique
+
+      - name: tariff_type
+        description: "Tariff tier - low or high"
+        tests:
+          - accepted_values:
+              values: [ 'low', 'high' ]
+
+      - name: tariff_description_en
+        description: "Tariff description translated to English"
+        tests:
+          - not_null
+          - accepted_values:
+              values: [
+                'household_high_tariff_block_1', 'household_high_tariff_block_2',
+                'household_high_tariff_block_3', 'household_high_tariff_block_4',
+                'household_low_tariff_block', 'business_high_tariff_block',
+                'business_low_tariff_block', 'distribution_fee'
+              ]
+
+      - name: tariff_description_mk
+        description: "Original Macedonian tariff description from source"
+        tests:
+          - not_null
+
+      - name: price_mkd_per_kwh
+        description: "Price per kilowatt-hour in Macedonian Denar for this version"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: "> 0"
+
+      - name: valid_from
+        description: "Date from which this tariff version is effective"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: "<= current_date"
+
+      - name: valid_to
+        description: "Date from which this tariff version is superseded - null means currently active"
+
+      - name: is_latest
+        description: "True if this is the currently active version of the tariff"
+        tests:
+          - not_null
+
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - tariff_description_mk
+            - valid_from
+
+  - name: dim_electricity_tariffs_schedule
+    description: "Electricity tariff schedule dimension - SCD Type 2 on day/hour, tracking schedule changes over time"
+    columns:
+      - name: skey
+        description: "Surrogate key derived from day_of_week, hour and valid_from"
+        tests:
+          - not_null
+          - unique
+
+      - name: day_of_week
+        description: "ISO day of week - 1=Monday through 7=Sunday"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: ">= 1 and day_of_week <= 7"
+
+      - name: hour
+        description: "Hour of day (0-23) for this tariff assignment"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: ">= 0 and hour < 24"
+
+      - name: tariff_type
+        description: "Tariff tier applicable at this day/hour slot - low or high"
+        tests:
+          - not_null
+          - accepted_values:
+              values: [ 'low', 'high' ]
+
+      - name: valid_from
+        description: "Date from which this schedule assignment is effective"
+        tests:
+          - not_null
+
+      - name: valid_to
+        description: "Date from which this schedule assignment is superseded - null means currently active"
+
+      - name: is_latest
+        description: "True if this is the currently active assignment for this day/hour slot"
+        tests:
+          - not_null
+
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - day_of_week
+            - hour
+            - valid_from
+
+  - name: dim_exchange_rates
+    description: "USD/MKD exchange rate dimension - SCD Type 2 on currency pair, one row per daily rate snapshot"
+    columns:
+      - name: skey
+        description: "Surrogate key derived from from_currency, to_currency and timestamp"
+        tests:
+          - not_null
+          - unique
+
+      - name: from_currency
+        description: "Source currency"
+        tests:
+          - not_null
+          - accepted_values:
+              values: [ 'USD' ]
+
+      - name: to_currency
+        description: "Target currency"
+        tests:
+          - not_null
+          - accepted_values:
+              values: [ 'MKD' ]
+
+      - name: value
+        description: "USD to MKD exchange rate for this snapshot"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: "> 0"
+
+      - name: inverse_value
+        description: "MKD to USD exchange rate (1 / value) for this snapshot"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: "> 0"
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: "< value"
+
+      - name: valid_from
+        description: "Date of this rate snapshot (cast from timestamp)"
+        tests:
+          - not_null
+
+      - name: valid_to
+        description: "Date from which this rate is superseded - null means currently active"
+
+      - name: is_latest
+        description: "True if this is the most recent rate snapshot for the currency pair"
+        tests:
+          - not_null
+
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - from_currency
+            - to_currency
+            - valid_from
+
+  - name: fct_compute_offers
+    description: "Core fact table - one row per Vast.ai GPU offer snapshot, with electricity cost and profit metrics computed across all EVN tariff scenarios"
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - offer_id
+              - valid_from
+    columns:
+      # -----------------------------------------------------------------------
+      # identity
+      # -----------------------------------------------------------------------
+      - name: offer_id
+        description: "Vast.ai offer identifier"
+        tests:
+          - not_null
+
+      - name: machine_id
+        description: "Vast.ai machine identifier"
+        tests:
+          - not_null
+
+      - name: host_id
+        description: "Vast.ai host identifier"
+        tests:
+          - not_null
+
+      # -----------------------------------------------------------------------
+      # host context
+      # -----------------------------------------------------------------------
+      - name: country_code
+        description: "ISO country code extracted from geolocation string e.g. US, DE"
+        tests:
+          - not_null:
+              config:
+                severity: warn
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: "= upper(country_code)"
+              config:
+                severity: warn
+
+      - name: verification_flag
+        description: "Vast.ai host verification status"
+        tests:
+          - not_null
+          - accepted_values:
+              values: [ 'verified', 'unverified', 'deverified' ]
+
+      - name: rentable_flag
+        description: "Whether the offer is currently rentable"
+        tests:
+          - not_null
+
+      - name: rented_flag
+        description: "Whether the offer is currently rented"
+        tests:
+          - not_null
+
+      - name: reliability_score
+        description: "Vast.ai host reliability score"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: "> 0"
+
+      # -----------------------------------------------------------------------
+      # gpu specs
+      # -----------------------------------------------------------------------
+      - name: gpu_architecture
+        description: "GPU architecture family e.g. nvidia, amd"
+        tests:
+          - not_null
+
+      - name: gpu_model_name
+        description: "GPU model name e.g. RTX 4090"
+        tests:
+          - not_null
+
+      - name: number_of_gpus
+        description: "Number of GPUs in the offer"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: "> 0"
+
+      - name: tflops_per_gpu
+        description: "Raw compute capacity per GPU in TFLOPS"
+        tests:
+          - not_null:
+              config:
+                severity: warn
+
+      - name: gpu_tdp_watts
+        description: "GPU TDP / max power draw per GPU in watts"
+        tests:
+          - not_null:
+              config:
+                severity: warn
+
+      - name: gpu_memory_gb
+        description: "GPU VRAM per GPU in gigabytes"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: "> 0"
+
+      - name: gpu_max_cuda_version_supported
+        description: "Maximum CUDA version supported by the GPU driver"
+
+      - name: gpu_bandwidth_gbytes_per_sec
+        description: "GPU memory bandwidth in GB/s"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: "> 0"
+              config:
+                severity: warn
+
+      # -----------------------------------------------------------------------
+      # cpu specs
+      # -----------------------------------------------------------------------
+      - name: cpu_architecture
+        description: "CPU architecture e.g. amd64, arm64"
+        tests:
+          - not_null
+
+      - name: cpu_model_name
+        description: "CPU model name"
+        tests:
+          - not_null:
+              config:
+                severity: warn
+
+      - name: number_of_cpu_cores
+        description: "Effective number of CPU cores available"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: "> 0"
+              config:
+                severity: warn
+
+      # -----------------------------------------------------------------------
+      # system specs
+      # -----------------------------------------------------------------------
+      - name: ram_gb
+        description: "System RAM in gigabytes"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: ">= 0"
+
+      - name: disk_model_name
+        description: "Disk model name"
+        tests:
+          - not_null:
+              config:
+                severity: warn
+
+      - name: disk_space_gb
+        description: "Available disk space in gigabytes"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: "> 0"
+
+      - name: disk_bandwidth_gbytes_per_sec
+        description: "Disk sequential read/write bandwidth in GB/s"
+        tests:
+          - not_null:
+              config:
+                severity: warn
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: "> 0"
+              config:
+                severity: warn
+
+      - name: pcie_generation
+        description: "PCIe generation e.g. 3.0, 4.0, 5.0"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: "> 0"
+
+      - name: pcie_bandwidth_gbytes_per_sec
+        description: "PCIe bandwidth in GB/s"
+        tests:
+          - not_null:
+              config:
+                severity: warn
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: "> 0"
+              config:
+                severity: warn
+      # -----------------------------------------------------------------------
+      # network
+      # -----------------------------------------------------------------------
+      - name: network_download_mbits_per_sec
+        description: "Network download speed in Mbps"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: "> 0"
+              config:
+                severity: warn
+
+      - name: network_upload_mbits_per_sec
+        description: "Network upload speed in Mbps"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: "> 0"
+              config:
+                severity: warn
+
+      # -----------------------------------------------------------------------
+      # performance scores
+      # -----------------------------------------------------------------------
+      - name: deep_learning_score
+        description: "Vast.ai deep learning benchmark score"
+        tests:
+          - not_null:
+              config:
+                severity: warn
+
+      - name: deep_learning_score_per_usd
+        description: "DL performance per dollar - pre-computed by Vast.ai"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: ">= 0"
+
+      # -----------------------------------------------------------------------
+      # pricing
+      # -----------------------------------------------------------------------
+      - name: gpu_price_usd_per_hr
+        description: "Base GPU rental cost per hour excluding storage and bandwidth"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: ">= 0"
+
+      - name: revenue_usd_per_hr
+        description: "Total hourly revenue from renting the offer (total_price_usd_per_hour)"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: ">= 0"
+
+      # -----------------------------------------------------------------------
+      # derived power / compute
+      # -----------------------------------------------------------------------
+      - name: total_system_kwh_per_hr
+        description: "Estimated total system power draw in kWh per hour (gpu_tdp_watts * number_of_gpus / 1000)"
+        tests:
+          - not_null:
+              config:
+                severity: warn
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: "> 0"
+              config:
+                severity: warn
+
+      - name: total_system_tflops
+        description: "Total compute capacity across all GPUs in the offer (gpu_tflops * number_of_gpus)"
+        tests:
+          - not_null:
+              config:
+                severity: warn
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: "> 0"
+              config:
+                severity: warn
+
+      - name: kwh_per_tflop
+        description: "Energy efficiency ratio - kilowatt-hours consumed per TFLOP of compute"
+        tests:
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: "> 0"
+              config:
+                severity: warn
+
+      # -----------------------------------------------------------------------
+      # rates context
+      # -----------------------------------------------------------------------
+      - name: usd_to_mkd_rate
+        description: "USD to MKD exchange rate applied at ingestion time"
+        tests:
+          - not_null:
+              config:
+                severity: warn
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: "> 0"
+              config:
+                severity: warn
+
+      # -----------------------------------------------------------------------
+      # electricity costs (USD/hr) - one column per EVN tariff scenario
+      # -----------------------------------------------------------------------
+      - name: cost_household_1_high_usd_per_hr
+        description: "Electricity cost per hour in USD under household high tariff block 1 (lowest consumption band)"
+
+      - name: cost_household_2_high_usd_per_hr
+        description: "Electricity cost per hour in USD under household high tariff block 2"
+
+      - name: cost_household_3_high_usd_per_hr
+        description: "Electricity cost per hour in USD under household high tariff block 3"
+
+      - name: cost_household_4_high_usd_per_hr
+        description: "Electricity cost per hour in USD under household high tariff block 4 (highest consumption band)"
+
+      - name: cost_household_low_usd_per_hr
+        description: "Electricity cost per hour in USD under household low tariff (off-peak, single block)"
+
+      - name: cost_business_high_usd_per_hr
+        description: "Electricity cost per hour in USD under business high tariff"
+
+      - name: cost_business_low_usd_per_hr
+        description: "Electricity cost per hour in USD under business low tariff"
+
+      # -----------------------------------------------------------------------
+      # profits (USD/hr) - revenue minus cost per scenario
+      # -----------------------------------------------------------------------
+      - name: profit_household_1_high_usd_per_hr
+        description: "Hourly profit in USD under household high tariff block 1 - negative means unprofitable"
+
+      - name: profit_household_2_high_usd_per_hr
+        description: "Hourly profit in USD under household high tariff block 2 - negative means unprofitable"
+
+      - name: profit_household_3_high_usd_per_hr
+        description: "Hourly profit in USD under household high tariff block 3 - negative means unprofitable"
+
+      - name: profit_household_4_high_usd_per_hr
+        description: "Hourly profit in USD under household high tariff block 4 - negative means unprofitable"
+
+      - name: profit_household_low_usd_per_hr
+        description: "Hourly profit in USD under household low tariff - negative means unprofitable"
+
+      - name: profit_business_high_usd_per_hr
+        description: "Hourly profit in USD under business high tariff - negative means unprofitable"
+
+      - name: profit_business_low_usd_per_hr
+        description: "Hourly profit in USD under business low tariff - negative means unprofitable"
+
+      # -----------------------------------------------------------------------
+      # cost per TFLOP (USD) - electricity cost normalised to compute
+      # -----------------------------------------------------------------------
+      - name: cost_per_tflop_household_1_high_usd
+        description: "Electricity cost per TFLOP in USD under household high tariff block 1"
+        tests:
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: "> 0"
+              config:
+                severity: warn
+
+      - name: cost_per_tflop_household_2_high_usd
+        description: "Electricity cost per TFLOP in USD under household high tariff block 2"
+        tests:
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: "> 0"
+              config:
+                severity: warn
+
+      - name: cost_per_tflop_household_3_high_usd
+        description: "Electricity cost per TFLOP in USD under household high tariff block 3"
+        tests:
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: "> 0"
+              config:
+                severity: warn
+
+      - name: cost_per_tflop_household_4_high_usd
+        description: "Electricity cost per TFLOP in USD under household high tariff block 4"
+        tests:
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: "> 0"
+              config:
+                severity: warn
+
+      - name: cost_per_tflop_household_low_usd
+        description: "Electricity cost per TFLOP in USD under household low tariff"
+        tests:
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: "> 0"
+              config:
+                severity: warn
+
+      - name: cost_per_tflop_business_high_usd
+        description: "Electricity cost per TFLOP in USD under business high tariff"
+        tests:
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: "> 0"
+              config:
+                severity: warn
+
+      - name: cost_per_tflop_business_low_usd
+        description: "Electricity cost per TFLOP in USD under business low tariff"
+        tests:
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: "> 0"
+              config:
+                severity: warn
+
+      # -----------------------------------------------------------------------
+      # profit per TFLOP (USD) - profit normalised to compute
+      # -----------------------------------------------------------------------
+      - name: profit_per_tflop_household_1_high_usd
+        description: "Hourly profit per TFLOP in USD under household high tariff block 1 - negative means unprofitable"
+
+      - name: profit_per_tflop_household_2_high_usd
+        description: "Hourly profit per TFLOP in USD under household high tariff block 2 - negative means unprofitable"
+
+      - name: profit_per_tflop_household_3_high_usd
+        description: "Hourly profit per TFLOP in USD under household high tariff block 3 - negative means unprofitable"
+
+      - name: profit_per_tflop_household_4_high_usd
+        description: "Hourly profit per TFLOP in USD under household high tariff block 4 - negative means unprofitable"
+
+      - name: profit_per_tflop_household_low_usd
+        description: "Hourly profit per TFLOP in USD under household low tariff - negative means unprofitable"
+
+      - name: profit_per_tflop_business_high_usd
+        description: "Hourly profit per TFLOP in USD under business high tariff - negative means unprofitable"
+
+      - name: profit_per_tflop_business_low_usd
+        description: "Hourly profit per TFLOP in USD under business low tariff - negative means unprofitable"
