@@ -4,7 +4,7 @@ import logging
 from config.loader import BronzeConfigLoader
 from ingestion.models.enums import HardwareComponentType
 from ingestion.seeds.electricity_tariff_schedule_seed import ElectricityTariffScheduleSeed
-from ingestion.seeds.electricity_tarrif_seed import ElectricityTariffSeed
+from ingestion.seeds.electricity_tarrif_price_seed import ElectricityTariffPricesSeed
 from ingestion.sources.exchange_rate_source import ExchangeRateSource
 from ingestion.sources.vast_ai_source import VastAISource
 from pubsub.producer import KafkaProducer
@@ -27,7 +27,7 @@ async def main():
     ]
 
     seeds = [
-        (erc_config, ElectricityTariffSeed(config=erc_config, http_config=loader.get_http())),
+        (erc_config, ElectricityTariffPricesSeed(config=erc_config, http_config=loader.get_http())),
         (evn_config, ElectricityTariffScheduleSeed(config=evn_config, http_config=loader.get_http())),
     ]
 

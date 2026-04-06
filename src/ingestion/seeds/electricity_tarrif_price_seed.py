@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime, UTC
 from typing import Any
 
 import requests
@@ -11,17 +12,17 @@ from config.seeds.erc import ERCConfig
 from config.http import HttpConfig
 from config.loader import BronzeConfigLoader
 from ingestion.base import BatchIngestor
-from ingestion.models.electricity_tariff import ElectricityTariff
+from ingestion.models.electricity_tariff_price import ElectricityTariffPrice
 
 
-class ElectricityTariffSeed(BatchIngestor):
+class ElectricityTariffPricesSeed(BatchIngestor):
 
     def __init__(self, config: ERCConfig, http_config: HttpConfig, name: str = None):
         super().__init__(config=config, name=name)
         self.config = config
         self.http_config = http_config
 
-    def load(self) -> list[ElectricityTariff]:
+    def load(self) -> list[ElectricityTariffPrice]:
         url: str = self.config.url
         data: dict[str, Any] = self.config.data
         timeout_seconds: int = self.http_config.timeout_seconds
@@ -33,29 +34,31 @@ class ElectricityTariffSeed(BatchIngestor):
         )
         status: int = response.status_code
         if status != HTTPStatus.OK:
-            self.logger.error(f"Electricity tariffs load returned HTTP status: {status}.")
+            self.logger.error(f"Electricity tariff prices load returned HTTP status: {status}.")
             return []
         parser: BeautifulSoup = BeautifulSoup(response.text, "html.parser")
-        electricity_tariffs: list[ElectricityTariff] = []
-
+        electricity_tariffs: list[ElectricityTariffPrice] = []
+        ingested_at: datetime = datetime.now(UTC)
         for row in parser.select(self.config.table_rows_selector):
-            electricity_tariff: ElectricityTariff = self.parse(data=row)
+            electricity_tariff: ElectricityTariffPrice = self.parse(data=row, timestamp=ingested_at)
             if electricity_tariff:
                 electricity_tariffs.append(
                     electricity_tariff
                 )
         return electricity_tariffs
 
-    def parse(self, **kwargs) -> ElectricityTariff | None:
+    def parse(self, **kwargs) -> ElectricityTariffPrice | None:
         tag: Tag = kwargs.get('data')
+        ingested_at: datetime = kwargs.get('timestamp')
         try:
-            return ElectricityTariff(
+            return ElectricityTariffPrice(
+                ingested_at=ingested_at,
                 tariff_description=tag.select_one(self.config.description_selector).text,
-                price_per_kwh_mkd=tag.select_one(self.config.price_selector).text,
+                price_mkd_per_kwh=tag.select_one(self.config.price_selector).text,
                 valid_from=tag.select_one(self.config.valid_from_selector).text,
             )
         except (KeyError, ValueError, TypeError) as e:
-            self.logger.warning(f"Could not parse electricity tariff: {tag.text} {e}")
+            self.logger.warning(f"Could not parse electricity tariff price: {tag.text} {e}")
             return None
 
 
@@ -64,7 +67,7 @@ def main():
     erc_config: ERCConfig = loader.get_erc()
     if not erc_config.enabled:
         return
-    electricity_tariff: ElectricityTariffSeed = ElectricityTariffSeed(config=erc_config, http_config=loader.get_http())
+    electricity_tariff: ElectricityTariffPricesSeed = ElectricityTariffPricesSeed(config=erc_config, http_config=loader.get_http())
     logging.info(f"Starting seed {electricity_tariff.name}...")
     electricity_tariff.run()
 

@@ -2,7 +2,7 @@
 from ingestion.models.base import BaseRecord
 
 
-class ElectricityTariff(BaseRecord):
+class ElectricityTariffPrice(BaseRecord):
     tariff_description: str
-    price_per_kwh_mkd: str
+    price_mkd_per_kwh: str
     valid_from: str

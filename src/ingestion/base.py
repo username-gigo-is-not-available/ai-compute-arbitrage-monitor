@@ -7,7 +7,7 @@ import pyarrow.parquet as pq
 from abc import ABC, abstractmethod
 from typing import Any
 
-from ingestion.models.electricity_tariff import ElectricityTariff
+from ingestion.models.electricity_tariff_price import ElectricityTariffPrice
 from ingestion.models.electricity_tariff_schedule import ElectricityTariffSchedule
 from ingestion.models.types import IngestorConfig
 from ingestion.models.vast_ai_offer import VastAIOffer
@@ -58,14 +58,14 @@ class BatchIngestor(ABC):
         self.logger = logging.getLogger(self.name)
 
     @abstractmethod
-    def load(self) -> list[ElectricityTariff | ElectricityTariffSchedule]:
+    def load(self) -> list[ElectricityTariffPrice | ElectricityTariffSchedule]:
         raise NotImplementedError
 
     @abstractmethod
-    def parse(self, **kwargs) -> ElectricityTariff | ElectricityTariffSchedule | None:
+    def parse(self, **kwargs) -> ElectricityTariffPrice | ElectricityTariffSchedule | None:
         raise NotImplementedError
 
-    def store(self, data: list[ElectricityTariff | ElectricityTariffSchedule]) -> None:
+    def store(self, data: list[ElectricityTariffPrice | ElectricityTariffSchedule]) -> None:
         self.config.output_path.parent.mkdir(parents=True, exist_ok=True)
         output_path: Path = self.config.output_path_with_suffix(".parquet")
         records: list[dict[str, Any]] = JsonSerializer.serialize_batch(data)
