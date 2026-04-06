@@ -1,7 +1,7 @@
-from datetime import UTC, datetime
+from datetime import datetime
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 
 class BaseRecord(BaseModel):
-    ingested_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    ingested_at: datetime
