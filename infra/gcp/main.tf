@@ -25,7 +25,7 @@ resource "google_storage_bucket" "cluster_staging" {
   name          = "${var.gcs_bucket_name}-dataproc-staging"
   location      = var.location
   storage_class = "STANDARD"
-  force_destroy = var.buckets_force_destroy
+  force_destroy = true
 
   lifecycle_rule {
     action { type = "Delete" }
@@ -102,11 +102,10 @@ resource "google_storage_bucket_object" "uv_lock" {
 }
 
 resource "google_storage_bucket_object" "init_script" {
-  name   = "init-dependencies.sh"
-  bucket = google_storage_bucket.bucket.name
-  source = "${path.module}/init-dependencies.sh"
+  name    = "init-dependencies.sh"
+  bucket  = google_storage_bucket.bucket.name
+  content = replace(file("${path.module}/init-dependencies.sh"), "\r\n", "\n")
 }
-
 # ── Service account ────────────────────────────────────────────────────────────
 
 resource "google_service_account" "dataproc_sa" {
