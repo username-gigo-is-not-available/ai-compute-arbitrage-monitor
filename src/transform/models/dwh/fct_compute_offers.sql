@@ -3,6 +3,13 @@
         materialized     = 'incremental',
         unique_key       = ['offer_id', 'valid_from'],
         on_schema_change = 'append_new_columns',
+        tags = ['compute_offers'],
+        partition_by     = {
+                'field': 'valid_from',
+                'data_type': 'timestamp',
+                'granularity': 'day'
+            },
+        cluster_by       = ['gpu_model_name', 'offer_type'],
         post_hook = """
             {% if execute %}
                 {% set latest_ts_query %}
@@ -16,7 +23,7 @@
 
                     update {{ this }}
                     set valid_to = '{{ latest_ts }}'
-                    where valid_to = timezone('UTC', '9999-12-31'::timestamp)
+                    where valid_to = timestamp '9999-12-31'
                       and valid_from < '{{ latest_ts }}'
                       and offer_id not in (
                           select offer_id
@@ -28,9 +35,16 @@
         """
     )
 }}
+
 with latest_fct_date as (
-    select coalesce(max(valid_from), '1900-01-01'::timestamp) as max_valid_from
-    from {{ this }}
+    select coalesce(max(valid_from), timestamp '1900-01-01') as max_valid_from
+    from (
+        {% if is_incremental() %}
+            select valid_from from {{ this }}
+        {% else %}
+            select timestamp '1900-01-01' as valid_from
+        {% endif %}
+    )
 ),
 
 offers as (
@@ -89,12 +103,12 @@ joined as (
     from offers o
 
     left join exchange_rates er
-        on  o.valid_from >= er.valid_from
-        and o.valid_from <  er.valid_to
+        on  cast(o.valid_from as date) >= er.valid_from
+        and cast(o.valid_from as date) <  er.valid_to
 
     left join tariff_prices_pivoted tp
-        on  o.valid_from >= tp.valid_from
-        and o.valid_from <  tp.valid_to
+        on  cast(o.valid_from as date) >= tp.valid_from
+        and cast(o.valid_from as date) <  tp.valid_to
 ),
 
 calculations as (

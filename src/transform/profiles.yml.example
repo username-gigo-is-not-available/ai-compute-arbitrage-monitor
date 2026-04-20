@@ -1,0 +1,11 @@
+transform:
+  outputs:
+    dev:
+      type: bigquery
+      method: oauth
+      project:
+      dataset:
+      threads: 4
+      location:
+      priority: interactive
+  target: dev

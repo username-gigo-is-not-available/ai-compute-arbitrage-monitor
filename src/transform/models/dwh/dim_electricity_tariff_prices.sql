@@ -1,3 +1,7 @@
+{{ config(
+    tags         = ['electricity_tariff_prices'],
+    materialized = 'table'
+) }}
 with source as (
     select * from {{ ref('int_electricity_tariff_prices') }}
 ),
@@ -12,9 +16,9 @@ scd as (
         valid_from,
         coalesce(
             cast({{ valid_to('valid_from', 'tariff_description_mk') }} as date),
-            '9999-12-31'::date
-        ) as valid_to,
-        {{ is_latest('valid_from', 'tariff_description_mk') }} as is_latest
+            date '9999-12-31'
+        )                                                               as valid_to,
+        {{ is_latest('valid_from', 'tariff_description_mk') }}         as is_latest
     from source
 )
 

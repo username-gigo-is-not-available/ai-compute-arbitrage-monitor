@@ -127,9 +127,10 @@ models:
       - name: tflops_per_gpu
         description: "Raw compute capacity in TFLOPS per gpu"
         tests:
-          - not_null:
-              config:
-                severity: warn
+          - not_null
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: "> 0"
 
       - name: total_system_tflops
         description: "Total compute capacity across all GPUs in the offer (gpu_tflops * number_of_gpus)"
@@ -312,7 +313,7 @@ models:
           - not_null
           - dbt_utils.expression_is_true:
               arguments:
-                  expression: "<= timezone('UTC', now())"
+                  expression: "<= current_timestamp"
 
       - name: valid_to
         description: "Date to which this compute offer is valid"
@@ -371,6 +372,13 @@ models:
       - name: processed_at
         tests:
           - not_null
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - tariff_description_en
+              - tariff_description_mk
+              - valid_from
 
   - name: int_electricity_tariffs_schedule
     description: "Intermediate tariff schedule - exploded from hour ranges into one row per (day_of_week, hour) combination"
@@ -413,10 +421,11 @@ models:
 
     tests:
       - dbt_utils.unique_combination_of_columns:
-          combination_of_columns:
-            - day_of_week
-            - hour
-            - valid_from
+          arguments:
+            combination_of_columns:
+              - day_of_week
+              - hour
+              - valid_from
 
   - name: int_exchange_rates
     description: "Intermediate exchange rates - inverse rate added"
@@ -469,7 +478,8 @@ models:
 
     tests:
       - dbt_utils.unique_combination_of_columns:
-          combination_of_columns:
-            - from_currency
-            - to_currency
-            - timestamp
+          arguments:
+            combination_of_columns:
+              - from_currency
+              - to_currency
+              - timestamp

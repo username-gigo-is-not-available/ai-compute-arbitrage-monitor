@@ -1,8 +1,12 @@
+{{
+    config(
+        tags = ['compute_offers']
+    )
+}}
+
 with source as (
-    select
-        *
-    from
-        {{ ref('stg_compute_offers') }}
+    select *
+    from {{ ref('stg_compute_offers') }}
 ),
 
 transformed as (
@@ -27,12 +31,12 @@ transformed as (
         -- gpu
         gpu_architecture,
         gpu_model_name,
-        {{ mb_to_gb('(' ~ round_gpu_mb('gpu_memory_mb') ~ ')::integer') }} as gpu_memory_gb,
+        cast({{ mb_to_gb('cast(' ~ round_gpu_mb('gpu_memory_mb') ~ ' as int64)') }} as int64) as gpu_memory_gb,
         gpu_tdp_watts,
         number_of_gpus,
-        round(gpu_max_cuda_version_supported, 1) as gpu_max_cuda_version_supported,
-        (gpu_tflops / number_of_gpus) as tflops_per_gpu,
-        gpu_tflops as total_system_tflops,
+        round(gpu_max_cuda_version_supported, 1)                as gpu_max_cuda_version_supported,
+        (gpu_tflops / number_of_gpus)                           as tflops_per_gpu,
+        gpu_tflops                                              as total_system_tflops,
         gpu_bandwidth_gbytes_per_sec,
 
         -- cpu
@@ -68,8 +72,8 @@ transformed as (
         rented_flag,
 
         -- time
-        ingested_at as valid_from,
-        timezone('UTC', '9999-12-31'::timestamp) as valid_to,
+        ingested_at                                             as valid_from,
+        cast('9999-12-31' as timestamp)                         as valid_to,
         processed_at
 
     from source

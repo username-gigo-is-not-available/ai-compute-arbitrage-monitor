@@ -1,6 +1,16 @@
+{{ config(
+    materialized = 'table',
+    tags         = ['marts'],
+    partition_by = {
+        'field': 'hour_bucket',
+        'data_type': 'timestamp',
+        'granularity': 'day'
+    },
+    cluster_by   = ['gpu_model_name', 'offer_type']
+) }}
 select
-    date_trunc('hour', f.valid_from)            as hour_bucket,
-    extract(isodow from f.valid_from)           as day_of_week,
+    timestamp_trunc(f.valid_from, hour)                         as hour_bucket,
+    mod(extract(dayofweek from f.valid_from) + 5, 7) + 1       as day_of_week,
     extract(hour from f.valid_from)             as hour_of_day,
     ts.tariff_type                              as tariff_window,
     f.offer_type,
@@ -65,9 +75,8 @@ select
 
 from {{ ref('fct_compute_offers') }} f
 left join {{ ref('dim_electricity_tariffs_schedule') }} ts
-    on  extract(isodow from f.valid_from) = ts.day_of_week
-    and extract(hour from f.valid_from)   = ts.hour
-    and f.valid_from >= ts.valid_from
-    and (f.valid_from < ts.valid_to)
+    on  mod(extract(dayofweek from f.valid_from) + 5, 7) + 1 = ts.day_of_week
+    and extract(hour from f.valid_from)                       = ts.hour
+    and cast(f.valid_from as date) >= ts.valid_from
+    and cast(f.valid_from as date) <  ts.valid_to
 group by 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12
-order by 1 desc, 2, 3, 4

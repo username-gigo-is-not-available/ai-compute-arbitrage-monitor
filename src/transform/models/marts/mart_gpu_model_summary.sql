@@ -1,3 +1,8 @@
+{{ config(
+    materialized = 'table',
+    tags         = ['marts'],
+    cluster_by   = ['gpu_model_name', 'offer_type']
+) }}
 select
     offer_type,
     gpu_architecture,
@@ -18,6 +23,8 @@ select
         / nullif(count(*), 0), 2)               as pct_profitable_household_3_high,
     round(100.0 * sum(case when profit_household_4_high_usd_per_hr > 0 then 1 else 0 end)
         / nullif(count(*), 0), 2)               as pct_profitable_household_4_high,
+      round(100.0 * sum(case when profit_household_low_usd_per_hr > 0 then 1 else 0 end)
+        / nullif(count(*), 0), 2)               as pct_profitable_household_low,
     round(100.0 * sum(case when profit_business_high_usd_per_hr > 0 then 1 else 0 end)
         / nullif(count(*), 0), 2)               as pct_profitable_business_high,
     round(100.0 * sum(case when profit_business_low_usd_per_hr > 0 then 1 else 0 end)
@@ -32,6 +39,5 @@ select
     max(valid_from)                             as last_seen_at
 
 from {{ ref('fct_compute_offers') }}
-where cast(valid_to as date) = '9999-12-31'
+where cast(valid_to as date) = date '9999-12-31'
 group by 1, 2, 3, 4, 5
-order by pct_profitable_business_high desc

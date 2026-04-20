@@ -1,3 +1,8 @@
+{{
+    config(
+        tags = ['exchange_rates']
+    )
+}}
 with source as (
     select * from {{ ref('stg_exchange_rates') }}
 ),
@@ -7,7 +12,7 @@ transformed as (
         from_currency,
         to_currency,
         value,
-        {{ calculate_inverse('value') }} as inverse_value,
+        {{ calculate_inverse('value') }}                        as inverse_value,
         timestamp,
         ingested_at,
         processed_at

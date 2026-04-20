@@ -1,6 +1,11 @@
+{{ config(
+    materialized = 'table',
+    tags         = ['marts'],
+    cluster_by   = ['offer_type', 'gpu_model_name']
+) }}
 with current_offers as (
     select * from {{ ref('fct_compute_offers') }}
-    where cast(valid_to as date) = '9999-12-31'
+    where cast(valid_to as date) = date '9999-12-31'
 ),
 
 available_offers as (
@@ -8,7 +13,7 @@ available_offers as (
     where
         coalesce(total_system_tflops, 0) > 0
         and coalesce(revenue_usd_per_hr, 0) > 0
-      and coalesce(gpu_tdp_watts, 0) <> 0
+        and coalesce(gpu_tdp_watts, 0) > 0
         and rented_flag = false
         and rentable_flag = true
         and verification_flag = 'verified'
@@ -108,4 +113,3 @@ select
     valid_from
 
 from ranked
-order by offer_type, arbitrage_rank

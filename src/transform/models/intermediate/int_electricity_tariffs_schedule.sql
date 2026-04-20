@@ -1,25 +1,22 @@
-with recursive calendar AS (
-    select 1 as day_of_week, 0 as hour
-    union all
+{{
+    config(
+        tags = ['electricity_tariffs_schedule']
+    )
+}}
+with calendar as (
     select
-        case
-            when hour = 23
-            then day_of_week + 1
-            else day_of_week
-        end,
-        case
-            when hour = 23
-            then 0
-            else hour + 1
-        end
-    from calendar
-    where not (day_of_week = 7 and hour = 23)
+        day_of_week,
+        hour
+    from
+        unnest(generate_array(1, 7)) as day_of_week,
+        unnest(generate_array(0, 23)) as hour
 ),
+
 source as (
-    select
-        *
+    select *
     from {{ ref('stg_electricity_tariffs_schedule') }}
 )
+
 select
     c.day_of_week,
     c.hour,
@@ -28,10 +25,8 @@ select
     s.ingested_at,
     s.processed_at
 from calendar as c
-join source as s on
-    s.day_of_week = c.day_of_week
+join source as s
+    on  s.day_of_week = c.day_of_week
     and s.start_hour <= c.hour
     and s.end_hour > c.hour
 order by c.day_of_week, c.hour
-
-

@@ -62,6 +62,9 @@ models:
           combination_of_columns:
             - tariff_description_mk
             - valid_from
+      - dbt_utils.expression_is_true:
+          arguments:
+            expression: "valid_from < valid_to"
 
   - name: dim_electricity_tariffs_schedule
     description: "Electricity tariff schedule dimension - SCD Type 2 on day/hour, tracking schedule changes over time"
@@ -114,6 +117,9 @@ models:
             - day_of_week
             - hour
             - valid_from
+      - dbt_utils.expression_is_true:
+          arguments:
+            expression: "valid_from < valid_to"
 
   - name: dim_exchange_rates
     description: "USD/MKD exchange rate dimension - SCD Type 2 on currency pair, one row per daily rate snapshot"
@@ -176,15 +182,12 @@ models:
             - from_currency
             - to_currency
             - valid_from
+      - dbt_utils.expression_is_true:
+          arguments:
+            expression: "valid_from < valid_to"
 
   - name: fct_compute_offers
     description: "Core fact table - one row per Vast.ai GPU offer snapshot, with electricity cost and profit metrics computed across all EVN tariff scenarios"
-    tests:
-      - dbt_utils.unique_combination_of_columns:
-          arguments:
-            combination_of_columns:
-              - offer_id
-              - valid_from
     columns:
       # -----------------------------------------------------------------------
       # identity
@@ -482,7 +485,7 @@ models:
       # rates context
       # -----------------------------------------------------------------------
       - name: usd_to_mkd_rate
-        description: "USD to MKD exchange rate applied at ingestion time"
+        description: "USD to MKD exchange rate applied at ingest time"
         tests:
           - not_null:
               config:
@@ -498,25 +501,87 @@ models:
       # -----------------------------------------------------------------------
       - name: cost_household_1_high_usd_per_hr
         description: "Electricity cost per hour in USD under household high tariff block 1 (lowest consumption band)"
+        tests:
+          - not_null:
+              config:
+                severity: warn
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: "> 0"
+              config:
+                severity: warn
 
       - name: cost_household_2_high_usd_per_hr
         description: "Electricity cost per hour in USD under household high tariff block 2"
+        tests:
+          - not_null:
+              config:
+                severity: warn
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: "> 0"
+              config:
+                severity: warn
 
       - name: cost_household_3_high_usd_per_hr
         description: "Electricity cost per hour in USD under household high tariff block 3"
+        tests:
+          - not_null:
+              config:
+                severity: warn
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: "> 0"
+              config:
+                severity: warn
 
       - name: cost_household_4_high_usd_per_hr
         description: "Electricity cost per hour in USD under household high tariff block 4 (highest consumption band)"
+        tests:
+          - not_null:
+              config:
+                severity: warn
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: "> 0"
+              config:
+                severity: warn
 
       - name: cost_household_low_usd_per_hr
         description: "Electricity cost per hour in USD under household low tariff (off-peak, single block)"
+        tests:
+          - not_null:
+              config:
+                severity: warn
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: "> 0"
+              config:
+                severity: warn
 
       - name: cost_business_high_usd_per_hr
         description: "Electricity cost per hour in USD under business high tariff"
+        tests:
+          - not_null:
+              config:
+                severity: warn
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: "> 0"
+              config:
+                severity: warn
 
       - name: cost_business_low_usd_per_hr
         description: "Electricity cost per hour in USD under business low tariff"
-
+        tests:
+          - not_null:
+              config:
+                severity: warn
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: "> 0"
+              config:
+                severity: warn
       # -----------------------------------------------------------------------
       # profits (USD/hr) - revenue minus cost per scenario
       # -----------------------------------------------------------------------
@@ -630,3 +695,13 @@ models:
 
       - name: profit_per_tflop_business_low_usd
         description: "Hourly profit per TFLOP in USD under business low tariff - negative means unprofitable"
+
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - offer_id
+              - valid_from
+      - dbt_utils.expression_is_true:
+          arguments:
+            expression: "valid_from < valid_to"

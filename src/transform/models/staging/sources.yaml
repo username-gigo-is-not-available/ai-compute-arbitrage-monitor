@@ -1,18 +1,40 @@
+version: 2
+
 sources:
-  - name: streaming
-    description: "Streaming sources processed by Spark into silver layer"
-    schema: bronze
+  - name: sources
+    description: "Data sources stored as Parquet in GCS, exposed as External Tables in BQ"
+    schema: source
     tables:
       - name: compute_offers
-        description: "Vast.ai GPU compute offers polled every 30 minutes"
-      - name: exchange_rates
-        description: "USD/MKD exchange rate polled every 24 hours"
+        description: "Vast.ai GPU compute offers"
+        external:
+          location: "gs://gpu-compute-arbitrage-monitor-lake/silver/sources/compute_offers/*.parquet"
+          options:
+            format: parquet
+          autodetect: true
 
-  - name: batch
-    description: "Reference data seeds processed by Spark into silver layer"
-    schema: bronze
+      - name: exchange_rates
+        description: "USD/MKD exchange rate"
+        external:
+          location: "gs://gpu-compute-arbitrage-monitor-lake/silver/sources/exchange_rates/*.parquet"
+          options:
+            format: parquet
+          autodetect: true
+
+  - name: seeds
+    description: "Data seeds stored as Parquet in GCS, exposed as External Tables in BQ"
+    schema: seed
     tables:
       - name: electricity_tariff_prices
-        description: "Electricity tariff prices from ERC North Macedonia"
-      - name: electricity_tariff_schedule
-        description: "Electricity tariff schedule (high/low periods) from EVN North Macedonia"
+        external:
+          location: "gs://gpu-compute-arbitrage-monitor-lake/silver/seeds/electricity_tariff_prices/*.parquet"
+          options:
+            format: parquet
+          autodetect: true
+      
+      - name: electricity_tariffs_schedule
+        external:
+          location: "gs://gpu-compute-arbitrage-monitor-lake/silver/seeds/electricity_tariffs_schedule/*.parquet"
+          options:
+            format: parquet
+          autodetect: true

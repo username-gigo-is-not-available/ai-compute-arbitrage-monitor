@@ -1,3 +1,14 @@
+{{
+    config(
+        tags = ['exchange_rates'],
+        materialized = 'table',
+        partition_by = {
+        'field': 'valid_from',
+        'data_type': 'date'
+    },
+    cluster_by   = ['from_currency', 'to_currency']
+    )
+}}
 with source as (
     select * from {{ ref('int_exchange_rates') }}
 ),
@@ -25,12 +36,12 @@ scd as (
         to_currency,
         value,
         inverse_value,
-        cast(timestamp as date)                                                         as valid_from,
+        cast(timestamp as date)                                         as valid_from,
         coalesce(
             cast({{ valid_to('timestamp', 'from_currency, to_currency') }} as date),
-            '9999-12-31'::date
-        )                                                                               as valid_to,
-        {{ is_latest('timestamp', 'from_currency, to_currency') }}                     as is_latest
+            date '9999-12-31'
+        )                                                               as valid_to,
+        {{ is_latest('timestamp', 'from_currency, to_currency') }}     as is_latest
     from changes_only
 )
 

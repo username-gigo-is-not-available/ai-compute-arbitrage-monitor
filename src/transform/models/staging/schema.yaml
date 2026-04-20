@@ -30,7 +30,7 @@ models:
         tests:
           - not_null
           - accepted_values:
-              values: ["on_demand", "bid", "reserved"]
+              values: [ "on_demand", "bid", "reserved" ]
 
       - name: total_price_usd_per_hr
         description: "Total hourly price including GPU, storage and bandwidth costs (discounted_dph_total)"
@@ -127,9 +127,10 @@ models:
       - name: gpu_tflops
         description: "Raw compute capacity in TFLOPS (total_flops)"
         tests:
-          - not_null:
-              config:
-                severity: warn
+          - not_null
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: "> 0"
 
       - name: gpu_bandwidth_gbytes_per_sec
         description: "GPU memory bandwidth in GB/s"
@@ -258,7 +259,7 @@ models:
           - not_null
           - dbt_utils.expression_is_true:
               arguments:
-                expression: "> 0"
+                expression: ">= 0"
 
       - name: deep_learning_score
         description: "Vast.ai deep learning benchmark score (dlperf)"
@@ -299,6 +300,12 @@ models:
 
   - name: stg_electricity_tariff_prices
     description: "Staged Macedonian EVN electricity tariff prices in MKD"
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - tariff_description
+              - valid_from
     columns:
       - name: tariff_description
         description: "Tariff description - by household, business, tier, block"
@@ -331,6 +338,14 @@ models:
 
   - name: stg_electricity_tariffs_schedule
     description: "Time-of-use schedule mapping day/hour ranges to tariff types"
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - day_of_week
+              - start_hour
+              - end_hour
+              - valid_from
     columns:
       - name: tariff_type
         description: "Tariff tier for this time window - low or high"
@@ -381,6 +396,13 @@ models:
 
   - name: stg_exchange_rates
     description: "Staged USD to MKD exchange rates"
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - from_currency
+              - to_currency
+              - timestamp
     columns:
       - name: from_currency
         description: "Source currency"

@@ -1,6 +1,11 @@
+{{ config(
+    materialized = 'table',
+    tags         = ['marts'],
+    cluster_by   = ['offer_type', 'gpu_architecture', 'gpu_model_name']
+) }}
 with current_offers as (
     select * from {{ ref('fct_compute_offers') }}
-    where cast(valid_to as date) = '9999-12-31'
+    where cast(valid_to as date) = date '9999-12-31'
 ),
 
 available_offers as (
@@ -64,7 +69,6 @@ select
     profit_per_tflop_business_high_usd,
     profit_per_tflop_business_low_usd,
 
-    valid_from as ingested_at
+    valid_from
 from normalized_offers
 where rn = 1
-order by offer_type, gpu_architecture, gpu_model_name

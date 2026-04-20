@@ -294,7 +294,7 @@ models:
       - name: profit_per_tflop_business_low_usd
         description: "Profit per TFLOP in USD under business low tariff"
 
-      - name: ingested_at
+      - name: valid_from
         description: "Timestamp of the latest snapshot for this GPU model"
         tests:
           - not_null
@@ -542,6 +542,14 @@ models:
                 expression: ">= 0 and pct_profitable_household_4_high <= 100"
               config:
                 severity: warn
+      - name: pct_profitable_household_low
+        description: "Percentage of offers profitable under household low tariff block"
+        tests:
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: ">= 0 and pct_profitable_household_low <= 100"
+              config:
+                severity: warn
       - name: pct_profitable_business_high
         description: "Percentage of offers profitable under business high tariff"
         tests:
@@ -581,6 +589,6 @@ models:
         description: "Average host reliability score"
 
       - name: last_seen_at
-        description: "Most recent ingestion timestamp in this group"
+        description: "Most recent ingest timestamp in this group"
         tests:
           - not_null
