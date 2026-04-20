@@ -3,9 +3,7 @@ sources:
     enabled: true
     poll_interval_seconds: 1800
     base_url: "https://console.vast.ai/api/v0"
-    topic_name: "compute_offers"
-    limit: 20000
-    subdirectory_name: "VastAI"
+    limit: 10000
     file_name: "compute_offers"
 
   exchange_rate:
@@ -14,8 +12,6 @@ sources:
     base_url: "https://v6.exchangerate-api.com/v6"
     from_currency: "USD"
     to_currency: "MKD"
-    topic_name: "exchange_rate"
-    subdirectory_name: "ExchangeRate"
     file_name: "exchange_rates"
 
 seeds:
@@ -23,7 +19,7 @@ seeds:
     enabled: true
     url: "https://www.erc.org.mk/ceni.aspx"
     data: { "e": 2 }
-    file_name: "electricity_tariffs"
+    file_name: "electricity_tariff_prices"
 
   evn:
     enabled: true
@@ -45,11 +41,16 @@ http:
   retry_count: 5
   retry_delay_seconds: 60
 
-kafka:
-  bootstrap_servers: "localhost:29092"
-
 paths:
   base_directory_path: "../data"
   seeds_directory_name: "seeds"
   sources_directory_name: "sources"
-  checkpoints_directory_name: "checkpoints"
+
+gcp:
+  project_id: "even-card-485518-r5"
+  region_name: "europe-west3"
+  gcs:
+    bucket_name: "gpu-compute-arbitrage-monitor-lake"
+  dataproc:
+    cluster_name: "gpu-arbitrage-cluster"
+    entrypoints_path: "src/refine/pipelines"
