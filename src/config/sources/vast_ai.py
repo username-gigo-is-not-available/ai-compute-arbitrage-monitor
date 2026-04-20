@@ -4,7 +4,7 @@ import os
 from pydantic import Field
 
 from config.file_config import FileConfig
-from ingestion.models.enums import OfferType
+from ingest.models.enums import OfferType
 
 
 class VastAIConfig(FileConfig):
@@ -13,7 +13,6 @@ class VastAIConfig(FileConfig):
     poll_interval_seconds: int
     api_key: str = Field(default_factory=lambda: os.getenv("VASTAI_API_KEY", ""))
     limit: int
-    topic_name: str
 
     @property
     def url(self) -> str:

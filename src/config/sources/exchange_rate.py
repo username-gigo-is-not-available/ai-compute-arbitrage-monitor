@@ -11,7 +11,6 @@ class ExchangeRateConfig(FileConfig):
     base_url: str
     from_currency: str
     to_currency: str
-    topic_name: str
     api_key: str = Field(default_factory=lambda: os.getenv("EXCHANGE_RATE_API_KEY", ""))
 
     @property
