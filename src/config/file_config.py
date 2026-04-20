@@ -1,34 +1,28 @@
-from pathlib import Path
 from pydantic import BaseModel
 
 
 class FileConfig(BaseModel):
     file_name: str
     subdirectory_name: str | None = None
-    input_directory_path: Path | None = None
-    output_directory_path: Path | None = None
-    checkpoints_directory_path: Path | None = None  # only relevant for streams
-
+    input_directory_path: str | None = None
+    output_directory_path: str | None = None
     @property
-    def input_path(self) -> Path | None:
+    def input_path(self) -> str | None:
         if not self.input_directory_path:
             return None
-        return self.input_directory_path / self.file_name
+        return f"{self.input_directory_path.rstrip('/')}/{self.file_name}"
 
-    def input_path_with_suffix(self, suffix: str) -> Path | None:
-        return self.input_path.with_suffix(suffix)
+    def input_path_with_suffix(self, suffix: str) -> str | None:
+        path = self.input_path
+        return f"{path}.{suffix.lstrip('.')}" if path else None
 
     @property
-    def output_path(self) -> Path | None:
+    def output_path(self) -> str | None:
         if not self.output_directory_path:
             return None
-        return self.output_directory_path / self.file_name
+        return f"{self.output_directory_path.rstrip('/')}/{self.file_name}"
 
-    def output_path_with_suffix(self, suffix: str) -> Path | None:
-        return self.output_path.with_suffix(suffix)
+    def output_path_with_suffix(self, suffix: str) -> str | None:
+        path = self.output_path
+        return f"{path}.{suffix.lstrip('.')}" if path else None
 
-    @property
-    def checkpoint_path(self) -> Path | None:
-        if not self.checkpoints_directory_path:
-            return None
-        return self.checkpoints_directory_path / self.subdirectory_name
