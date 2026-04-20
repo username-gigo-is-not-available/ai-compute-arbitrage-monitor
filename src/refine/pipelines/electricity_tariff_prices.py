@@ -1,13 +1,14 @@
 from dataclasses import dataclass, field
 from typing import Callable
+
 from pyspark.sql import DataFrame, SparkSession
 
 from config.loader import SilverConfigLoader
-from streaming.assets.filtering import deduplicate
-from streaming.init import initialize_spark
-from streaming.pipelines.base import BatchPipeline
-from streaming.assets.cleaning import trim_whitespace, replace_substring, parse_date, empty_to_null, parse_valid_from
-from streaming.schemas import ELECTRICITY_TARIFF_SCHEMA
+from refine.assets.cleaning import trim_whitespace, replace_substring, empty_to_null, parse_valid_from
+from refine.assets.filtering import deduplicate
+from refine.init import initialize_spark
+from refine.pipelines.base import Pipeline
+from refine.schemas import ELECTRICITY_TARIFF_SCHEMA
 
 
 def fix_decimal_separator(df: DataFrame) -> DataFrame:
@@ -18,7 +19,7 @@ def deduplicate_electricity_tariffs_prices(df: DataFrame) -> DataFrame:
 
 
 @dataclass
-class ElectricityTariffPricesPipeline(BatchPipeline):
+class ElectricityTariffPricesPipeline(Pipeline):
     transform_steps: list[Callable[[DataFrame], DataFrame]] = field(default_factory=lambda: [
         trim_whitespace,
         empty_to_null,

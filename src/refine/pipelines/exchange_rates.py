@@ -4,13 +4,12 @@ from typing import Callable
 from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql.streaming import StreamingQuery
 
-from config.kafka import KafkaConfig
 from config.loader import SilverConfigLoader
-from streaming.assets.filtering import deduplicate
-from streaming.init import initialize_spark
-from streaming.pipelines.base import StreamPipeline
-from streaming.assets.cleaning import trim_whitespace, empty_to_null
-from streaming.schemas import EXCHANGE_RATE_SCHEMA
+from refine.assets.filtering import deduplicate
+from refine.init import initialize_spark
+from refine.assets.cleaning import trim_whitespace, empty_to_null
+from refine.pipelines.base import Pipeline
+from refine.schemas import EXCHANGE_RATE_SCHEMA
 
 
 def deduplicate_exchange_rate(df: DataFrame) -> DataFrame:
@@ -18,7 +17,7 @@ def deduplicate_exchange_rate(df: DataFrame) -> DataFrame:
 
 
 @dataclass
-class ExchangeRatePipeline(StreamPipeline):
+class ExchangeRatesPipeline(Pipeline):
     transform_steps: list[Callable[[DataFrame], DataFrame]] = field(default_factory=lambda: [
         trim_whitespace,
         empty_to_null,
@@ -29,13 +28,9 @@ class ExchangeRatePipeline(StreamPipeline):
 if __name__ == '__main__':
     session: SparkSession = initialize_spark()
     config_loader: SilverConfigLoader = SilverConfigLoader()
-    kafka_config: KafkaConfig = config_loader.get_kafka()
-    exchange_rate_pipeline: ExchangeRatePipeline = ExchangeRatePipeline(
+    exchange_rate_pipeline: ExchangeRatesPipeline = ExchangeRatesPipeline(
         session=session,
         schema=EXCHANGE_RATE_SCHEMA,
         config=config_loader.get_exchange_rate(),
-        kafka_config=kafka_config
     )
-    query: StreamingQuery = exchange_rate_pipeline.run()
-
-    query.awaitTermination()
+    exchange_rate_pipeline.run()

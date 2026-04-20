@@ -1,0 +1,55 @@
+import logging
+from abc import ABC
+from dataclasses import dataclass, field
+from typing import Callable
+
+from pyspark.sql import DataFrame, SparkSession
+from pyspark.sql.types import StructType
+
+from ingest.models.types import DatasetConfig
+from refine.assets.casting import cast_to_schema
+from refine.assets.extract import add_processed_at_column
+
+
+@dataclass
+class Pipeline:
+    session: SparkSession
+    schema: StructType
+    config: DatasetConfig
+    transform_steps: list[Callable[[DataFrame], DataFrame]] = field(default_factory=list)
+    logger: logging.Logger = field(init=False)
+
+    def __post_init__(self):
+        self.logger = logging.getLogger(self.__class__.__name__)
+
+    def read(self) -> DataFrame:
+        input_path: str = self.config.input_path_with_suffix(".parquet")
+        self.logger.info(f"Reading from {input_path}")
+        return self.session.read.parquet(str(input_path))
+
+    def save(self, df: DataFrame) -> DataFrame:
+        self.logger.info(f"Writing to {self.config.output_path}")
+        df.write.mode("overwrite").parquet(str(self.config.output_path))
+        self.logger.info("Write complete")
+        return df
+
+    def transform(self, df: DataFrame) -> DataFrame:
+        for step in self.transform_steps:
+            step_name = getattr(step, "__name__", repr(step))
+            self.logger.info(f"Applying transform step: {step_name}")
+            df = df.transform(step)
+        self.logger.info("Applying cast_to_schema")
+        df = df.transform(add_processed_at_column)
+        return cast_to_schema(df, self.schema)
+
+    def run(self):
+        name = self.__class__.__name__
+        self.logger.info(f"{name} starting")
+        df = self.read()
+        self.logger.info(f"{name} read complete")
+        df = self.transform(df)
+        self.logger.info(f"{name} transform complete")
+        result = self.save(df)
+        self.logger.info(f"{name} complete")
+        return result
+
