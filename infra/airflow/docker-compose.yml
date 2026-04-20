@@ -1,0 +1,179 @@
+x-airflow-common: &airflow-common
+  build:
+    context: ../..
+    dockerfile: infra/airflow/Dockerfile
+    args:
+      PYTHON_VERSION: "3.12"
+  env_file:
+    - ../../.env
+  user: "${AIRFLOW_UID:-50000}:0"
+  environment:
+    &airflow-common-env
+    # --- Core & Executor ---
+    SETTINGS_PATH: /opt/airflow/config/settings.yaml
+    AIRFLOW__CORE__EXECUTOR: LocalExecutor
+    AIRFLOW__CORE__AUTH_MANAGER: airflow.providers.fab.auth_manager.fab_auth_manager.FabAuthManager
+    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+    AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+    AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: "true"
+    AIRFLOW__CORE__MAX_ACTIVE_RUNS_PER_DAG: "1"
+    AIRFLOW__CORE__INTERNAL_API_URL: http://airflow-api:8080/api/v1
+    AIRFLOW__CORE__EXECUTION_API_SERVER_URL: "http://airflow-api:8080/execution/"
+    AIRFLOW__CORE__FERNET_KEY: ${AIRFLOW_FERNET_KEY}
+
+    # --- API ---
+    AIRFLOW__API_AUTH__JWT_SECRET: ${AIRFLOW_JWT_SECRET}
+    AIRFLOW__API_AUTH__JWT_ISSUER: "airflow"
+    AIRFLOW__API__SECRET_KEY: {AIRFLOW_SECRET_KEY}
+
+    # --- Logging & Paths ---
+    AIRFLOW__LOGGING__LOGGING_LEVEL: INFO
+    PYTHONPATH: /opt/airflow/src:/opt/airflow
+    DBT_PROJECT_DIR: /opt/airflow/src/transform
+    DBT_PROFILES_DIR: /opt/airflow/src/transform
+    DBT_TARGET_DIR: /tmp/dbt_target
+
+    # --- Connections & Accounts ---
+    GOOGLE_APPLICATION_CREDENTIALS: /home/airflow/.config/gcloud/application_default_credentials.json
+    AIRFLOW_CONN_GOOGLE_CLOUD_DEFAULT: google-cloud-platform://?extra__google_cloud_platform__project=${GCP_PROJECT_ID}
+  volumes:
+    - ./dags:/opt/airflow/dags
+    - ./logs:/opt/airflow/logs
+    - ./plugins:/opt/airflow/plugins
+    - ../../config:/opt/airflow/config
+    - ../../infra:/opt/airflow/infra
+    - ../../src:/opt/airflow/src
+
+    # GCP Credentials
+    - ${GCP_APPLICATION_CREDENTIALS_PATH}:/home/airflow/.config/gcloud:ro
+
+  depends_on:
+    postgres:
+      condition: service_healthy
+  networks:
+    - airflow-net
+
+services:
+  # ---------------------------------------------------------------------------
+  # Metastore
+  # ---------------------------------------------------------------------------
+  postgres:
+    container_name: postgres
+    image: postgres:15
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - postgres-db:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}" ]
+      interval: 10s
+      retries: 5
+      start_period: 10s
+    networks:
+      - airflow-net
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------------------
+  # One-shot init
+  # ---------------------------------------------------------------------------
+  airflow-init:
+    container_name: airflow-init
+    <<: *airflow-common
+    entrypoint: /bin/bash
+    command:
+      - -c
+      - |
+        # Airflow 3 uses 'db migrate' instead of 'db init'
+        airflow db migrate
+        airflow users create \
+          --username "${AIRFLOW_USER}" \
+          --password "${AIRFLOW_PASSWORD}" \
+          --firstname Admin \
+          --lastname User \
+          --role Admin \
+          --email "${AIRFLOW_EMAIL}" || true
+    environment:
+      <<: *airflow-common-env
+      _AIRFLOW_DB_MIGRATE: 'true'
+      _AIRFLOW_WWW_USER_CREATE: 'true'
+
+  # ---------------------------------------------------------------------------
+  # API Server
+  # ---------------------------------------------------------------------------
+  airflow-webserver:
+    container_name: airflow-api
+    <<: *airflow-common
+    command: api-server --workers 1
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: [ "CMD", "curl", "--fail", "http://localhost:8080/api/v2/monitor/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+    depends_on:
+      airflow-init:
+        condition: service_completed_successfully
+  # ---------------------------------------------------------------------------
+  # DAG Processor
+  # ---------------------------------------------------------------------------
+  airflow-dag-processor:
+    container_name: airflow-dag-processor
+    <<: *airflow-common
+    command: dag-processor
+    healthcheck:
+      test: [ "CMD-SHELL", 'airflow jobs check --job-type DagProcessorJob --hostname "$${HOSTNAME}"' ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    restart: unless-stopped
+    depends_on:
+      airflow-init:
+        condition: service_completed_successfully
+  # ---------------------------------------------------------------------------
+  # Scheduler
+  # ---------------------------------------------------------------------------
+  airflow-scheduler:
+    container_name: airflow-scheduler
+    <<: *airflow-common
+    command: scheduler
+    healthcheck:
+      test: [ "CMD-SHELL", 'airflow jobs check --job-type SchedulerJob --hostname "$${HOSTNAME}"' ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    restart: unless-stopped
+    depends_on:
+      airflow-init:
+        condition: service_completed_successfully
+
+  # ---------------------------------------------------------------------------
+  # Triggerer
+  # ---------------------------------------------------------------------------
+  airflow-triggerer:
+    container_name: airflow-trigger
+    <<: *airflow-common
+    command: triggerer
+    healthcheck:
+      test: [ "CMD-SHELL", 'airflow jobs check --job-type TriggererJob --hostname "$${HOSTNAME}"' ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    restart: unless-stopped
+    depends_on:
+      airflow-init:
+        condition: service_completed_successfully
+
+# ---------------------------------------------------------------------------
+# Volumes & Networks
+# ---------------------------------------------------------------------------
+volumes:
+  postgres-db:
+
+networks:
+  airflow-net:
+    driver: bridge
