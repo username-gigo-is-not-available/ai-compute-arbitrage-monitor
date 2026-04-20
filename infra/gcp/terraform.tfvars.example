@@ -1,0 +1,8 @@
+project_id            = "your-project-id"
+vpc_name              = "gpu-compute-arbitrage-monitor-vpc"
+subnet_name           = "gpu-compute-arbitrage-monitor-subnet"
+compute_router_name   = "gpu-compute-arbitrage-monitor-router"
+router_nat_name       = "gpu-compute-arbitrage-monitor-nat"
+bq_dataset_name       = "gpu_compute_arbitrage_monitor_dataset"
+gcs_bucket_name       = "gpu-compute-arbitrage-monitor-lake"
+dataproc_cluster_name = "gpu-arbitrage-cluster"
