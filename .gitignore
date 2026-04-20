@@ -12,3 +12,4 @@ logs/
 src/transform/dev.duckdb
 src/transform/dbt_packages
 src/transform/target
+src/transform/profiles.yml
