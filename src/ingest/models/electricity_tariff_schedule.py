@@ -1,5 +1,5 @@
-from ingestion.models.base import BaseRecord
-from ingestion.models.enums import TariffType
+from ingest.models.base import BaseRecord
+from ingest.models.enums import TariffType
 
 
 class ElectricityTariffSchedule(BaseRecord):

@@ -2,24 +2,19 @@ import asyncio
 import logging
 
 from config.loader import BronzeConfigLoader
-from ingestion.models.enums import HardwareComponentType
-from ingestion.seeds.electricity_tariff_schedule_seed import ElectricityTariffScheduleSeed
-from ingestion.seeds.electricity_tarrif_price_seed import ElectricityTariffPricesSeed
-from ingestion.sources.exchange_rate_source import ExchangeRateSource
-from ingestion.sources.vast_ai_source import VastAISource
-from pubsub.producer import KafkaProducer
+from ingest.seeds.electricity_tariff_schedule import ElectricityTariffScheduleSeed
+from ingest.seeds.electricity_tariff_price import ElectricityTariffPricesSeed
+from ingest.sources.exchange_rate import ExchangeRateSource
+from ingest.sources.vast_ai import VastAISource
 
 
 async def main():
     loader = BronzeConfigLoader()
-    kafka_config = loader.get_kafka()
 
     erc_config = loader.get_erc()
     evn_config = loader.get_evn()
     vast_ai_config = loader.get_vast_ai()
     exchange_rate_config = loader.get_exchange_rate()
-
-    producer = KafkaProducer(config=kafka_config)
 
     async_sources = [
         (exchange_rate_config, ExchangeRateSource(config=exchange_rate_config, http_config=loader.get_http())),
@@ -34,7 +29,7 @@ async def main():
     for config, source in async_sources:
         if config.enabled:
             logging.info(f"Starting source {source.name}...")
-            await source.run(producer=producer)
+            await source.run()
 
     for config, seed in seeds:
         if config.enabled:

@@ -9,18 +9,17 @@ from pydantic import ValidationError
 
 from config.loader import BronzeConfigLoader
 from config.sources.vast_ai import VastAIConfig
-from ingestion.base import StreamIngestor
-from ingestion.models.enums import OfferType
-from ingestion.models.vast_ai_offer import VastAIOffer
-from pubsub.producer import KafkaProducer
+from ingest.base import AsyncBatchIngestor
+from ingest.models.enums import OfferType
+from ingest.models.vast_ai_offer import VastAIOffer
 
 
-class VastAISource(StreamIngestor):
+class VastAISource(AsyncBatchIngestor):
 
     def __init__(self, config: VastAIConfig, name: str = None):
         super().__init__(config=config, name=name)
 
-    async def poll(self) -> list[VastAIOffer]:
+    async def load(self) -> list[VastAIOffer]:
         async with ClientSession() as session:
             offers = []
             for offer_type in OfferType:
@@ -91,16 +90,6 @@ class VastAISource(StreamIngestor):
             self.logger.warning(f"Could not parse offer {data.get('id')}: {e}")
             return None
 
-    def publish(self, producer: KafkaProducer, data: list[VastAIOffer]) -> None:
-        for offer in data:
-            producer.produce(
-                topic=self.config.topic_name,
-                payload=offer.model_dump(mode="json"),
-                key=str(offer.offer_id)
-            )
-        producer.flush()
-        self.logger.info(f"Published {len(data)} offers to '{self.config.topic_name}'")
-
 
 async def main():
     loader: BronzeConfigLoader = BronzeConfigLoader()
@@ -110,8 +99,11 @@ async def main():
 
     vast_ai: VastAISource = VastAISource(config=vast_ai_config)
     logging.info(f"Starting source {vast_ai.name}...")
-    await vast_ai.run(producer=KafkaProducer(config=loader.get_kafka()))
+    await vast_ai.run()
 
+
+def run():
+    asyncio.run(main())
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    run()

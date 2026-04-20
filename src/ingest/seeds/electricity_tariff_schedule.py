@@ -10,12 +10,12 @@ from bs4 import BeautifulSoup
 from config.seeds.evn import EVNConfig
 from config.http import HttpConfig
 from config.loader import BronzeConfigLoader
-from ingestion.base import BatchIngestor
-from ingestion.models.electricity_tariff_schedule import ElectricityTariffSchedule
-from ingestion.models.enums import TariffType
+from ingest.base import BatchIngestor, SyncBatchIngestor
+from ingest.models.electricity_tariff_schedule import ElectricityTariffSchedule
+from ingest.models.enums import TariffType
 
 
-class ElectricityTariffScheduleSeed(BatchIngestor):
+class ElectricityTariffScheduleSeed(SyncBatchIngestor):
 
     def __init__(self, config: EVNConfig, http_config: HttpConfig, name: str = None):
         super().__init__(config=config, name=name)
@@ -87,6 +87,8 @@ def main():
     logging.info(f"Starting seed {schedule_seed.name}...")
     schedule_seed.run()
 
+def run():
+    main()
 
 if __name__ == "__main__":
-    main()
+    run()

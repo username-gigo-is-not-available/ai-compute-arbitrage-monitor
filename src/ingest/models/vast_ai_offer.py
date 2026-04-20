@@ -2,8 +2,8 @@
 from datetime import datetime, UTC
 from pydantic import Field, field_validator
 
-from ingestion.models.base import BaseRecord
-from ingestion.models.enums import VerificationFlag, OfferType
+from ingest.models.base import BaseRecord
+from ingest.models.enums import VerificationFlag, OfferType
 
 
 class VastAIOffer(BaseRecord):

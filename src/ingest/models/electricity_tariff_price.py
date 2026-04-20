@@ -1,5 +1,5 @@
 
-from ingestion.models.base import BaseRecord
+from ingest.models.base import BaseRecord
 
 
 class ElectricityTariffPrice(BaseRecord):

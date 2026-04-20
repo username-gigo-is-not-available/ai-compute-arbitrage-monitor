@@ -11,11 +11,11 @@ from bs4 import BeautifulSoup, Tag
 from config.seeds.erc import ERCConfig
 from config.http import HttpConfig
 from config.loader import BronzeConfigLoader
-from ingestion.base import BatchIngestor
-from ingestion.models.electricity_tariff_price import ElectricityTariffPrice
+from ingest.base import BatchIngestor, SyncBatchIngestor
+from ingest.models.electricity_tariff_price import ElectricityTariffPrice
 
 
-class ElectricityTariffPricesSeed(BatchIngestor):
+class ElectricityTariffPricesSeed(SyncBatchIngestor):
 
     def __init__(self, config: ERCConfig, http_config: HttpConfig, name: str = None):
         super().__init__(config=config, name=name)
@@ -71,6 +71,8 @@ def main():
     logging.info(f"Starting seed {electricity_tariff.name}...")
     electricity_tariff.run()
 
-
-if __name__ == '__main__':
+def run():
     main()
+
+if __name__ == "__main__":
+    run()
