@@ -1,18 +1,19 @@
 import logging
 import os
 from pathlib import Path
+from typing import Any
 
 import yaml
 from dotenv import load_dotenv
 
+from config.cluster import GCPClusterConfig
+from config.http import HttpConfig
+from config.storage import GCPStorageConfig
 from config.seeds.erc import ERCConfig
 from config.seeds.evn import EVNConfig
 from config.sources.exchange_rate import ExchangeRateConfig
-from config.http import HttpConfig
-from config.kafka import KafkaConfig
-from config.paths import PathConfig
 from config.sources.vast_ai import VastAIConfig
-from ingestion.models.enums import DataStageType
+from ingest.models.enums import DataStageType
 
 load_dotenv()
 
@@ -21,16 +22,30 @@ class ConfigLoader:
     def __init__(self, config_path: Path = Path(os.getenv("SETTINGS_PATH", "settings.yaml"))):
         self._raw = self._load_yaml(config_path)
         self._setup_logging()
-        self._paths = self.get_paths()
+        self._paths = self.get_storage()
 
-    def get_kafka(self) -> KafkaConfig:
-        return KafkaConfig(**self._raw["kafka"])
+    def get_cluster(self) -> GCPClusterConfig:
+        gcp_config: dict[str, Any] = self._raw["gcp"]
+        return GCPClusterConfig(
+            project_id=gcp_config["project_id"],
+            region_name=gcp_config["region_name"],
+            cluster_name=gcp_config["dataproc"]["cluster_name"],
+            entrypoints_path=gcp_config["dataproc"]["entrypoints_path"],
+        )
+
 
     def get_http(self) -> HttpConfig:
         return HttpConfig(**self._raw["http"])
 
-    def get_paths(self) -> PathConfig:
-        return PathConfig(**self._raw["paths"])
+
+    def get_storage(self) -> GCPStorageConfig :
+        path_data: dict[str, Any] = self._raw["paths"]
+        return GCPStorageConfig(
+            seeds_directory_name=path_data["seeds_directory_name"],
+            sources_directory_name=path_data["sources_directory_name"],
+            bucket_name=self._raw["gcp"]["gcs"]["bucket_name"]
+        )
+
 
     def _setup_logging(self) -> None:
         log_config = self._raw.get("logging", {})
@@ -39,6 +54,7 @@ class ConfigLoader:
             format=log_config.get("format", "%(asctime)s - %(name)s - %(levelname)s - %(message)s"),
             force=True
         )
+
 
     @staticmethod
     def _load_yaml(path: Path) -> dict:
@@ -58,10 +74,16 @@ class BronzeConfigLoader(ConfigLoader):
         super().__init__(config_path)
 
     def get_vast_ai(self) -> VastAIConfig:
-        return VastAIConfig(**self._raw["sources"]["vast_ai"])
+        return VastAIConfig(
+            **self._raw["sources"]["vast_ai"],
+            output_directory_path=self._paths.sources_directory_path_for_stage(DataStageType.BRONZE)
+        )
 
     def get_exchange_rate(self) -> ExchangeRateConfig:
-        return ExchangeRateConfig(**self._raw["sources"]["exchange_rate"])
+        return ExchangeRateConfig(
+            **self._raw["sources"]["exchange_rate"],
+            output_directory_path=self._paths.sources_directory_path_for_stage(DataStageType.BRONZE)
+        )
 
     def get_erc(self) -> ERCConfig:
         return ERCConfig(
@@ -82,15 +104,16 @@ class SilverConfigLoader(ConfigLoader):
 
     def get_vast_ai(self) -> VastAIConfig:
         return VastAIConfig(**self._raw["sources"]["vast_ai"],
+                            input_directory_path=self._paths.sources_directory_path_for_stage(DataStageType.BRONZE),
                             output_directory_path=self._paths.sources_directory_path_for_stage(DataStageType.SILVER),
-                            checkpoints_directory_path=self._paths.checkpoints_directory_path
                             )
 
     def get_exchange_rate(self) -> ExchangeRateConfig:
         return ExchangeRateConfig(**self._raw["sources"]["exchange_rate"],
+                                  input_directory_path=self._paths.sources_directory_path_for_stage(
+                                      DataStageType.BRONZE),
                                   output_directory_path=self._paths.sources_directory_path_for_stage(
                                       DataStageType.SILVER),
-                                  checkpoints_directory_path=self._paths.checkpoints_directory_path
                                   )
 
     def get_erc(self) -> ERCConfig:
