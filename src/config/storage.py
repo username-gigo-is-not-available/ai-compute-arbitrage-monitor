@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from pydantic import BaseModel, computed_field
+from pydantic import BaseModel
 from ingest.models.enums import DataStageType
 
 

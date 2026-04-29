@@ -1,6 +1,5 @@
 # models/vast_ai_offer.py
-from datetime import datetime, UTC
-from pydantic import Field, field_validator
+from pydantic import field_validator
 
 from ingest.models.base import BaseRecord
 from ingest.models.enums import VerificationFlag, OfferType

@@ -11,7 +11,7 @@ from bs4 import BeautifulSoup, Tag
 from config.seeds.erc import ERCConfig
 from config.http import HttpConfig
 from config.loader import BronzeConfigLoader
-from ingest.base import BatchIngestor, SyncBatchIngestor
+from ingest.base import SyncBatchIngestor
 from ingest.models.electricity_tariff_price import ElectricityTariffPrice
 
 
