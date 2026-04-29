@@ -1,30 +1,6 @@
-from pyspark.sql.types import StructType, StructField, StringType, IntegerType, FloatType, DoubleType, TimestampType, \
-    BooleanType, DateType
+from pyspark.sql.types import StructType, StructField, StringType, IntegerType, FloatType, BooleanType
 
-META_COLUMNS_SCHEMA = [
-    StructField("ingested_at", TimestampType(), nullable=True),
-    StructField("processed_at", TimestampType(), nullable=True),
-
-]
-
-ELECTRICITY_TARIFF_SCHEMA = StructType(
-    META_COLUMNS_SCHEMA +
-    [
-        StructField("tariff_description", StringType(), nullable=False),
-        StructField("price_mkd_per_kwh", FloatType(), nullable=False),
-        StructField("valid_from", DateType(), nullable=False),
-    ])
-
-ELECTRICITY_TARIFF_SCHEDULE_SCHEMA = StructType(
-    META_COLUMNS_SCHEMA +
-    [
-        StructField("tariff_type", StringType(), nullable=False),
-        StructField("day_of_week", IntegerType(), nullable=False),
-        StructField("start_hour", IntegerType(), nullable=False),
-        StructField("end_hour", IntegerType(), nullable=False),
-        StructField("valid_from", DateType(), nullable=False)
-    ]
-)
+from refine.schemas.base import META_COLUMNS_SCHEMA
 
 COMPUTE_OFFER_SCHEMA = StructType(
     META_COLUMNS_SCHEMA +
@@ -80,11 +56,3 @@ COMPUTE_OFFER_SCHEMA = StructType(
         StructField("rented_flag", BooleanType(), nullable=False),
     ])
 
-EXCHANGE_RATE_SCHEMA = StructType(
-    META_COLUMNS_SCHEMA +
-    [
-        StructField("from_currency", StringType(), nullable=False),
-        StructField("to_currency", StringType(), nullable=False),
-        StructField("value", FloatType(), nullable=False),
-        StructField("timestamp", TimestampType(), nullable=False),
-    ])
