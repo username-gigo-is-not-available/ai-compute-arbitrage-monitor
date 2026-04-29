@@ -1,4 +1,6 @@
 project_id            = "your-project-id"
+location              = "your-location"
+region                = "your-region"
 vpc_name              = "gpu-compute-arbitrage-monitor-vpc"
 subnet_name           = "gpu-compute-arbitrage-monitor-subnet"
 compute_router_name   = "gpu-compute-arbitrage-monitor-router"

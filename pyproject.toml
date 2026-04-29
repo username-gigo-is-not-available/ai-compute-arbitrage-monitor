@@ -26,6 +26,7 @@ dependencies = [
     "google-cloud-dataproc>=5.26.0",
     "dbt-bigquery>=1.11.1",
     "apache-airflow[google]>=3.2.0",
+    "diagrams>=0.25.1",
 ]
 
 [project.optional-dependencies]
