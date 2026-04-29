@@ -1,4 +1,3 @@
-# models/vast_ai_offer.py
 from pydantic import field_validator
 
 from ingest.models.base import BaseRecord

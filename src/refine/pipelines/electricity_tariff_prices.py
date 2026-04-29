@@ -8,7 +8,7 @@ from refine.assets.cleaning import trim_whitespace, replace_substring, empty_to_
 from refine.assets.filtering import deduplicate
 from refine.init import initialize_spark
 from refine.pipelines.base import Pipeline
-from refine.schemas import ELECTRICITY_TARIFF_SCHEMA
+from refine.schemas.electricity_tariff import ELECTRICITY_TARIFF_SCHEMA
 
 
 def fix_decimal_separator(df: DataFrame) -> DataFrame:

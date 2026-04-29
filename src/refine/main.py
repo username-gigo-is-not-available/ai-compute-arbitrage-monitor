@@ -6,12 +6,10 @@ from refine.pipelines.electricity_tariff_prices import ElectricityTariffPricesPi
 from refine.pipelines.electricity_tariffs_schedule import ElectricityTariffsSchedulePipeline
 from refine.pipelines.exchange_rates import ExchangeRatesPipeline
 from refine.pipelines.compute_offers import ComputeOffersPipeline
-from refine.schemas import (
-    ELECTRICITY_TARIFF_SCHEMA,
-    ELECTRICITY_TARIFF_SCHEDULE_SCHEMA,
-    COMPUTE_OFFER_SCHEMA,
-    EXCHANGE_RATE_SCHEMA,
-)
+from refine.schemas.compute_offers import COMPUTE_OFFER_SCHEMA
+from refine.schemas.electricity_tariff import ELECTRICITY_TARIFF_SCHEMA
+from refine.schemas.electricity_tariff_schedule import ELECTRICITY_TARIFF_SCHEDULE_SCHEMA
+from refine.schemas.exchange_rate import EXCHANGE_RATE_SCHEMA
 
 if __name__ == "__main__":
     session = initialize_spark()
