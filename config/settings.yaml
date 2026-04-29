@@ -1,14 +1,12 @@
 sources:
   vast_ai:
     enabled: true
-    poll_interval_seconds: 1800
     base_url: "https://console.vast.ai/api/v0"
     limit: 10000
     file_name: "compute_offers"
 
   exchange_rate:
     enabled: true
-    poll_interval_seconds: 3600
     base_url: "https://v6.exchangerate-api.com/v6"
     from_currency: "USD"
     to_currency: "MKD"

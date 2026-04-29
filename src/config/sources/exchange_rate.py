@@ -7,7 +7,6 @@ from config.file_config import FileConfig
 
 class ExchangeRateConfig(FileConfig):
     enabled: bool
-    poll_interval_seconds: int
     base_url: str
     from_currency: str
     to_currency: str
