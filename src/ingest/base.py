@@ -5,7 +5,7 @@ from typing import Any
 import pyarrow as pa
 import pyarrow.parquet as pq
 
-from ingest.models.types import DatasetConfig, IngestorRecord
+from common.types import DatasetConfig, IngestorRecord
 from serializers.json_serializer import JsonSerializer
 
 

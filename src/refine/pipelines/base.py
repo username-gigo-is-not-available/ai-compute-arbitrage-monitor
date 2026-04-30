@@ -5,7 +5,7 @@ from typing import Callable
 from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql.types import StructType
 
-from ingest.models.types import DatasetConfig
+from common.types import DatasetConfig
 from refine.assets.casting import cast_to_schema
 from refine.assets.extract import add_processed_at_column
 

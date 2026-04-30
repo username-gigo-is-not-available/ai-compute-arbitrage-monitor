@@ -12,7 +12,7 @@ from config.http import HttpConfig
 from config.loader import BronzeConfigLoader
 from ingest.base import SyncBatchIngestor
 from ingest.models.electricity_tariff_schedule import ElectricityTariffSchedule
-from ingest.models.enums import TariffType
+from common.enums import TariffType
 
 
 class ElectricityTariffScheduleSeed(SyncBatchIngestor):

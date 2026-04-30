@@ -1,7 +1,7 @@
 from pydantic import field_validator
 
 from ingest.models.base import BaseRecord
-from ingest.models.enums import VerificationFlag, OfferType
+from common.enums import VerificationFlag, OfferType
 
 
 class VastAIOffer(BaseRecord):

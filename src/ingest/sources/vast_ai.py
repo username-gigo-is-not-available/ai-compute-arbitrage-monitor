@@ -10,7 +10,7 @@ from pydantic import ValidationError
 from config.loader import BronzeConfigLoader
 from config.sources.vast_ai import VastAIConfig
 from ingest.base import AsyncBatchIngestor
-from ingest.models.enums import OfferType
+from common.enums import OfferType
 from ingest.models.vast_ai_offer import VastAIOffer
 
 

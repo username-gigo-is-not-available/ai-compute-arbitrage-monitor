@@ -1,4 +1,4 @@
-from pyspark.sql import functions as F, Column, DataFrame
+from pyspark.sql import functions as F, DataFrame
 
 
 def add_processed_at_column(df: DataFrame) -> DataFrame:

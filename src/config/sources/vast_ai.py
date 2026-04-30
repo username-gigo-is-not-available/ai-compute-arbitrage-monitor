@@ -4,7 +4,7 @@ import os
 from pydantic import Field
 
 from config.file_config import FileConfig
-from ingest.models.enums import OfferType
+from common.enums import OfferType
 
 
 class VastAIConfig(FileConfig):

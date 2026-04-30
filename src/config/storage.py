@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from pydantic import BaseModel
-from ingest.models.enums import DataStageType
+from common.enums import DataStageType
 
 
 class BaseStorageConfig(BaseModel, ABC):
