@@ -5,9 +5,14 @@ import zipfile
 from pathlib import Path
 
 from google.cloud import storage
-from google.cloud.dataproc_v1 import JobControllerClient
-from google.cloud.dataproc_v1.types import Job, PySparkJob, JobPlacement
-from google.cloud.dataproc_v1.types.jobs import JobStatus
+from google.cloud.dataproc_v1 import BatchControllerClient
+from google.cloud.dataproc_v1.types import (
+    Batch,
+    PySparkBatch,
+    RuntimeConfig,
+    EnvironmentConfig,
+    ExecutionConfig,
+)
 
 from config.cluster import GCPClusterConfig
 from config.loader import ConfigLoader
@@ -19,20 +24,23 @@ class JobBootstrapper:
         self,
         storage_config: GCPStorageConfig,
         cluster_config: GCPClusterConfig,
+        image_tag: str
     ):
         self.storage_config = storage_config
         self.cluster_config = cluster_config
         self.project_root = Path(__file__).parent.parent.parent
+        self.image_tag = image_tag
         self.logger = logging.getLogger(self.__class__.__name__)
 
     @property
     def entrypoints(self) -> dict[str, str]:
         bucket = self.storage_config.bucket_name
+        entrypoints_path: str = self.cluster_config.entrypoints_path
         return {
-            "electricity_tariff_prices":    f"gs://{bucket}/src/refine/pipelines/electricity_tariff_prices.py",
-            "electricity_tariffs_schedule": f"gs://{bucket}/src/refine/pipelines/electricity_tariffs_schedule.py",
-            "compute_offers":               f"gs://{bucket}/src/refine/pipelines/compute_offers.py",
-            "exchange_rates":               f"gs://{bucket}/src/refine/pipelines/exchange_rates.py",
+            "electricity_tariff_prices":    f"gs://{bucket}/{entrypoints_path}/electricity_tariff_prices.py",
+            "electricity_tariffs_schedule": f"gs://{bucket}/{entrypoints_path}/electricity_tariffs_schedule.py",
+            "compute_offers":               f"gs://{bucket}/{entrypoints_path}/compute_offers.py",
+            "exchange_rates":               f"gs://{bucket}/{entrypoints_path}/exchange_rates.py",
         }
 
     def _zip_src(self) -> Path:
@@ -40,13 +48,13 @@ class JobBootstrapper:
         src_dir = self.project_root / "src"
 
         with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
-            for file in src_dir.rglob("*.py"):
-                if "__pycache__" in file.parts or ".egg-info" in str(file):
-                    continue
-                arcname = file.relative_to(src_dir).as_posix()
-                zf.write(file, arcname)
+            for package in self.cluster_config.runtime_packages:
+                package_dir = src_dir / package
+                for file in package_dir.rglob("*.py"):
+                    arcname = file.relative_to(src_dir).as_posix()
+                    zf.write(file, arcname)
 
-        self.logger.info(f"Zipped src/ → {zip_path}")
+        self.logger.info(f"Zipped runtime src/ → {zip_path}")
         return zip_path
 
     def upload_to_gcs(self) -> None:
@@ -62,9 +70,9 @@ class JobBootstrapper:
         else:
             self.logger.warning("config/settings.yaml not found, skipping.")
 
-        pipelines_dir = self.project_root / "src" / "refine" / "pipelines"
-        for file in pipelines_dir.glob("*.py"):
-            gcs_key = f"src/refine/pipelines/{file.name}"
+        entrypoints_path = self.project_root / self.cluster_config.entrypoints_path
+        for file in entrypoints_path.glob("*.py"):
+            gcs_key = f"{self.cluster_config.entrypoints_path}/{file.name}"
             bucket.blob(gcs_key).upload_from_filename(str(file))
             self.logger.info(f"Uploaded pipeline → gs://{bucket_name}/{gcs_key}")
 
@@ -73,88 +81,91 @@ class JobBootstrapper:
         self.logger.info(f"Uploaded src.zip → gs://{bucket_name}/src.zip")
         zip_path.unlink()
 
-    def submit_job(self, job_name: str) -> str:
-        if job_name not in self.entrypoints:
-            self.logger.error(f"Unknown job '{job_name}'. Available: {list(self.entrypoints)}")
+    def submit_batch(self, entrypoint: str) -> str:
+        if entrypoint not in self.entrypoints:
+            self.logger.error(f"Unknown job '{entrypoint}'. Available: {list(self.entrypoints)}")
             sys.exit(1)
 
-        client = JobControllerClient(
+        client = BatchControllerClient(
             client_options={
                 "api_endpoint": f"{self.cluster_config.region_name}-dataproc.googleapis.com:443"
             }
         )
 
-        job = Job(
-            placement=JobPlacement(cluster_name=self.cluster_config.cluster_name),
-            pyspark_job=PySparkJob(
-                main_python_file_uri=self.entrypoints[job_name],
-                python_file_uris=[
-                    f"gs://{self.storage_config.bucket_name}/src.zip",
-                ],
-                file_uris=[
-                    f"gs://{self.storage_config.bucket_name}/config/settings.yaml"
-                ],
-                properties={
+        settings_uri = f"gs://{self.storage_config.bucket_name}/config/settings.yaml"
 
-                    "spark.yarn.appMasterEnv.SETTINGS_PATH": f"gs://{self.storage_config.bucket_name}/config/settings.yaml",
-                    "spark.executorEnv.SETTINGS_PATH": f"gs://{self.storage_config.bucket_name}/config/settings.yaml",
-                    "spark.submit.deployMode": "client",
-                    "spark.pyspark.python": "/opt/gpu_arbitrage/.venv/bin/python",
-                    "spark.pyspark.driver.python": "/opt/gpu_arbitrage/.venv/bin/python",
-                    "spark.submit.pyFiles": f"gs://{self.storage_config.bucket_name}/src.zip"
+        batch = Batch(
+            pyspark_batch=PySparkBatch(
+                main_python_file_uri=self.entrypoints[entrypoint],
+            ),
+            runtime_config=RuntimeConfig(
+                container_image=self.image_tag,
+                properties={
+                    "spark.sql.parquet.compression.codec": "snappy",
+                    "spark.executorEnv.SETTINGS_PATH": settings_uri,
+                    "spark.yarn.appMasterEnv.SETTINGS_PATH": settings_uri,
                 },
+            ),
+            environment_config=EnvironmentConfig(
+                execution_config=ExecutionConfig(
+                    subnetwork_uri=self.cluster_config.subnetwork_name,
+                    service_account=self.cluster_config.service_account_email,
+                )
             ),
         )
 
-        response = client.submit_job(
-            project_id=self.cluster_config.project_id,
-            region=self.cluster_config.region_name,
-            job=job,
+        batch_id = f"{self.cluster_config.batch_id_prefix}-{entrypoint}-{int(time.time())}"
+
+        client.create_batch(
+            parent=f"projects/{self.cluster_config.project_id}/locations/{self.cluster_config.region_name}",
+            batch=batch,
+            batch_id=batch_id,
         )
-        job_id = response.reference.job_id
-        self.logger.info(f"Submitted job: {job_id}")
-        return job_id
 
-    def wait_for_job(self, job_id: str) -> None:
-        self.logger.info("Waiting for job to complete...")
+        self.logger.info(f"Submitted batch: {batch_id}")
+        return batch_id
 
-        client = JobControllerClient(
+    def wait_for_batch(self, batch_id: str) -> None:
+        self.logger.info(f"Waiting for batch {batch_id} to complete...")
+
+        client = BatchControllerClient(
             client_options={
                 "api_endpoint": f"{self.cluster_config.region_name}-dataproc.googleapis.com:443"
             }
         )
 
+        batch_name = (
+            f"projects/{self.cluster_config.project_id}"
+            f"/locations/{self.cluster_config.region_name}"
+            f"/batches/{batch_id}"
+        )
+
         while True:
-            job = client.get_job(
-                project_id=self.cluster_config.project_id,
-                region=self.cluster_config.region_name,
-                job_id=job_id,
-            )
-            status = job.status.state
+            batch = client.get_batch(name=batch_name)
+            state = batch.state
 
-            if status == JobStatus.State.DONE:
-                self.logger.info("Job completed successfully!")
+            if state == Batch.State.SUCCEEDED:
+                self.logger.info("Batch completed successfully.")
                 break
-            elif status == JobStatus.State.ERROR:
-                self.logger.error(f"Job failed: {job.status.details}")
+            elif state == Batch.State.FAILED:
+                self.logger.error(f"Batch failed: {batch.state_message}")
                 sys.exit(1)
-            elif status == JobStatus.State.CANCELLED:
-                self.logger.warning("Job was cancelled.")
+            elif state == Batch.State.CANCELLED:
+                self.logger.warning("Batch was cancelled.")
                 sys.exit(1)
 
-            self.logger.info(f"Current status: {status.name}...")
-            time.sleep(10)
+            self.logger.info(f"Current state: {state.name}...")
+            time.sleep(15)
 
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print("Usage: python jobs.py [job_name]")
+    if len(sys.argv) < 3:
+        print("Usage: python jobs.py [job_name] [image_tag]")
         print("Available jobs: electricity_tariff_prices, electricity_tariffs_schedule, compute_offers, exchange_rates")
         sys.exit(1)
 
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-
-    job_name = sys.argv[1]
+    entrypoint = sys.argv[1]
+    image_tag = sys.argv[2]
 
     loader = ConfigLoader()
     storage_config = loader.get_storage()
@@ -163,8 +174,9 @@ if __name__ == "__main__":
     bootstrapper = JobBootstrapper(
         storage_config=storage_config,
         cluster_config=cluster_config,
+        image_tag=image_tag,
     )
 
     bootstrapper.upload_to_gcs()
-    job_id = bootstrapper.submit_job(job_name)
-    bootstrapper.wait_for_job(job_id)
+    batch_id = bootstrapper.submit_batch(entrypoint)
+    bootstrapper.wait_for_batch(batch_id)
