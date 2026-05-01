@@ -5,6 +5,7 @@ on:
     branches:
       - master
     paths:
+      - "config/settings.yaml"
       - "src/refine/**"
       - "src/config/**"
       - "src/common/**"
