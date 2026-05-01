@@ -1,6 +1,6 @@
 output "workload_identity_provider_name" {
   description = "Value for GCP_WORKLOAD_IDENTITY_PROVIDER_NAME secret in GitHub"
-  value       = google_iam_workload_identity_pool_provider.github.name
+  value       = google_iam_workload_identity_pool_provider.github_workload_identity_pool_provider.name
 }
 
 output "github_actions_service_account_email" {
