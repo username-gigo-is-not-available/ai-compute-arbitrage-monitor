@@ -21,3 +21,4 @@ COPY src/common/ /src/common/
 ENV PYTHONPATH="/src:${PYTHONPATH}"
 
 USER $DATAPROC_USER
+
