@@ -4,7 +4,7 @@ USER root
 
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 
-WORKDIR /app
+WORKDIR /src
 
 COPY pyproject.toml uv.lock ./
 
@@ -14,10 +14,10 @@ RUN uv sync \
     --no-install-project \
     --python /usr/bin/python3
 
-COPY src/refine/ /app/refine/
-COPY src/config/ /app/config/
-COPY src/common/ /app/common/
+COPY src/refine/ /src/refine/
+COPY src/config/ /src/config/
+COPY src/common/ /src/common/
 
-ENV PYTHONPATH="/app:${PYTHONPATH}"
+ENV PYTHONPATH="/src:${PYTHONPATH}"
 
 USER $DATAPROC_USER
