@@ -29,6 +29,7 @@ class ConfigLoader:
         return GCPClusterConfig(
             project_id=gcp_config["project_id"],
             region_name=gcp_config["region_name"],
+            image_tag=gcp_config["dataproc"]["image_tag"],
             runtime_packages=gcp_config["dataproc"]["runtime_packages"],
             entrypoints_path=gcp_config["dataproc"]["entrypoints_path"],
             subnetwork_name=gcp_config["dataproc"]["subnetwork_name"],

@@ -50,6 +50,7 @@ gcp:
   gcs:
     bucket_name: "gpu-compute-arbitrage-monitor-lake"
   dataproc:
+    image_tag: "http://europe-west3-docker.pkg.dev/even-card-485518-r5/gpu-compute-arbitrage-monitor-repository/gpu-compute-arbitrage-monitor-dataproc-image:latest"
     runtime_packages: ["common", "config", "refine"]
     entrypoints_path: "src/refine/pipelines"
     subnetwork_name: "projects/even-card-485518-r5/regions/europe-west3/subnetworks/gpu-compute-arbitrage-monitor-subnet"

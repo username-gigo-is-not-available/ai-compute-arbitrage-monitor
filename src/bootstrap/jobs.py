@@ -24,12 +24,10 @@ class JobBootstrapper:
         self,
         storage_config: GCPStorageConfig,
         cluster_config: GCPClusterConfig,
-        image_tag: str
     ):
         self.storage_config = storage_config
         self.cluster_config = cluster_config
         self.project_root = Path(__file__).parent.parent.parent
-        self.image_tag = image_tag
         self.logger = logging.getLogger(self.__class__.__name__)
 
     @property
@@ -99,7 +97,7 @@ class JobBootstrapper:
                 main_python_file_uri=self.entrypoints[entrypoint],
             ),
             runtime_config=RuntimeConfig(
-                container_image=self.image_tag,
+                container_image=self.cluster_config.image_tag,
                 properties={
                     "spark.sql.parquet.compression.codec": "snappy",
                     "spark.executorEnv.SETTINGS_PATH": settings_uri,
@@ -159,13 +157,12 @@ class JobBootstrapper:
 
 
 if __name__ == "__main__":
-    if len(sys.argv) < 3:
-        print("Usage: python jobs.py [job_name] [image_tag]")
+    if len(sys.argv) < 2:
+        print("Usage: python jobs.py [job_name]")
         print("Available jobs: electricity_tariff_prices, electricity_tariffs_schedule, compute_offers, exchange_rates")
         sys.exit(1)
 
     entrypoint = sys.argv[1]
-    image_tag = sys.argv[2]
 
     loader = ConfigLoader()
     storage_config = loader.get_storage()
@@ -174,7 +171,6 @@ if __name__ == "__main__":
     bootstrapper = JobBootstrapper(
         storage_config=storage_config,
         cluster_config=cluster_config,
-        image_tag=image_tag,
     )
 
     bootstrapper.upload_to_gcs()
