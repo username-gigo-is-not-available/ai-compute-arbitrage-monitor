@@ -23,6 +23,7 @@ locals {
     resourcemanager   = "cloudresourcemanager.googleapis.com"
     dataproc          = "dataproc.googleapis.com"
     artifact_registry = "artifactregistry.googleapis.com"
+    container_file_system = "containerfilesystem.googleapis.com"
   }
 }
 
@@ -146,7 +147,9 @@ resource "google_project_iam_member" "dataproc_roles" {
   role    = each.key
   member  = "serviceAccount:${google_service_account.dataproc_sa.email}"
 
-  depends_on = [google_project_service.enabled_services["resourcemanager"]]
+  depends_on = [google_project_service.enabled_services["resourcemanager"],
+    google_project_service.enabled_services["container_file_system"]
+  ]
 }
 
 # GitHub Actions
