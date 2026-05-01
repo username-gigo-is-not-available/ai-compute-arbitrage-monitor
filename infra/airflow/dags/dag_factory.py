@@ -41,7 +41,6 @@ class DagFactory:
 
     def dataproc_batch(self) -> dict:
         image_tag = self.cluster_config.image_tag
-        settings_uri = f"gs://{self.storage_config.bucket_name}/config/settings.yaml"
 
         return {
             "pyspark_batch": {
@@ -52,8 +51,6 @@ class DagFactory:
                 "container_image": image_tag,
                 "properties": {
                     "spark.sql.parquet.compression.codec": "snappy",
-                    "spark.executorEnv.SETTINGS_PATH": settings_uri,
-                    "spark.yarn.appMasterEnv.SETTINGS_PATH": settings_uri,
                 },
             },
             "environment_config": {
