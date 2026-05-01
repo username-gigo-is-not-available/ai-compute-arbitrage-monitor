@@ -2,7 +2,6 @@ from dataclasses import field, dataclass
 from typing import Callable
 
 from pyspark.sql import DataFrame, SparkSession
-from pyspark.sql.streaming import StreamingQuery
 
 from config.loader import SilverConfigLoader
 from refine.assets.filtering import deduplicate

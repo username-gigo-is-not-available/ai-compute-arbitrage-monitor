@@ -4,7 +4,7 @@ import os
 from datetime import datetime
 
 from infra.airflow.dags.marts_dag_factory import MartsDagFactory
-from ingest.models.enums import DatasetType
+from common.enums import DatasetType
 from src.config.cluster import GCPClusterConfig
 from src.config.loader import ConfigLoader
 from src.config.storage import GCPStorageConfig

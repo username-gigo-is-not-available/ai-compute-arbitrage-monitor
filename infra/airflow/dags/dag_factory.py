@@ -95,6 +95,7 @@ class DagFactory:
                 tags={"gpu-arbitrage", "capstone"},
                 max_active_runs=1,
         ) as dag:
+
             t_ingest = PythonOperator(
                 task_id="ingest",
                 python_callable=cfg.run_fn,
