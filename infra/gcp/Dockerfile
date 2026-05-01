@@ -1,4 +1,4 @@
-FROM us-central1-docker.pkg.dev/cloud-dataproc/dataproc-containers/dataproc-container:2.2
+FROM us-central1-docker.pkg.dev/cloud-dataproc/spark/dataproc_2.2
 
 USER root
 
