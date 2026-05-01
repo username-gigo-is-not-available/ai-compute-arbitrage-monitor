@@ -3,7 +3,7 @@ name: Build & Push Dataproc Image
 on:
   push:
     branches:
-      - main
+      - master
     paths:
       - "src/refine/**"
       - "src/config/**"
@@ -13,10 +13,12 @@ on:
       - "infra/gcp/Dockerfile"
 
 env:
-  REGION: europe-west3
   PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
-  REPOSITORY_NAME: gpu-compute-arbitrage-monitor-registry
-  IMAGE_NAME: gpu-compute-arbitrage-monitor-dataproc-image
+  REGION_NAME: ${{ vars.GCP_REGION_NAME }}
+  SERVICE_ACCOUNT_EMAIL: ${{ secrets.GCP_SERVICE_ACCOUNT_EMAIL }}
+  IDENTITY_PROVIDER_NAME: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER_NAME }}
+  REPOSITORY_NAME: ${{ vars.GCP_REPOSITORY_NAME }}
+  IMAGE_NAME: ${{ vars.GCP_DATAPROC_IMAGE_NAME }}
 
 jobs:
   build-and-push:
@@ -34,15 +36,15 @@ jobs:
       - name: Authenticate to GCP
         uses: google-github-actions/auth@v2
         with:
-          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
-          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+          workload_identity_provider: ${{ env.IDENTITY_PROVIDER_NAME }}
+          service_account: ${{ env.SERVICE_ACCOUNT_EMAIL }}
 
       - name: Configure Docker for Artifact Registry
-        run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev --quiet
+        run: gcloud auth configure-docker ${{ env.REGION_NAME }}-docker.pkg.dev --quiet
 
       - name: Build & Push image
         run: |
-          IMAGE=${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY_NAME }}/${{ env.IMAGE_NAME }}
+          IMAGE=${{ env.REGION_NAME }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY_NAME }}/${{ env.IMAGE_NAME }}
           docker build \
             -f infra/gcp/Dockerfile \
             -t $IMAGE:$(git rev-parse --short HEAD) \
