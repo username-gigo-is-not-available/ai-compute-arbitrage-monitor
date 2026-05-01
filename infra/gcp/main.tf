@@ -121,7 +121,9 @@ resource "google_artifact_registry_repository" "image_repository" {
   depends_on = [google_project_service.enabled_services["artifact_registry"]]
 }
 
-# ── Service Account & IAM ──────────────────────────────────────────────────────
+# ── Resource Manager & IAM ──────────────────────────────────────────────────────
+
+# Dataproc
 
 resource "google_service_account" "dataproc_sa" {
   account_id   = "dataproc-sa"
@@ -145,4 +147,54 @@ resource "google_project_iam_member" "dataproc_roles" {
   member  = "serviceAccount:${google_service_account.dataproc_sa.email}"
 
   depends_on = [google_project_service.enabled_services["resourcemanager"]]
+}
+
+# GitHub Actions
+
+resource "google_service_account" "github_actions_sa" {
+  account_id   = "github-actions-sa"
+  display_name = "GitHub Actions Service Account"
+
+  depends_on = [google_project_service.enabled_services["iam"]]
+}
+
+resource "google_project_iam_member" "github_actions_roles" {
+  for_each = toset([
+    "roles/artifactregistry.writer",
+    "roles/dataproc.editor",
+    "roles/storage.objectAdmin",
+  ])
+  project = var.project_id
+  role    = each.key
+  member  = "serviceAccount:${google_service_account.github_actions_sa.email}"
+
+  depends_on = [google_project_service.enabled_services["resourcemanager"]]
+}
+
+# GitHub Workload Identity Provider
+
+resource "google_iam_workload_identity_pool" "github" {
+  workload_identity_pool_id = "github-pool"
+}
+
+resource "google_iam_workload_identity_pool_provider" "github" {
+  workload_identity_pool_id          = google_iam_workload_identity_pool.github.workload_identity_pool_id
+  workload_identity_pool_provider_id = "github-provider"
+
+  oidc {
+    issuer_uri = "https://token.actions.githubusercontent.com"
+  }
+
+  attribute_mapping = {
+    "google.subject"       = "assertion.sub"
+    "attribute.repository" = "assertion.repository"
+  }
+
+  attribute_condition = "assertion.repository == '${var.github_repository_uri}'"
+}
+
+resource "google_service_account_iam_member" "github_wif" {
+  service_account_id = google_service_account.github_actions_sa.name
+  role               = "roles/iam.workloadIdentityUser"
+  member = "principalSet://iam.googleapis.com/${google_iam_workload_identity_pool.github.name}/attribute.repository/${var.github_repository_uri}"
 }
