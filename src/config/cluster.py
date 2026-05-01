@@ -8,5 +8,4 @@ class GCPClusterConfig(BaseModel):
     runtime_packages: list[str]
     entrypoints_path: str
     subnetwork_name: str
-    batch_id_prefix: str
     service_account_email: str

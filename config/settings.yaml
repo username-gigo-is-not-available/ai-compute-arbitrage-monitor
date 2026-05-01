@@ -54,5 +54,4 @@ gcp:
     runtime_packages: ["common", "config", "refine"]
     entrypoints_path: "src/refine/pipelines"
     subnetwork_name: "projects/even-card-485518-r5/regions/europe-west3/subnetworks/gpu-compute-arbitrage-monitor-subnet"
-    batch_id_prefix: "gpu-compute-arbitrage-monitor"
     service_account_email: "dataproc-sa@even-card-485518-r5.iam.gserviceaccount.com"

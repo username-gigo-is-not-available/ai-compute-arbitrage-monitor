@@ -112,7 +112,8 @@ class JobBootstrapper:
             ),
         )
 
-        batch_id = f"{self.cluster_config.batch_id_prefix}-{entrypoint}-{int(time.time())}"
+        batch_id = f"{entrypoint.replace("_", "-")}-{{{{ ts_nodash | lower }}}}"
+
 
         client.create_batch(
             parent=f"projects/{self.cluster_config.project_id}/locations/{self.cluster_config.region_name}",

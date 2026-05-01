@@ -33,7 +33,6 @@ class ConfigLoader:
             runtime_packages=gcp_config["dataproc"]["runtime_packages"],
             entrypoints_path=gcp_config["dataproc"]["entrypoints_path"],
             subnetwork_name=gcp_config["dataproc"]["subnetwork_name"],
-            batch_id_prefix=gcp_config["dataproc"]["batch_id_prefix"],
             service_account_email=gcp_config["dataproc"]["service_account_email"],
         )
 

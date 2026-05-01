@@ -6,7 +6,7 @@ from airflow import DAG
 from airflow.sdk import Asset, AssetAny
 from airflow.providers.standard.operators.bash import BashOperator
 
-from infra.airflow.dags.data_source_config import PipelineConfig
+from infra.airflow.dags.pipeline_config import PipelineConfig
 
 DEFAULT_ARGS = {
     "owner": "gigo",

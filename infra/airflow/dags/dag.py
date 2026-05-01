@@ -9,7 +9,7 @@ from src.config.cluster import GCPClusterConfig
 from src.config.loader import ConfigLoader
 from src.config.storage import GCPStorageConfig
 from infra.airflow.dags.dag_factory import DagFactory
-from infra.airflow.dags.data_source_config import PipelineConfig
+from infra.airflow.dags.pipeline_config import PipelineConfig
 from src.ingest.sources.vast_ai import run as vast_ai_run
 from src.ingest.sources.exchange_rate import run as exchange_rate_run
 from src.ingest.seeds.electricity_tariff_price import run as tariff_price_run
