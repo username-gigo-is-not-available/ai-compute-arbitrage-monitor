@@ -19,7 +19,7 @@ COPY src/refine/  src/refine/
 COPY src/config/  src/config/
 COPY src/common/  src/common/
 
-ENV PYTHONPATH="/src:${PYTHONPATH}"
+ENV PYTHONPATH="/app/src:${PYTHONPATH}"
 ENV SETTINGS_PATH="/app/config/settings.yaml"
 
 
