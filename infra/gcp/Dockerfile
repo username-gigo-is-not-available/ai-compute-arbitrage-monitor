@@ -4,10 +4,12 @@ USER root
 
 WORKDIR /app
 
-RUN conda install -y python=3.11 && \
-    conda clean -afy \
+RUN conda create -n spark_env python=3.11 -y && \
+    conda clean -afy
 
-RUN pip install --no-cache-dir pyyaml pydantic python-dotenv
+RUN /opt/conda/envs/spark_env/bin/pip install --no-cache-dir \
+    pyyaml pydantic python-dotenv
+
 
 COPY config/settings.yaml config/settings.yaml
 COPY src/refine/  src/refine/
@@ -16,8 +18,7 @@ COPY src/common/  src/common/
 
 ENV PYTHONPATH="/app/src:${PYTHONPATH}"
 ENV SETTINGS_PATH="/app/config/settings.yaml"
-ENV PYSPARK_PYTHON=/opt/conda/bin/python
+ENV PYSPARK_PYTHON=/opt/conda/envs/spark_env/bin/python
 
 
 USER $DATAPROC_USER
-
