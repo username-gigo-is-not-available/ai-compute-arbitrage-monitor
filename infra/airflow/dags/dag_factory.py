@@ -44,7 +44,7 @@ class DagFactory:
 
         return {
             "pyspark_batch": {
-                "main_python_file_uri": f"gs://{self.storage_config.bucket_name}/src/refine/pipelines/{self.pipeline_config.name}.py",
+                "main_python_file_uri": f"file:///app/{self.cluster_config.entrypoints_path}/{self.pipeline_config.name}.py",
                 "args": [],
             },
             "runtime_config": {
