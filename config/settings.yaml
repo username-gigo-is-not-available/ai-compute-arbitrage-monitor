@@ -1,3 +1,4 @@
+execution_type: "local"
 sources:
   vast_ai:
     enabled: true

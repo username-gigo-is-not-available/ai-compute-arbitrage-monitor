@@ -1,6 +1,6 @@
 from enum import StrEnum, auto
 
-class EnvironmentType(StrEnum):
+class ExecutionType(StrEnum):
     LOCAL = auto()
     GCP = auto()
 

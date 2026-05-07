@@ -13,7 +13,7 @@ from config.seeds.erc import ERCConfig
 from config.seeds.evn import EVNConfig
 from config.sources.exchange_rate import ExchangeRateConfig
 from config.sources.vast_ai import VastAIConfig
-from common.enums import DataStageType
+from common.enums import DataStageType, ExecutionType
 
 load_dotenv()
 
@@ -24,8 +24,16 @@ class ConfigLoader:
         self._setup_logging()
         self._paths = self.get_storage()
 
+    def get_execution_type(self) -> ExecutionType:
+        execution_type: ExecutionType = ExecutionType(self._raw.get("execution_type", "local"))
+        try:
+            return ExecutionType(execution_type)
+        except ValueError:
+            logging.warning(f"Unknown execution type '{execution_type}', falling back to local.")
+            return ExecutionType.LOCAL
+
     def get_cluster(self) -> GCPClusterConfig:
-        gcp_config: dict[str, Any] = self._raw["gcp"]
+        gcp_config: dict[str, Any] = self._raw["terraform"]
         return GCPClusterConfig(
             project_id=gcp_config["project_id"],
             region_name=gcp_config["region_name"],
@@ -46,7 +54,7 @@ class ConfigLoader:
         return GCPStorageConfig(
             seeds_directory_name=path_data["seeds_directory_name"],
             sources_directory_name=path_data["sources_directory_name"],
-            bucket_name=self._raw["gcp"]["gcs"]["bucket_name"]
+            bucket_name=self._raw["terraform"]["gcs"]["bucket_name"]
         )
 
 
