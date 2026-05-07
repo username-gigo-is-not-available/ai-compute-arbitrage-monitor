@@ -25,7 +25,7 @@ class ElectricityTariffsSchedulePipeline(Pipeline):
     ])
 
 
-if __name__ == '__main__':
+def run():
     session: SparkSession = initialize_spark()
     config_loader: SilverConfigLoader = SilverConfigLoader()
     electricity_tariffs_schedule_pipeline: ElectricityTariffsSchedulePipeline = ElectricityTariffsSchedulePipeline(
@@ -35,3 +35,7 @@ if __name__ == '__main__':
     )
 
     electricity_tariffs_schedule_pipeline.run()
+
+
+if __name__ == "__main__":
+    run()

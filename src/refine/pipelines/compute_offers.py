@@ -29,7 +29,7 @@ class ComputeOffersPipeline(Pipeline):
     ])
 
 
-if __name__ == '__main__':
+def run():
     session: SparkSession = initialize_spark()
     config_loader: SilverConfigLoader = SilverConfigLoader()
     compute_offers_pipeline: ComputeOffersPipeline = ComputeOffersPipeline(
@@ -38,3 +38,7 @@ if __name__ == '__main__':
         config=config_loader.get_vast_ai(),
     )
     compute_offers_pipeline.run()
+
+
+if __name__ == "__main__":
+    run()

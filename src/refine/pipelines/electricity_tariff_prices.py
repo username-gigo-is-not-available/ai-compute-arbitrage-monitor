@@ -14,6 +14,7 @@ from refine.schemas.electricity_tariff import ELECTRICITY_TARIFF_SCHEMA
 def fix_decimal_separator(df: DataFrame) -> DataFrame:
     return replace_substring(df, column="price_mkd_per_kwh", current=",", replacement=".")
 
+
 def deduplicate_electricity_tariffs_prices(df: DataFrame) -> DataFrame:
     return deduplicate(df, columns=['tariff_description', 'valid_from'])
 
@@ -29,7 +30,7 @@ class ElectricityTariffPricesPipeline(Pipeline):
     ])
 
 
-if __name__ == '__main__':
+def run():
     session: SparkSession = initialize_spark()
     config_loader: SilverConfigLoader = SilverConfigLoader()
     electricity_tariff_prices_pipeline: ElectricityTariffPricesPipeline = ElectricityTariffPricesPipeline(
@@ -38,3 +39,7 @@ if __name__ == '__main__':
         config=config_loader.get_erc()
     )
     electricity_tariff_prices_pipeline.run()
+
+
+if __name__ == '__main__':
+    run()

@@ -24,7 +24,7 @@ class ExchangeRatesPipeline(Pipeline):
     ])
 
 
-if __name__ == '__main__':
+def run():
     session: SparkSession = initialize_spark()
     config_loader: SilverConfigLoader = SilverConfigLoader()
     exchange_rate_pipeline: ExchangeRatesPipeline = ExchangeRatesPipeline(
@@ -33,3 +33,7 @@ if __name__ == '__main__':
         config=config_loader.get_exchange_rate(),
     )
     exchange_rate_pipeline.run()
+
+
+if __name__ == '__main__':
+    run()
