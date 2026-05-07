@@ -1,10 +1,14 @@
+# shared.tfvars
+
 project_id              = "even-card-485518-r5"
+bq_dataset_name         = "gpu_compute_arbitrage_monitor_dataset"
+gcs_bucket_name         = "gpu-compute-arbitrage-monitor-lake"
+
+# gcp.tfvars
 vpc_name                = "gpu-compute-arbitrage-monitor-vpc"
 subnet_name             = "gpu-compute-arbitrage-monitor-subnet"
 compute_router_name     = "gpu-compute-arbitrage-monitor-router"
 router_nat_name         = "gpu-compute-arbitrage-monitor-nat"
-bq_dataset_name         = "gpu_compute_arbitrage_monitor_dataset"
-gcs_bucket_name         = "gpu-compute-arbitrage-monitor-lake"
 ar_repository_name      = "gpu-compute-arbitrage-monitor-repository"
 gh_wif_pool_id          = "gh-wif-pool"
 gh_wif_pool_provider_id = "gh-wif-provider"

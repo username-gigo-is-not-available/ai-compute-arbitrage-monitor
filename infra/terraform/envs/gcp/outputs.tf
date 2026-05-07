@@ -9,8 +9,8 @@ output "github_actions_service_account_email" {
 }
 
 output "dataproc_service_account_email" {
-  description = "Value for gcp.dataproc.service_account_email field in settings.yaml"
-  value = google_service_account.dataproc_sa.email
+  description = "Value for gcp.dataproc.service_account_email in settings.yaml"
+  value       = google_service_account.dataproc_sa.email
 }
 
 output "artifact_registry_url" {
