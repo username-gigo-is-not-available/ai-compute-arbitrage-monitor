@@ -25,7 +25,6 @@ dependencies = [
     "google-cloud-pubsub>=2.37.0",
     "google-cloud-dataproc>=5.27.0",
     "dbt-bigquery>=1.11.1",
-    "apache-airflow[google]>=3.2.1",
     "diagrams>=0.25.1",
 ]
 
@@ -48,3 +47,8 @@ target-version = ['py311']
 [tool.ruff]
 line-length = 88
 target-version = "py311"
+
+[dependency-groups]
+dev = [
+    "apache-airflow[google]==3.0.6",
+]
