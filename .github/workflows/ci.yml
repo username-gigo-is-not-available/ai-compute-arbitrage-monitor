@@ -48,7 +48,7 @@ jobs:
         run: |
           IMAGE=${{ env.REGION_NAME }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY_NAME }}/${{ env.IMAGE_NAME }}
           docker build \
-            -f infra/gcp/Dockerfile \
+            -f infra/terraform/Dockerfile \
             -t $IMAGE:$(git rev-parse --short HEAD) \
             -t $IMAGE:latest \
             .
