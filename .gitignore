@@ -14,8 +14,8 @@ src/transform/dbt_packages
 src/transform/target
 src/transform/profiles.yml
 src/transform/.user.yml
-infra/gcp/.terraform
-infra/gcp/terraform.tfstate
-infra/gcp/terraform.tfstate.backup
-infra/gcp/.terraform.lock.hcl
-infra/gcp/terraform.tfvars
+infra/**/.terraform
+infra/**/terraform.tfstate
+infra/**/terraform.tfstate.backup
+infra/**/.terraform.lock.hcl
+infra/**/terraform.tfvars
