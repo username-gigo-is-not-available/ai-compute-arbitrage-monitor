@@ -1,12 +1,13 @@
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 from airflow import DAG
 from airflow.sdk import Asset, AssetAny
 from airflow.providers.standard.operators.bash import BashOperator
 
 from infra.airflow.dags.pipeline_config import PipelineConfig
+from infra.airflow.dags.transform_adapter import DbtAdapter
 
 DEFAULT_ARGS = {
     "owner": "gigo",
@@ -20,30 +21,10 @@ class MartsDagFactory:
     def __init__(
         self,
         pipeline_configs: list[PipelineConfig],
-        dbt_project_dir: str,
-        dbt_target_dir: str,
+        dbt: DbtAdapter
     ) -> None:
         self.pipeline_configs = pipeline_configs
-        self.dbt_directory = dbt_project_dir
-        self.dbt_target_dir = dbt_target_dir
-
-    def dbt_run(self, tag: str) -> str:
-        return (
-            f"/opt/airflow/.venv/bin/dbt run"
-            f" --project-dir {self.dbt_directory}"
-            f" --profiles-dir {self.dbt_directory}"
-            f" --target-path {self.dbt_target_dir}"
-            f" --select {tag}"
-        )
-
-    def dbt_test(self, tag: str) -> str:
-        return (
-            f"/opt/airflow/.venv/bin/dbt test"
-            f" --project-dir {self.dbt_directory}"
-            f" --profiles-dir {self.dbt_directory}"
-            f" --target-path {self.dbt_target_dir}"
-            f" --select {tag}"
-        )
+        self.dbt = dbt
 
     def build(self) -> DAG:
         pipeline_assets = [Asset(f"gpu_arbitrage/{cfg.name}") for cfg in self.pipeline_configs]
@@ -60,12 +41,12 @@ class MartsDagFactory:
 
             t_dbt_run = BashOperator(
                 task_id="run",
-                bash_command=self.dbt_run("tag:marts"),
+                bash_command=self.dbt.run("tag:marts"),
             )
 
             t_dbt_test = BashOperator(
                 task_id="test",
-                bash_command=self.dbt_test("tag:marts"),
+                bash_command=self.dbt.test("tag:marts"),
             )
             t_dbt_run >> t_dbt_test
 

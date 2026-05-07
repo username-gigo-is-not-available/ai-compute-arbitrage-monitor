@@ -8,7 +8,8 @@ from common.enums import DatasetType
 @dataclass
 class PipelineConfig:
     name: str
-    run_fn: Callable
+    ingest_fn: Callable
+    refine_fn: Callable
     schedule: str
     start_date: datetime
     dataset_type: DatasetType
@@ -28,8 +29,6 @@ class PipelineConfig:
     def external_table_selector(self) -> str:
         return f"{self.dataset_type.value.lower()}.{self.name}"
 
-    def entrypoint(self, bucket_name: str):
-        return f"gs://{bucket_name}/src/refine/pipelines/{self.name}"
 
 
 
