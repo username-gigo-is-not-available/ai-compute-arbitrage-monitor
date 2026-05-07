@@ -11,7 +11,7 @@ on:
       - "src/common/**"
       - "pyproject.toml"
       - "uv.lock"
-      - "infra/gcp/Dockerfile"
+      - "../../infra/terraform/Dockerfile"
 
 env:
   PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}

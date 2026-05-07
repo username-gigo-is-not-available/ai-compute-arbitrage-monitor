@@ -168,7 +168,7 @@ gcloud auth application-default login
 ### 4. Provision GCP infrastructure
 
 ```bash
-cd infra/gcp
+cd infra/terraform
 cp terraform.tfvars.example terraform.tfvars
 # Edit terraform.tfvars with your project_id, region, bucket_name, cluster_name
 terraform init
