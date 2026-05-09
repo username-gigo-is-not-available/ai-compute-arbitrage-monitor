@@ -1,6 +1,6 @@
-TF_SHARED      := infra/gcp/shared
-TF_ENV_DEV     := infra/gcp/envs/dev
-TF_ENV_GCP     := infra/gcp/envs/gcp
+TF_SHARED      := infra/terraform/shared
+TF_ENV_DEV     := infra/terraform/envs/dev
+TF_ENV_GCP     := infra/terraform/envs/gcp
 AIRFLOW_DIR    := infra/airflow
 
 .DEFAULT_GOAL  := help
