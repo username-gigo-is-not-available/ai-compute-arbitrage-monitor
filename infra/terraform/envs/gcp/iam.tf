@@ -22,6 +22,29 @@ resource "google_project_iam_member" "dataproc_roles" {
   member  = "serviceAccount:${google_service_account.dataproc_sa.email}"
 }
 
+# ── Composer Service Account ───────────────────────────────────────────────────
+
+resource "google_service_account" "composer_sa" {
+  account_id   = "composer-sa"
+  display_name = "Cloud Composer Service Account"
+
+  depends_on = [google_project_service.enabled_services["iam"]]
+}
+
+resource "google_project_iam_member" "composer_roles" {
+  for_each = toset([
+    "roles/composer.worker",
+    "roles/storage.objectAdmin",
+    "roles/bigquery.dataEditor",
+    "roles/bigquery.jobUser",
+    "roles/dataproc.admin",
+  ])
+
+  project = var.project_id
+  role    = each.key
+  member  = "serviceAccount:${google_service_account.composer_sa.email}"
+}
+
 # ── GitHub Actions Service Account ─────────────────────────────────────────────
 
 resource "google_service_account" "github_actions_sa" {

@@ -12,6 +12,12 @@ variable "router_nat_name" {}
 # Artifact Registry
 variable "ar_repository_name" {}
 
+# Cloud Composer
+variable "cc_environment_name" {}
+
+# Storage
+variable "gcs_bucket_name" {}
+
 # GitHub Workload Identity Federation
 variable "gh_wif_pool_id" {}
 variable "gh_wif_pool_provider_id" {}

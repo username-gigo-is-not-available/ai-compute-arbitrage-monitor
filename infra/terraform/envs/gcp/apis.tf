@@ -4,6 +4,7 @@ locals {
     dataproc              = "dataproc.googleapis.com"
     artifact_registry     = "artifactregistry.googleapis.com"
     container_file_system = "containerfilesystem.googleapis.com"
+    composer              = "composer.googleapis.com"
   }
 }
 
