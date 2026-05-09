@@ -43,12 +43,3 @@ resource "google_composer_environment" "composer" {
   }
 }
 
-output "composer_dags_bucket" {
-  description = "GCS bucket to upload DAGs and src/ into"
-  value       = google_composer_environment.composer.config.dag_gcs_prefix
-}
-
-output "composer_airflow_uri" {
-  description = "Airflow web UI URL"
-  value       = google_composer_environment.composer.config.airflow_uri
-}
