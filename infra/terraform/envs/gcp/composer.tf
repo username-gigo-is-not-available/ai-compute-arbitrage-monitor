@@ -10,7 +10,7 @@ resource "google_composer_environment" "composer" {
 
   config {
     software_config {
-      image_version = "composer-2-airflow-3"
+      image_version = "composer-3-airflow-3.1.7"
 
       pypi_packages = {
         pydantic       = ">=2.13.3"
