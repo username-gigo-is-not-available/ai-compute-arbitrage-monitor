@@ -98,7 +98,7 @@ resource "google_iam_workload_identity_pool_provider" "github_workload_identity_
   attribute_condition = "assertion.repository == '${var.gh_repository_uri}'"
 }
 
-resource "google_service_account_iam_member" "dataproc_wif_grant" {
+resource "google_service_account_iam_member" "github_workload_identity_grant" {
   service_account_id = google_service_account.github_actions_sa.name
   role               = "roles/iam.workloadIdentityUser"
   member             = "principalSet://iam.googleapis.com/${google_iam_workload_identity_pool.github_workload_identity_pool.name}/attribute.repository/${var.gh_repository_uri}"
