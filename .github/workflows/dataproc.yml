@@ -39,6 +39,7 @@ jobs:
         with:
           workload_identity_provider: ${{ env.IDENTITY_PROVIDER_NAME }}
           service_account: ${{ env.SERVICE_ACCOUNT_EMAIL }}
+          project_id: ${{ env.PROJECT_ID }}
 
       - name: Configure Docker for Artifact Registry
         run: |
