@@ -9,5 +9,3 @@ RUN pip install --no-cache-dir \
     python-dotenv==1.2.2
 
 USER airflow
-
-# Trigger CI
