@@ -41,24 +41,18 @@ jobs:
           gcloud auth configure-docker ${{ env.REGION_NAME }}-docker.pkg.dev --quiet
 
       - name: Build & Push Image
-        id: build
         run: |
           IMAGE=${{ env.REGION_NAME }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY_NAME }}/${{ env.IMAGE_NAME }}
-          SHORT_SHA=$(git rev-parse --short HEAD)
           docker build \
-          -f infra/terraform/Dockerfile.composer \
-          -t $IMAGE:$SHORT_SHA \
-          -t $IMAGE:latest \
-          .
-          docker push $IMAGE:$SHORT_SHA
+            -f infra/terraform/Dockerfile.composer \
+            -t $IMAGE:latest \
+            .
           docker push $IMAGE:latest
-          echo "image=$IMAGE" >> $GITHUB_OUTPUT
-          echo "short_sha=$SHORT_SHA" >> $GITHUB_OUTPUT
 
       - name: Update Composer custom image
-        id: update
         run: |
+          IMAGE=${{ env.REGION_NAME }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY_NAME }}/${{ env.IMAGE_NAME }}
           gcloud composer environments update ${{ env.COMPOSER_NAME }} \
             --location=${{ env.REGION_NAME }} \
             --project=${{ env.PROJECT_ID }} \
-            --update-airflow-configs=core-custom_image=${{ steps.build.outputs.image }}:${{ steps.build.outputs.short_sha }}
+            --update-airflow-configs=core-custom_image=$IMAGE:latest
