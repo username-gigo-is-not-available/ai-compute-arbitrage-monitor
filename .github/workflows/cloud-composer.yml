@@ -43,7 +43,6 @@ jobs:
           workload_identity_provider: ${{ env.IDENTITY_PROVIDER_NAME }}
           service_account: ${{ env.SERVICE_ACCOUNT_EMAIL }}
           project_id: ${{ env.PROJECT_ID }}
-          token_format: "access_token"
 
       - name: Configure Docker for Artifact Registry
         run: |
@@ -84,7 +83,6 @@ jobs:
           workload_identity_provider: ${{ env.IDENTITY_PROVIDER_NAME }}
           service_account: ${{ env.SERVICE_ACCOUNT_EMAIL }}
           project_id: ${{ env.PROJECT_ID }}
-          token_format: "access_token"
 
       - name: Update Composer custom image
         if: needs.build.outputs.image_built == 'true'
@@ -105,14 +103,11 @@ jobs:
 
       - name: Sync DAGs
         run: |
-          gcloud storage rsync -r --delete-unmatched-destination-objects \
-            --exclude-managed-folders \
-            infra/airflow/dags/ gs://europe-west3-ai-compute-arb-477a272b-bucket/dags/
+          gcloud storage cp -r infra/airflow/dags/* gs://europe-west3-ai-compute-arb-477a272b-bucket/dags/
 
       - name: Sync src/
         run: |
-          gcloud storage rsync -r --delete-unmatched-destination-objects \
-            src/ gs://europe-west3-ai-compute-arb-477a272b-bucket/src/
+          gcloud storage cp -r src/* gs://europe-west3-ai-compute-arb-477a272b-bucket/dags/src/
 
       - name: Upload settings
         run: |
