@@ -34,6 +34,7 @@ resource "google_service_account" "composer_sa" {
 resource "google_project_iam_member" "composer_roles" {
   for_each = toset([
     "roles/composer.worker",
+    "roles/composer.user",
     "roles/storage.objectAdmin",
     "roles/bigquery.dataEditor",
     "roles/bigquery.jobUser"
