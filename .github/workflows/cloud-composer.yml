@@ -106,6 +106,7 @@ jobs:
       - name: Sync DAGs
         run: |
           gcloud storage rsync -r --delete-unmatched-destination-objects \
+            --exclude-managed-folders \
             infra/airflow/dags/ gs://europe-west3-ai-compute-arb-477a272b-bucket/dags/
 
       - name: Sync src/
