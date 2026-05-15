@@ -22,3 +22,5 @@ ENV PYSPARK_PYTHON=/opt/conda/envs/spark_env/bin/python
 
 
 USER $DATAPROC_USER
+
+# Trigger CI
