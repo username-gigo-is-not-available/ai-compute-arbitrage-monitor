@@ -105,12 +105,14 @@ jobs:
 
       - name: Sync DAGs
         run: |
-          gsutil -m rsync -r -d infra/airflow/dags/ ${{ steps.composer.outputs.dags_bucket }}/
+          gcloud storage rsync -r --delete-unmatched-destination-objects \
+            infra/airflow/dags/ gs://europe-west3-ai-compute-arb-477a272b-bucket/dags/
 
       - name: Sync src/
         run: |
-          gsutil -m rsync -r -d src/ ${{ steps.composer.outputs.dags_bucket }}/src/
+          gcloud storage rsync -r --delete-unmatched-destination-objects \
+            src/ gs://europe-west3-ai-compute-arb-477a272b-bucket/src/
 
       - name: Upload settings
         run: |
-          gsutil cp config/settings.yaml gs://${{ env.GCS_BUCKET_NAME }}/config/settings.yaml
+          gcloud storage cp config/settings.yaml gs://${{ env.GCS_BUCKET_NAME }}/config/settings.yaml
