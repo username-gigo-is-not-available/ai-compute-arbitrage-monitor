@@ -3,15 +3,16 @@ output "workload_identity_provider_name" {
   value       = google_iam_workload_identity_pool_provider.github_workload_identity_pool_provider.name
 }
 
-output "github_actions_service_account_email" {
-  description = "Value for GCP_SERVICE_ACCOUNT_EMAIL secret in GitHub"
-  value       = google_service_account.github_actions_sa.email
-}
-
 output "dataproc_service_account_email" {
-  description = "Value for gcp.dataproc.service_account_email in settings.yaml"
+  description = "Value for GCP_DATAPROC_SERVICE_ACCOUNT_EMAIL in GitHub"
   value       = google_service_account.dataproc_sa.email
 }
+
+output "composer_environment_service_account_email" {
+  description = "Value for GCP_COMPOSER_ENVIRONMENT_SERVICE_ACCOUNT_EMAIL in GitHub"
+  value       = google_service_account.composer_sa.email
+}
+
 
 output "artifact_registry_url" {
   description = "Base URL for the Artifact Registry repository"

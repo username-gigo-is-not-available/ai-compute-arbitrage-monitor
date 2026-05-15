@@ -1,0 +1,11 @@
+FROM us-central1-docker.pkg.dev/cloud-airflow-releaser/airflow-worker-scheduler-3/airflow-worker-scheduler-3:cloud-composer-3-airflow-3.1.7-build.0
+
+USER root
+RUN pip install --no-cache-dir \
+    dbt-bigquery==1.11.1 \
+    pydantic==2.13.3 \
+    aiohttp==3.13.4 \
+    beautifulsoup4==4.14.3 \
+    python-dotenv==1.2.2
+
+USER airflow

@@ -36,13 +36,20 @@ resource "google_project_iam_member" "composer_roles" {
     "roles/composer.worker",
     "roles/storage.objectAdmin",
     "roles/bigquery.dataEditor",
-    "roles/bigquery.jobUser",
-    "roles/dataproc.admin",
+    "roles/bigquery.jobUser"
   ])
 
   project = var.project_id
   role    = each.key
   member  = "serviceAccount:${google_service_account.composer_sa.email}"
+}
+
+# ── Composer Service Account impersonates Dataproc Service Account ───────────────────────────────────────────────────
+
+resource "google_service_account_iam_member" "composer_impersonates_dataproc" {
+  service_account_id = google_service_account.dataproc_sa.name
+  role               = "roles/iam.serviceAccountUser"
+  member             = "serviceAccount:${google_service_account.composer_sa.email}"
 }
 
 # ── GitHub Actions Service Account ─────────────────────────────────────────────
@@ -71,18 +78,11 @@ resource "google_project_iam_member" "github_actions_roles" {
 resource "google_iam_workload_identity_pool" "github_workload_identity_pool" {
   workload_identity_pool_id = var.gh_wif_pool_id
 
-  lifecycle {
-    prevent_destroy = true
-  }
 }
 
 resource "google_iam_workload_identity_pool_provider" "github_workload_identity_pool_provider" {
   workload_identity_pool_id          = google_iam_workload_identity_pool.github_workload_identity_pool.workload_identity_pool_id
   workload_identity_pool_provider_id = var.gh_wif_pool_provider_id
-
-  lifecycle {
-    prevent_destroy = true
-  }
 
   oidc {
     issuer_uri = "https://token.actions.githubusercontent.com"
@@ -96,8 +96,14 @@ resource "google_iam_workload_identity_pool_provider" "github_workload_identity_
   attribute_condition = "assertion.repository == '${var.gh_repository_uri}'"
 }
 
-resource "google_service_account_iam_member" "github_workflow_identity_federation_grant" {
+resource "google_service_account_iam_member" "dataproc_wif_grant" {
   service_account_id = google_service_account.github_actions_sa.name
+  role               = "roles/iam.workloadIdentityUser"
+  member             = "principalSet://iam.googleapis.com/${google_iam_workload_identity_pool.github_workload_identity_pool.name}/attribute.repository/${var.gh_repository_uri}"
+}
+
+resource "google_service_account_iam_member" "composer_wif_grant" {
+  service_account_id = google_service_account.composer_sa.name
   role               = "roles/iam.workloadIdentityUser"
   member             = "principalSet://iam.googleapis.com/${google_iam_workload_identity_pool.github_workload_identity_pool.name}/attribute.repository/${var.gh_repository_uri}"
 }
