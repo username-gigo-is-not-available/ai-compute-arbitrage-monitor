@@ -95,6 +95,7 @@ jobs:
         run: |
           DAGS_BUCKET=$(gcloud composer environments describe ${{ env.COMPOSER_NAME }} \
             --location=${{ env.REGION_NAME }} \
+            --project=${{ env.PROJECT_ID }} \
             --format="value(config.dagGcsPrefix)")
           echo "dags_bucket=$DAGS_BUCKET" >> $GITHUB_OUTPUT
 
