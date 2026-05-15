@@ -46,13 +46,13 @@ paths:
   sources_directory_name: "sources"
 
 gcp:
-  project_id: "even-card-485518-r5"
+  project_id: "ai-compute-arbitrage-monitor"
   region_name: "europe-west3"
   gcs:
     bucket_name: "gpu-compute-arbitrage-monitor-lake"
   dataproc:
-    image_tag: "europe-west3-docker.pkg.dev/even-card-485518-r5/gpu-compute-arbitrage-monitor-repository/gpu-compute-arbitrage-monitor-dataproc-image:latest"
+    image_tag: "europe-west3-docker.pkg.dev/ai-compute-arbitrage-monitor/ai-compute-arbitrage-monitor-repository/ai-compute-arbitrage-monitor-dataproc-image:latest"
     runtime_packages: ["common", "config", "refine"]
     entrypoints_path: "src/refine/pipelines"
-    subnetwork_name: "projects/even-card-485518-r5/regions/europe-west3/subnetworks/gpu-compute-arbitrage-monitor-subnet"
-    service_account_email: "dataproc-sa@even-card-485518-r5.iam.gserviceaccount.com"
+    subnetwork_name: "projects/ai-compute-arbitrage-monitor/regions/europe-west3/subnetworks/ai-compute-arbitrage-monitor-subnet"
+    service_account_email: "dataproc-sa@ai-compute-arbitrage-monitor.iam.gserviceaccount.com"

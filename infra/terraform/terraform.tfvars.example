@@ -1,16 +1,17 @@
 # shared.tfvars
 
-project_id              = "even-card-485518-r5"
-bq_dataset_name         = "gpu_compute_arbitrage_monitor_dataset"
-gcs_bucket_name         = "gpu-compute-arbitrage-monitor-lake"
+project_id              = "ai-compute-arbitrage-monitor"
+bq_dataset_name         = "ai_compute_arbitrage_monitor_dataset"
+gcs_bucket_name         = "ai-compute-arbitrage-monitor-lake"
 
 # gcp.tfvars
-vpc_name                = "gpu-compute-arbitrage-monitor-vpc"
-subnet_name             = "gpu-compute-arbitrage-monitor-subnet"
-compute_router_name     = "gpu-compute-arbitrage-monitor-router"
-router_nat_name         = "gpu-compute-arbitrage-monitor-nat"
-ar_repository_name      = "gpu-compute-arbitrage-monitor-repository"
-cc_environment_name     = "gpu-compute-arbitrage-monitor-orchestrator"
+vpc_name                = "ai-compute-arbitrage-monitor-vpc"
+subnet_name             = "ai-compute-arbitrage-monitor-subnet"
+compute_router_name     = "ai-compute-arbitrage-monitor-router"
+router_nat_name         = "ai-compute-arbitrage-monitor-nat"
+ar_repository_name      = "ai-compute-arbitrage-monitor-repository"
+cc_environment_name     = "ai-compute-arbitrage-monitor-orchestrator"
+cc_image_tag = "europe-west3-docker.pkg.dev/ai-compute-arbitrage-monitor/ai-compute-arbitrage-monitor-repository/ai-compute-arbitrage-monitor-composer-image:latest"
 gh_wif_pool_id          = "gh-wif-pool"
 gh_wif_pool_provider_id = "gh-wif-provider"
 gh_repository_uri       = "username-gigo-is-not-available/ai-compute-arbitrage-monitor"
