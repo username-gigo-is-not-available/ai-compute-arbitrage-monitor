@@ -17,7 +17,7 @@ env:
   IMAGE_NAME: ${{ vars.GCP_COMPOSER_IMAGE_NAME }}
 
 jobs:
-  build:
+  build-and-push:
     name: Build & Push Image
     runs-on: ubuntu-latest
 
@@ -46,16 +46,19 @@ jobs:
           IMAGE=${{ env.REGION_NAME }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY_NAME }}/${{ env.IMAGE_NAME }}
           SHORT_SHA=$(git rev-parse --short HEAD)
           docker build \
-            -f infra/terraform/Dockerfile.composer \
-            -t $IMAGE:$SHORT_SHA \
-            -t $IMAGE:latest \
-            .
+          -f infra/terraform/Dockerfile.composer \
+          -t $IMAGE:$SHORT_SHA \
+          -t $IMAGE:latest \
+          .
           docker push $IMAGE:$SHORT_SHA
           docker push $IMAGE:latest
+          echo "image=$IMAGE" >> $GITHUB_OUTPUT
+          echo "short_sha=$SHORT_SHA" >> $GITHUB_OUTPUT
 
       - name: Update Composer custom image
+        id: update
         run: |
           gcloud composer environments update ${{ env.COMPOSER_NAME }} \
             --location=${{ env.REGION_NAME }} \
             --project=${{ env.PROJECT_ID }} \
-            --update-airflow-configs=core-custom_image=$IMAGE:$SHORT_SHA
+            --update-airflow-configs=core-custom_image=${{ steps.build.outputs.image }}:${{ steps.build.outputs.short_sha }}
