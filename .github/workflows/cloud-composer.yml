@@ -87,6 +87,7 @@ jobs:
         run: |
           gcloud composer environments update ${{ env.COMPOSER_NAME }} \
             --location=${{ env.REGION_NAME }} \
+            --project=${{ env.PROJECT_ID }} \
             --update-airflow-configs=core-custom_image=${{ needs.build.outputs.image }}
 
       - name: Get Composer DAGs bucket
