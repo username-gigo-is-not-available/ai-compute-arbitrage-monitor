@@ -67,6 +67,7 @@ resource "google_project_iam_member" "github_actions_roles" {
     "roles/artifactregistry.writer",
     "roles/dataproc.editor",
     "roles/storage.objectAdmin",
+    "roles/composer.user",
   ])
 
   project = var.project_id
@@ -99,12 +100,6 @@ resource "google_iam_workload_identity_pool_provider" "github_workload_identity_
 
 resource "google_service_account_iam_member" "dataproc_wif_grant" {
   service_account_id = google_service_account.github_actions_sa.name
-  role               = "roles/iam.workloadIdentityUser"
-  member             = "principalSet://iam.googleapis.com/${google_iam_workload_identity_pool.github_workload_identity_pool.name}/attribute.repository/${var.gh_repository_uri}"
-}
-
-resource "google_service_account_iam_member" "composer_wif_grant" {
-  service_account_id = google_service_account.composer_sa.name
   role               = "roles/iam.workloadIdentityUser"
   member             = "principalSet://iam.googleapis.com/${google_iam_workload_identity_pool.github_workload_identity_pool.name}/attribute.repository/${var.gh_repository_uri}"
 }
