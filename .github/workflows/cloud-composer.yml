@@ -43,6 +43,7 @@ jobs:
           workload_identity_provider: ${{ env.IDENTITY_PROVIDER_NAME }}
           service_account: ${{ env.SERVICE_ACCOUNT_EMAIL }}
           project_id: ${{ env.PROJECT_ID }}
+          token_format: "access_token"
 
       - name: Configure Docker for Artifact Registry
         run: |
@@ -83,6 +84,7 @@ jobs:
           workload_identity_provider: ${{ env.IDENTITY_PROVIDER_NAME }}
           service_account: ${{ env.SERVICE_ACCOUNT_EMAIL }}
           project_id: ${{ env.PROJECT_ID }}
+          token_format: "access_token"
 
       - name: Update Composer custom image
         if: needs.build.outputs.image_built == 'true'
