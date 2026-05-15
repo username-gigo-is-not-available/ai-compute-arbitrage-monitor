@@ -1,0 +1,59 @@
+name: Deploy to Composer
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - "infra/airflow/dags/**"
+      - "src/**"
+      - "config/settings.yaml"
+
+env:
+  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  REGION_NAME: ${{ vars.GCP_REGION_NAME }}
+  SERVICE_ACCOUNT_EMAIL: ${{ secrets.GCP_SERVICE_ACCOUNT_EMAIL }}
+  IDENTITY_PROVIDER_NAME: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER_NAME }}
+  COMPOSER_NAME: ${{ vars.GCP_COMPOSER_ENVIRONMENT_NAME }}
+  GCS_BUCKET_NAME: ${{ vars.GCS_BUCKET_NAME }}
+
+jobs:
+  deploy:
+    name: Sync DAGs & Files
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ env.IDENTITY_PROVIDER_NAME }}
+          service_account: ${{ env.SERVICE_ACCOUNT_EMAIL }}
+          project_id: ${{ env.PROJECT_ID }}
+
+      - name: Get Composer DAGs bucket
+        id: composer
+        run: |
+          DAGS_BUCKET=$(gcloud composer environments describe ${{ env.COMPOSER_NAME }} \
+            --location=${{ env.REGION_NAME }} \
+            --project=${{ env.PROJECT_ID }} \
+            --format="value(config.dagGcsPrefix)")
+          echo "dags_bucket=$DAGS_BUCKET" >> $GITHUB_OUTPUT
+
+      - name: Sync DAGs
+        run: |
+          gcloud storage cp -r infra/airflow/dags/* ${{ steps.composer.outputs.dags_bucket }}/
+
+      - name: Sync src/
+        run: |
+          gcloud storage cp -r src/* ${{ steps.composer.outputs.dags_bucket }}/src/
+
+      - name: Upload settings
+        run: |
+          gcloud storage cp config/settings.yaml gs://${{ env.GCS_BUCKET_NAME }}/config/settings.yaml
