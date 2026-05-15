@@ -1,7 +1,7 @@
 x-airflow-common: &airflow-common
   build:
     context: ../..
-    dockerfile: infra/airflow/Dockerfile
+    dockerfile: infra/airflow/Dockerfile.airflow
     args:
       PYTHON_VERSION: "3.12"
   env_file:
