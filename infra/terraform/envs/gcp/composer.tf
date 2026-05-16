@@ -8,9 +8,9 @@ resource "google_composer_environment" "composer" {
     google_service_account.composer_sa
   ]
 
-   storage_config {
-      bucket = var.gcs_bucket_name
-    }
+  storage_config {
+    bucket = var.gcs_bucket_name
+  }
 
   config {
     software_config {
@@ -27,10 +27,10 @@ resource "google_composer_environment" "composer" {
 
       env_variables = {
         SETTINGS_PATH    = "gs://${var.gcs_bucket_name}/config/settings.yaml"
-        DBT_PROJECT_DIR  = "/home/airflow/gcs/dags/transform"
-        DBT_PROFILES_DIR = "/home/airflow/gcs/dags/transform"
+        DBT_PROJECT_DIR  = "/home/airflow/gcs/src/transform"
+        DBT_PROFILES_DIR = "/home/airflow/gcs/src/transform"
         DBT_TARGET_DIR   = "/tmp/dbt_target"
-        PYTHONPATH       = "/home/airflow/gcs/dags:/home/airflow/gcs/dags/src"
+        PYTHONPATH       = "/home/airflow/gcs/src:/home/airflow/gcs/dags"
       }
     }
 
