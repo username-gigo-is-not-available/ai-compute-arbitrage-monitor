@@ -14,7 +14,6 @@ env:
   REGION_NAME: ${{ vars.GCP_REGION_NAME }}
   SERVICE_ACCOUNT_EMAIL: ${{ secrets.GCP_SERVICE_ACCOUNT_EMAIL }}
   IDENTITY_PROVIDER_NAME: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER_NAME }}
-  COMPOSER_NAME: ${{ vars.GCP_COMPOSER_ENVIRONMENT_NAME }}
   BUCKET_NAME: ${{ vars.GCP_BUCKET_NAME }}
 
 jobs:
@@ -37,22 +36,13 @@ jobs:
           service_account: ${{ env.SERVICE_ACCOUNT_EMAIL }}
           project_id: ${{ env.PROJECT_ID }}
 
-      - name: Get Composer DAGs bucket
-        id: composer
-        run: |
-          DAGS_BUCKET=$(gcloud composer environments describe ${{ env.COMPOSER_NAME }} \
-            --location=${{ env.REGION_NAME }} \
-            --project=${{ env.PROJECT_ID }} \
-            --format="value(config.dagGcsPrefix)")
-          echo "dags_bucket=$DAGS_BUCKET" >> $GITHUB_OUTPUT
-
       - name: Sync DAGs
         run: |
-          gcloud storage cp -r infra/airflow/dags/* ${{ env.BUCKET_NAME }}/
+          gcloud storage cp -r infra/airflow/dags/* gs://${{ env.BUCKET_NAME }}/dags/
 
       - name: Sync src/
         run: |
-          gcloud storage cp -r src/* ${{ env.BUCKET_NAME }}/src/
+          gcloud storage cp -r src/* gs://${{ env.BUCKET_NAME }}/src/
 
       - name: Upload settings
         run: |
