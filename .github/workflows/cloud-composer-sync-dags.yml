@@ -15,7 +15,7 @@ env:
   SERVICE_ACCOUNT_EMAIL: ${{ secrets.GCP_SERVICE_ACCOUNT_EMAIL }}
   IDENTITY_PROVIDER_NAME: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER_NAME }}
   COMPOSER_NAME: ${{ vars.GCP_COMPOSER_ENVIRONMENT_NAME }}
-  GCS_BUCKET_NAME: ${{ vars.GCS_BUCKET_NAME }}
+  BUCKET_NAME: ${{ vars.GCP_BUCKET_NAME }}
 
 jobs:
   deploy:
@@ -56,4 +56,4 @@ jobs:
 
       - name: Upload settings
         run: |
-          gcloud storage cp config/settings.yaml gs://${{ env.GCS_BUCKET_NAME }}/config/settings.yaml
+          gcloud storage cp config/settings.yaml gs://${{ env.BUCKET_NAME }}/config/settings.yaml
