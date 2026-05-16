@@ -2,7 +2,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Callable
 
-from src.common.enums import DatasetType
+from common.enums import DatasetType
 
 
 @dataclass
