@@ -8,6 +8,10 @@ resource "google_composer_environment" "composer" {
     google_service_account.composer_sa
   ]
 
+   storage_config {
+      bucket = var.gcs_bucket_name
+    }
+
   config {
     software_config {
       image_version = "composer-3-airflow-3.1.7"
@@ -31,6 +35,7 @@ resource "google_composer_environment" "composer" {
     }
 
     environment_size = "ENVIRONMENT_SIZE_SMALL"
+
 
     node_config {
       network         = google_compute_network.vpc.id
