@@ -1,6 +1,6 @@
 variable "project_id" {}
 variable "region" { default = "europe-west3" }
-variable "location" { default = "EU" }
+variable "location" { default = "europe-west3" }
 
 # Networking
 variable "vpc_name" {}
