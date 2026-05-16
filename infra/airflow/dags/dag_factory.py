@@ -7,9 +7,9 @@ from airflow.providers.standard.operators.bash import BashOperator
 from airflow.providers.standard.operators.python import PythonOperator
 from airflow.sdk import Asset
 
-from infra.airflow.dags.pipeline_config import PipelineConfig
-from infra.airflow.dags.refine_strategy import RefineStrategy
-from infra.airflow.dags.transform_adapter import DbtAdapter
+from pipeline_config import PipelineConfig
+from refine_strategy import RefineStrategy
+from transform_adapter import DbtAdapter
 
 DEFAULT_ARGS = {
     "owner": "gigo",

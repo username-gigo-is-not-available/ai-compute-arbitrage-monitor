@@ -6,11 +6,11 @@ from airflow.providers.google.cloud.operators.dataproc import DataprocCreateBatc
 from airflow.providers.standard.operators.python import PythonOperator
 from airflow.sdk import BaseOperator
 
-from common.enums import ExecutionType
-from config.cluster import GCPClusterConfig
-from config.loader import ConfigLoader
-from config.storage import GCPStorageConfig
-from infra.airflow.dags.pipeline_config import PipelineConfig
+from src.common.enums import ExecutionType
+from src.config.cluster import GCPClusterConfig
+from src.config.loader import ConfigLoader
+from src.config.storage import GCPStorageConfig
+from pipeline_config import PipelineConfig
 
 
 class RefineStrategy(ABC):
