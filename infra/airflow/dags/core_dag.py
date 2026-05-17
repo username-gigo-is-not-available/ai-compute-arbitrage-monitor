@@ -7,16 +7,16 @@ from refine_strategy import RefineStrategy
 from transform_adapter import DbtAdapter
 from dag_factory import DagFactory
 from pipeline_config import PipelineConfig
-from common.enums import DatasetType
-from config.loader import ConfigLoader
-from ingest.sources.vast_ai import run as vast_ai_ingest_run
-from ingest.sources.exchange_rate import run as exchange_rate_ingest_run
-from ingest.seeds.electricity_tariff_price import run as tariff_price_ingest_run
-from ingest.seeds.electricity_tariff_schedule import run as tariff_schedule_ingest_run
-from refine.pipelines.compute_offers import run as compute_offer_refine_run
-from refine.pipelines.exchange_rates import run as exchange_rate_refine_run
-from refine.pipelines.electricity_tariff_prices import run as tariff_price_refine_run
-from refine.pipelines.electricity_tariffs_schedule import run as tariff_schedule_refine_run
+from src.common.enums import DatasetType
+from src.config.loader import ConfigLoader
+from src.ingest.sources.vast_ai import run as vast_ai_ingest_run
+from src.ingest.sources.exchange_rate import run as exchange_rate_ingest_run
+from src.ingest.seeds.electricity_tariff_price import run as tariff_price_ingest_run
+from src.ingest.seeds.electricity_tariff_schedule import run as tariff_schedule_ingest_run
+from src.refine.pipelines.compute_offers import run as compute_offer_refine_run
+from src.refine.pipelines.exchange_rates import run as exchange_rate_refine_run
+from src.refine.pipelines.electricity_tariff_prices import run as tariff_price_refine_run
+from src.refine.pipelines.electricity_tariffs_schedule import run as tariff_schedule_refine_run
 
 CONFIG: ConfigLoader = ConfigLoader()
 
