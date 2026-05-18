@@ -37,10 +37,12 @@ jobs:
           project_id: ${{ env.PROJECT_ID }}
 
       - name: Sync DAGs
-        run: gcloud storage cp -r infra/airflow/dags/* gs://${{ env.BUCKET_NAME }}/dags/
+        run: |
+          gcloud storage cp -r infra/airflow/dags/* gs://${{ env.BUCKET_NAME }}/dags/
 
-      - name: Sync src into dags
-        run: gcloud storage cp -r src/* gs://${{ env.BUCKET_NAME }}/dags/
+      - name: Sync src/
+        run: |
+          gcloud storage cp -r src/* gs://${{ env.BUCKET_NAME }}/src/
 
       - name: Upload settings
         run: |
