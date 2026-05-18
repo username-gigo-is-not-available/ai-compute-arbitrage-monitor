@@ -30,7 +30,7 @@ resource "google_composer_environment" "composer" {
         DBT_PROJECT_DIR  = "/home/airflow/gcs/src/transform"
         DBT_PROFILES_DIR = "/home/airflow/gcs/src/transform"
         DBT_TARGET_DIR   = "/tmp/dbt_target"
-        PYTHONPATH       = "/home/airflow/gcs/dags:/home/airflow/gcs/src"
+        PYTHONPATH       = "/home/airflow/gcs/dags:/home/airflow/gcs/dags/src"
       }
     }
 
