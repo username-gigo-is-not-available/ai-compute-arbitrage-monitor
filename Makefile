@@ -36,6 +36,7 @@ help:
 	@echo "Airflow"
 	@echo "  make up                Start Airflow (docker compose)"
 	@echo "  make down              Stop Airflow"
+	@echo "  make build             Build Airflow"
 	@echo "  make logs              Tail Airflow logs"
 	@echo "  make restart           Restart Airflow"
 	@echo ""
