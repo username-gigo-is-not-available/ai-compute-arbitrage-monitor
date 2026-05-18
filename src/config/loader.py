@@ -68,6 +68,8 @@ class ConfigLoader:
 
     @staticmethod
     def _load_yaml(path: Path) -> dict:
+        print(f"ATTEMPTING TO LOAD SETTINGS FROM: {path}")
+        print(f"FILE EXISTS: {path.exists()}")
         with open(path, "r", encoding="utf-8") as f:
             contents = f.read()
             print(f"SETTINGS FILE CONTENTS:\n{contents}")
