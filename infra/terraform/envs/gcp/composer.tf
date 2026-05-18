@@ -26,9 +26,9 @@ resource "google_composer_environment" "composer" {
       }
 
       env_variables = {
-        SETTINGS_PATH    = "/home/airflow/gcs/config/settings.yaml"
-        DBT_PROJECT_DIR  = "/home/airflow/gcs/src/transform"
-        DBT_PROFILES_DIR = "/home/airflow/gcs/src/transform"
+        SETTINGS_PATH    = "/home/airflow/gcs/dags/config/settings.yaml"
+        DBT_PROJECT_DIR  = "/home/airflow/gcs/dags/transform"
+        DBT_PROFILES_DIR = "/home/airflow/gcs/dags/transform"
         DBT_TARGET_DIR   = "/tmp/dbt_target"
         PYTHONPATH       = "/home/airflow/gcs/dags"
       }
