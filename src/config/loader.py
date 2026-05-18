@@ -66,16 +66,18 @@ class ConfigLoader:
             force=True
         )
 
+
     @staticmethod
     def _load_yaml(path: Path) -> dict:
-        print(f"ATTEMPTING TO LOAD SETTINGS FROM: {path}")
-        print(f"FILE EXISTS: {path.exists()}")
-        with open(path, "r", encoding="utf-8") as f:
-            contents = f.read()
-            print(f"SETTINGS FILE CONTENTS:\n{contents}")
-            result = yaml.safe_load(contents) or {}
-            print(f"PARSED YAML KEYS: {list(result.keys())}")
-            return result
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                return yaml.safe_load(f)
+        except FileNotFoundError:
+            logging.warning(f"Config file not found at {path}, using defaults.")
+            return {}
+        except Exception as e:
+            logging.error(f"Could not load config file {path}: {e}")
+            return {}
 
 
 class BronzeConfigLoader(ConfigLoader):
