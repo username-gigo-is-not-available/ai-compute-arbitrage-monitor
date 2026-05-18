@@ -42,7 +42,13 @@ jobs:
 
       - name: Sync src/
         run: |
-          gcloud storage cp -r src/ gs://${{ env.BUCKET_NAME }}/dags/
+          gcloud storage cp -r infra/airflow/dags/* gs://${{ env.BUCKET_NAME }}/dags/
+          gcloud storage cp -r src/common gs://${{ env.BUCKET_NAME }}/dags/common
+          gcloud storage cp -r src/config gs://${{ env.BUCKET_NAME }}/dags/config
+          gcloud storage cp -r src/ingest gs://${{ env.BUCKET_NAME }}/dags/ingest
+          gcloud storage cp -r src/refine gs://${{ env.BUCKET_NAME }}/dags/refine
+          gcloud storage cp -r src/serializers gs://${{ env.BUCKET_NAME }}/dags/serializers
+          gcloud storage cp -r src/bootstrap gs://${{ env.BUCKET_NAME }}/dags/bootstrap
 
       - name: Upload settings
         run: |
