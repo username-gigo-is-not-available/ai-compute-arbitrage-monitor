@@ -42,7 +42,6 @@ jobs:
 
       - name: Sync src/
         run: |
-          gcloud storage cp -r infra/airflow/dags/* gs://${{ env.BUCKET_NAME }}/dags/
           gcloud storage cp -r src/common gs://${{ env.BUCKET_NAME }}/dags/common/
           gcloud storage cp -r src/config gs://${{ env.BUCKET_NAME }}/dags/config/
           gcloud storage cp -r src/ingest gs://${{ env.BUCKET_NAME }}/dags/ingest/
