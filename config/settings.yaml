@@ -17,7 +17,7 @@ seeds:
   erc:
     enabled: true
     url: "https://www.erc.org.mk/ceni.aspx"
-    data: { "e": 2 }
+    data: { e: 2 }
     file_name: "electricity_tariff_prices"
 
   evn:
