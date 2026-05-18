@@ -71,7 +71,7 @@ class ConfigLoader:
     def _load_yaml(path: Path) -> dict:
         try:
             with open(path, "r", encoding="utf-8") as f:
-                return yaml.safe_load(f) or {}
+                return yaml.safe_load(f)
         except FileNotFoundError:
             logging.warning(f"Config file not found at {path}, using defaults.")
             return {}
