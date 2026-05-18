@@ -8,7 +8,7 @@ sources:
       - name: compute_offers
         description: "Vast.ai GPU compute offers"
         external:
-          location: "gs://gpu-compute-arbitrage-monitor-lake/silver/sources/compute_offers/*.parquet"
+          location: "gs://ai-compute-arbitrage-monitor-lake/silver/sources/compute_offers/*.parquet"
           options:
             format: parquet
           autodetect: true
@@ -16,7 +16,7 @@ sources:
       - name: exchange_rates
         description: "USD/MKD exchange rate"
         external:
-          location: "gs://gpu-compute-arbitrage-monitor-lake/silver/sources/exchange_rates/*.parquet"
+          location: "gs://ai-compute-arbitrage-monitor-lake/silver/sources/exchange_rates/*.parquet"
           options:
             format: parquet
           autodetect: true
@@ -27,14 +27,14 @@ sources:
     tables:
       - name: electricity_tariff_prices
         external:
-          location: "gs://gpu-compute-arbitrage-monitor-lake/silver/seeds/electricity_tariff_prices/*.parquet"
+          location: "gs://ai-compute-arbitrage-monitor-lake/silver/seeds/electricity_tariff_prices/*.parquet"
           options:
             format: parquet
           autodetect: true
       
       - name: electricity_tariffs_schedule
         external:
-          location: "gs://gpu-compute-arbitrage-monitor-lake/silver/seeds/electricity_tariffs_schedule/*.parquet"
+          location: "gs://ai-compute-arbitrage-monitor-lake/silver/seeds/electricity_tariffs_schedule/*.parquet"
           options:
             format: parquet
           autodetect: true
