@@ -42,11 +42,11 @@ jobs:
 
       - name: Sync src/
         run: |
-          gcloud storage cp -r src/common gs://${{ env.BUCKET_NAME }}/dags/common/
-          gcloud storage cp -r src/config gs://${{ env.BUCKET_NAME }}/dags/config/
-          gcloud storage cp -r src/ingest gs://${{ env.BUCKET_NAME }}/dags/ingest/
-          gcloud storage cp -r src/refine gs://${{ env.BUCKET_NAME }}/dags/refine/
-          gcloud storage cp -r src/serializers gs://${{ env.BUCKET_NAME }}/dags/serializers/
+          gcloud storage cp -r src/common/* gs://${{ env.BUCKET_NAME }}/dags/common/
+          gcloud storage cp -r src/config/* gs://${{ env.BUCKET_NAME }}/dags/config/
+          gcloud storage cp -r src/ingest/* gs://${{ env.BUCKET_NAME }}/dags/ingest/
+          gcloud storage cp -r src/refine/* gs://${{ env.BUCKET_NAME }}/dags/refine/
+          gcloud storage cp -r src/serializers/* gs://${{ env.BUCKET_NAME }}/dags/serializers/
 
       - name: Upload settings
         run: |
