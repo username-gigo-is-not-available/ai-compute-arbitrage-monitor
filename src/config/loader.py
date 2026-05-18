@@ -33,7 +33,7 @@ class ConfigLoader:
             return ExecutionType.LOCAL
 
     def get_cluster(self) -> GCPClusterConfig:
-        gcp_config: dict[str, Any] = self._raw["terraform"]
+        gcp_config: dict[str, Any] = self._raw["gcp"]
         return GCPClusterConfig(
             project_id=gcp_config["project_id"],
             region_name=gcp_config["region_name"],
@@ -54,7 +54,7 @@ class ConfigLoader:
         return GCPStorageConfig(
             seeds_directory_name=path_data["seeds_directory_name"],
             sources_directory_name=path_data["sources_directory_name"],
-            bucket_name=self._raw["terraform"]["gcs"]["bucket_name"]
+            bucket_name=self._raw["gcp"]["gcs"]["bucket_name"]
         )
 
 
