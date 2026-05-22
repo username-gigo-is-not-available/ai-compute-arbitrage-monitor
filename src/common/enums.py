@@ -13,7 +13,7 @@ class DatasetType(StrEnum):
     SOURCES = auto()
     SEEDS = auto()
 
-class VerificationFlag(StrEnum):
+class VerificationStatusType(StrEnum):
     VERIFIED = "verified"
     UNVERIFIED = "unverified"
     DEVERIFIED = "deverified"

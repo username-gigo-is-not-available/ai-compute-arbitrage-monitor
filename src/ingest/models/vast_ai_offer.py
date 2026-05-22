@@ -1,7 +1,7 @@
 from pydantic import field_validator
 
 from ingest.models.base import BaseRecord
-from common.enums import VerificationFlag, OfferType
+from common.enums import VerificationStatusType, OfferType
 
 
 class VastAIOffer(BaseRecord):
@@ -51,7 +51,7 @@ class VastAIOffer(BaseRecord):
     # LOCATION
     geolocation: str | None = None
     # FLAGS
-    verification_flag: VerificationFlag
+    verification_flag: VerificationStatusType
     rentable_flag: bool
     rented_flag: bool
 
