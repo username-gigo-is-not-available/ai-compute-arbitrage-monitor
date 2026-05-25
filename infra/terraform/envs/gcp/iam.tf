@@ -37,7 +37,8 @@ resource "google_project_iam_member" "composer_roles" {
     "roles/composer.user",
     "roles/storage.objectAdmin",
     "roles/bigquery.dataEditor",
-    "roles/bigquery.jobUser"
+    "roles/bigquery.jobUser",
+    "roles/dataproc.editor"
   ])
 
   project = var.project_id
