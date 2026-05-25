@@ -55,3 +55,4 @@ gcp:
     runtime_packages: ["common", "config", "refine"]
     subnetwork_name: "projects/ai-compute-arbitrage-monitor/regions/europe-west3/subnetworks/ai-compute-arbitrage-monitor-subnet"
     service_account_email: "dataproc-sa@ai-compute-arbitrage-monitor.iam.gserviceaccount.com"
+
