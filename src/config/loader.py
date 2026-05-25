@@ -39,24 +39,20 @@ class ConfigLoader:
             region_name=gcp_config["region_name"],
             image_tag=gcp_config["dataproc"]["image_tag"],
             runtime_packages=gcp_config["dataproc"]["runtime_packages"],
-            entrypoints_path=gcp_config["dataproc"]["entrypoints_path"],
             subnetwork_name=gcp_config["dataproc"]["subnetwork_name"],
             service_account_email=gcp_config["dataproc"]["service_account_email"],
         )
 
-
     def get_http(self) -> HttpConfig:
         return HttpConfig(**self._raw["http"])
 
-
-    def get_storage(self) -> GCPStorageConfig :
+    def get_storage(self) -> GCPStorageConfig:
         path_data: dict[str, Any] = self._raw["paths"]
         return GCPStorageConfig(
             seeds_directory_name=path_data["seeds_directory_name"],
             sources_directory_name=path_data["sources_directory_name"],
             bucket_name=self._raw["gcp"]["gcs"]["bucket_name"]
         )
-
 
     def _setup_logging(self) -> None:
         log_config = self._raw.get("logging", {})
@@ -65,7 +61,6 @@ class ConfigLoader:
             format=log_config.get("format", "%(asctime)s - %(name)s - %(levelname)s - %(message)s"),
             force=True
         )
-
 
     @staticmethod
     def _load_yaml(path: Path) -> dict:
@@ -114,18 +109,18 @@ class SilverConfigLoader(ConfigLoader):
         super().__init__(config_path)
 
     def get_vast_ai(self) -> VastAIConfig:
-        return VastAIConfig(**self._raw["sources"]["vast_ai"],
-                            input_directory_path=self._paths.sources_directory_path_for_stage(DataStageType.BRONZE),
-                            output_directory_path=self._paths.sources_directory_path_for_stage(DataStageType.SILVER),
-                            )
+        return VastAIConfig(
+            **self._raw["sources"]["vast_ai"],
+            input_directory_path=self._paths.sources_directory_path_for_stage(DataStageType.BRONZE),
+            output_directory_path=self._paths.sources_directory_path_for_stage(DataStageType.SILVER),
+        )
 
     def get_exchange_rate(self) -> ExchangeRateConfig:
-        return ExchangeRateConfig(**self._raw["sources"]["exchange_rate"],
-                                  input_directory_path=self._paths.sources_directory_path_for_stage(
-                                      DataStageType.BRONZE),
-                                  output_directory_path=self._paths.sources_directory_path_for_stage(
-                                      DataStageType.SILVER),
-                                  )
+        return ExchangeRateConfig(
+            **self._raw["sources"]["exchange_rate"],
+            input_directory_path=self._paths.sources_directory_path_for_stage(DataStageType.BRONZE),
+            output_directory_path=self._paths.sources_directory_path_for_stage(DataStageType.SILVER),
+        )
 
     def get_erc(self) -> ERCConfig:
         return ERCConfig(

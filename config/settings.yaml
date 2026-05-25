@@ -53,6 +53,5 @@ gcp:
   dataproc:
     image_tag: "europe-west3-docker.pkg.dev/ai-compute-arbitrage-monitor/ai-compute-arbitrage-monitor-repository/ai-compute-arbitrage-monitor-dataproc-image:latest"
     runtime_packages: ["common", "config", "refine"]
-    entrypoints_path: "src/refine/pipelines"
     subnetwork_name: "projects/ai-compute-arbitrage-monitor/regions/europe-west3/subnetworks/ai-compute-arbitrage-monitor-subnet"
     service_account_email: "dataproc-sa@ai-compute-arbitrage-monitor.iam.gserviceaccount.com"

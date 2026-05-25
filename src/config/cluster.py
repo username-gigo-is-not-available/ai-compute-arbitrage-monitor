@@ -6,6 +6,5 @@ class GCPClusterConfig(BaseModel):
     region_name: str
     image_tag: str
     runtime_packages: list[str]
-    entrypoints_path: str
     subnetwork_name: str
     service_account_email: str
