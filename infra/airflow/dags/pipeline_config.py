@@ -31,5 +31,13 @@ class PipelineConfig:
         return f"{self.ingest_module_base}.{self.dataset_type}.{self.dataset_name}"
 
     @property
+    def ingest_uri(self) -> str:
+        return f"{self.ingest_module_base}/{self.dataset_type}/{self.dataset_name}.py"
+
+    @property
     def refine_module(self) -> str:
         return f"{self.refine_module_base}.{self.dataset_type}.{self.dataset_name}"
+
+    @property
+    def refine_uri(self) -> str:
+        return f"{self.refine_module_base}/{self.dataset_type}/{self.dataset_name}.py"

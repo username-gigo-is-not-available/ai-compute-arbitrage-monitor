@@ -26,8 +26,7 @@ class RefineStrategy(ABC):
         execution_type: ExecutionType = config.get_execution_type()
         if execution_type == ExecutionType.GCP:
             return DataprocRefineStrategy(
-                cluster_config=config.get_cluster(),
-                storage_config=config.get_storage()
+                cluster_config=config.get_cluster()
             )
         elif execution_type == ExecutionType.LOCAL:
             return LocalRefineStrategy()
@@ -48,16 +47,13 @@ class LocalRefineStrategy(RefineStrategy):
 
 class DataprocRefineStrategy(RefineStrategy):
 
-    def __init__(self, cluster_config: GCPClusterConfig, storage_config: GCPStorageConfig) -> None:
+    def __init__(self, cluster_config: GCPClusterConfig) -> None:
         self.cluster_config = cluster_config
-        self.storage_config = storage_config
 
     def batch_config(self, pipeline_config: PipelineConfig) -> dict:
-
         return {
             "pyspark_batch": {
-                "main_class": f"{pipeline_config.refine_module}",
-                "args": [],
+                "main_python_file_uri": f"local:///app/{pipeline_config.refine_uri}"
             },
             "runtime_config": {
                 "container_image": self.cluster_config.image_tag,
