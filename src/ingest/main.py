@@ -2,10 +2,10 @@ import asyncio
 import logging
 
 from config.loader import BronzeConfigLoader
-from ingest.seeds.electricity_tariff_schedule import ElectricityTariffScheduleSeed
-from ingest.seeds.electricity_tariff_price import ElectricityTariffPricesSeed
-from ingest.sources.exchange_rate import ExchangeRateSource
-from ingest.sources.vast_ai import VastAISource
+from ingest.seeds.electricity_tariffs_schedule import ElectricityTariffScheduleSeed
+from ingest.seeds.electricity_tariff_prices import ElectricityTariffPricesSeed
+from ingest.sources.exchange_rates import ExchangeRateSource
+from ingest.sources.compute_offers import VastAISource
 
 
 async def main():

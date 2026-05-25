@@ -2,10 +2,10 @@ import logging
 
 from config.loader import SilverConfigLoader
 from refine.init import initialize_spark
-from refine.pipelines.electricity_tariff_prices import ElectricityTariffPricesPipeline
-from refine.pipelines.electricity_tariffs_schedule import ElectricityTariffsSchedulePipeline
-from refine.pipelines.exchange_rates import ExchangeRatesPipeline
-from refine.pipelines.compute_offers import ComputeOffersPipeline
+from refine.seeds.electricity_tariff_prices import ElectricityTariffPricesPipeline
+from refine.seeds.electricity_tariffs_schedule import ElectricityTariffsSchedulePipeline
+from refine.sources.exchange_rates import ExchangeRatesPipeline
+from refine.sources.compute_offers import ComputeOffersPipeline
 from refine.schemas.compute_offers import COMPUTE_OFFER_SCHEMA
 from refine.schemas.electricity_tariff import ELECTRICITY_TARIFF_SCHEMA
 from refine.schemas.electricity_tariff_schedule import ELECTRICITY_TARIFF_SCHEDULE_SCHEMA

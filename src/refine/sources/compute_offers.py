@@ -5,7 +5,7 @@ from pyspark.sql import DataFrame, SparkSession
 from config.loader import SilverConfigLoader
 from refine.assets.filtering import deduplicate
 from refine.init import initialize_spark
-from refine.pipelines.base import Pipeline
+from refine.base import Pipeline
 from refine.assets.cleaning import strip_non_ascii, trim_whitespace, replace_substring, empty_to_null
 from refine.schemas.compute_offers import COMPUTE_OFFER_SCHEMA
 

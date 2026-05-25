@@ -7,7 +7,7 @@ from config.loader import SilverConfigLoader
 from refine.assets.filtering import deduplicate
 from refine.init import initialize_spark
 from refine.assets.cleaning import trim_whitespace, empty_to_null
-from refine.pipelines.base import Pipeline
+from refine.base import Pipeline
 from refine.schemas.exchange_rate import EXCHANGE_RATE_SCHEMA
 
 
