@@ -1,0 +1,48 @@
+name: Deploy to Dataproc
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - "src/refine/**"
+      - "src/config/**"
+      - "src/common/**"
+      - "config/settings.yaml"
+
+env:
+  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  REGION_NAME: ${{ vars.GCP_REGION_NAME }}
+  SERVICE_ACCOUNT_EMAIL: ${{ secrets.GCP_SERVICE_ACCOUNT_EMAIL }}
+  IDENTITY_PROVIDER_NAME: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER_NAME }}
+  BUCKET_NAME: ${{ vars.GCP_BUCKET_NAME }}
+
+jobs:
+  sync:
+    name: Sync Jobs & Files
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ env.IDENTITY_PROVIDER_NAME }}
+          service_account: ${{ env.SERVICE_ACCOUNT_EMAIL }}
+          project_id: ${{ env.PROJECT_ID }}
+
+      - name: Sync src/
+        run: |
+          gcloud storage cp -r src/refine/* gs://${{ env.BUCKET_NAME }}/jobs/refine/
+          gcloud storage cp -r src/config/* gs://${{ env.BUCKET_NAME }}/jobs/config/
+          gcloud storage cp -r src/common/* gs://${{ env.BUCKET_NAME }}/jobs/common/
+
+      - name: Upload settings
+        run: |
+          gcloud storage cp config/settings.yaml gs://${{ env.BUCKET_NAME }}/jobs/config/settings.yaml
