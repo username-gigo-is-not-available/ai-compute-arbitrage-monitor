@@ -7,7 +7,7 @@ from airflow.providers.standard.operators.bash import BashOperator
 from airflow.providers.standard.operators.python import PythonOperator
 from airflow.sdk import Asset
 
-from infra.airflow.dags.callable_builder import CallableBuilder
+from callable_builder import CallableBuilder
 from pipeline_config import PipelineConfig
 from refine_strategy import RefineStrategy
 from transform_adapter import DbtAdapter

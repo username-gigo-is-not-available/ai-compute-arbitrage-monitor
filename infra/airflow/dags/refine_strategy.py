@@ -11,7 +11,7 @@ from common.enums import ExecutionType
 from config.cluster import GCPClusterConfig
 from config.loader import ConfigLoader
 from config.storage import GCPStorageConfig
-from infra.airflow.dags.callable_builder import CallableBuilder
+from callable_builder import CallableBuilder
 from pipeline_config import PipelineConfig
 
 
