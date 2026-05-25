@@ -53,13 +53,10 @@ class DataprocRefineStrategy(RefineStrategy):
         self.storage_config = storage_config
 
     def batch_config(self, pipeline_config: PipelineConfig) -> dict:
-        gcs_module_uri: str = (
-            f"gs://{self.storage_config.bucket_name}"
-            f"/{pipeline_config.refine_gcs_path}"
-        )
+
         return {
             "pyspark_batch": {
-                "main_python_file_uri": gcs_module_uri,
+                "main_class": f"{pipeline_config.refine_module}",
                 "args": [],
             },
             "runtime_config": {
