@@ -6,6 +6,7 @@ class FileConfig(BaseModel):
     subdirectory_name: str | None = None
     input_directory_path: str | None = None
     output_directory_path: str | None = None
+
     @property
     def input_path(self) -> str | None:
         if not self.input_directory_path:
