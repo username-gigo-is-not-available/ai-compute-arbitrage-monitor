@@ -36,4 +36,4 @@ class PipelineConfig:
 
     @property
     def refine_gcs_path(self) -> str:
-        return f"{self.refine_module}/{self.dataset_type}/{self.dataset_name}.py"
+        return f"{self.refine_module_base}/{self.dataset_type}/{self.dataset_name}.py"
