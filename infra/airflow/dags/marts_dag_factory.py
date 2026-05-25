@@ -27,15 +27,15 @@ class MartsDagFactory:
         self.dbt = dbt
 
     def build(self) -> DAG:
-        pipeline_assets = [Asset(f"gpu_arbitrage/{cfg.name}") for cfg in self.pipeline_configs]
+        pipeline_assets = [Asset(f"ai-compute-arbitrage-monitor/{config.dataset_name}") for config in self.pipeline_configs]
 
         with DAG(
-                dag_id="gpu_arbitrage__marts",
+                dag_id="ai-compute-arbitrage-monitor__marts",
                 description="Gold layer marts — triggered by new compute offers data",
                 schedule=AssetAny(*pipeline_assets),
                 catchup=False,
                 default_args=DEFAULT_ARGS,
-                tags={"gpu-arbitrage", "capstone"},
+                tags={"ai", "compute", "arbitrage", "monitor", "capstone"},
                 max_active_runs=1,
         ) as dag:
 

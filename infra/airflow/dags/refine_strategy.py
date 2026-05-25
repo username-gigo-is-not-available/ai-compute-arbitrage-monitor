@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from typing import Callable
 
 from airflow.providers.google.cloud.operators.dataproc import DataprocCreateBatchOperator
 from airflow.providers.standard.operators.python import PythonOperator
@@ -10,6 +11,7 @@ from common.enums import ExecutionType
 from config.cluster import GCPClusterConfig
 from config.loader import ConfigLoader
 from config.storage import GCPStorageConfig
+from infra.airflow.dags.callable_builder import CallableBuilder
 from pipeline_config import PipelineConfig
 
 
@@ -35,9 +37,12 @@ class RefineStrategy(ABC):
 class LocalRefineStrategy(RefineStrategy):
 
     def build_operator(self, pipeline_config: PipelineConfig) -> BaseOperator:
+        module_path: str = pipeline_config.refine_module
+        module_callable: Callable = CallableBuilder(module_path).build()
+
         return PythonOperator(
             task_id="refine",
-            python_callable=pipeline_config.refine_fn,
+            python_callable=module_callable,
         )
 
 
@@ -48,14 +53,13 @@ class DataprocRefineStrategy(RefineStrategy):
         self.storage_config = storage_config
 
     def batch_config(self, pipeline_config: PipelineConfig) -> dict:
-        entrypoint_uri = (
+        gcs_module_uri: str = (
             f"gs://{self.storage_config.bucket_name}"
-            f"/{self.cluster_config.entrypoints_path}"
-            f"/{pipeline_config.name}.py"
+            f"/{pipeline_config.refine_gcs_path}"
         )
         return {
             "pyspark_batch": {
-                "main_python_file_uri": entrypoint_uri,
+                "main_python_file_uri": gcs_module_uri,
                 "args": [],
             },
             "runtime_config": {
@@ -74,7 +78,7 @@ class DataprocRefineStrategy(RefineStrategy):
 
     @staticmethod
     def generate_batch_id(pipeline_config: PipelineConfig) -> str:
-        return f"{pipeline_config.name.replace('_', '-')}-{{{{ ts_nodash | lower }}}}"
+        return f"{pipeline_config.dataset_name.name.replace('_', '-')}-{{{{ ts_nodash | lower }}}}"
 
     def build_operator(self, pipeline_config: PipelineConfig) -> BaseOperator:
         return DataprocCreateBatchOperator(
