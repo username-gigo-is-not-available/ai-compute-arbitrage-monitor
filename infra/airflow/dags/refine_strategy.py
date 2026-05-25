@@ -78,7 +78,7 @@ class DataprocRefineStrategy(RefineStrategy):
 
     @staticmethod
     def generate_batch_id(pipeline_config: PipelineConfig) -> str:
-        return f"{pipeline_config.dataset_name.name.replace('_', '-')}-{{{{ ts_nodash | lower }}}}"
+        return f"{pipeline_config.dataset_name.replace('_', '-')}-{{{{ ts_nodash | lower }}}}"
 
     def build_operator(self, pipeline_config: PipelineConfig) -> BaseOperator:
         return DataprocCreateBatchOperator(
