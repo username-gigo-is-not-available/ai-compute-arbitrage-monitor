@@ -48,7 +48,7 @@ jobs:
       - name: Package src/
         run: |
           cd src
-          zip -r ../modules.zip config/ common/
+          zip -r ../modules.zip config/ common/ refine/
 
       - name: Upload src/
         run: |
