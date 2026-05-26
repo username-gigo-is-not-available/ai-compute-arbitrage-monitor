@@ -34,6 +34,7 @@ class RefineStrategy(ABC):
         else:
             raise NotImplementedError
 
+
 class LocalRefineStrategy(RefineStrategy):
 
     def build_operator(self, pipeline_config: PipelineConfig) -> BaseOperator:
@@ -58,6 +59,9 @@ class DataprocRefineStrategy(RefineStrategy):
                 "main_python_file_uri": f"gs://{self.storage_config.bucket_name}/jobs/{pipeline_config.refine_uri}",
                 "python_file_uris": [
                     f"gs://{self.storage_config.bucket_name}/jobs/modules.zip",
+                ],
+                "file_uris": [
+                    f"gs://{self.storage_config.bucket_name}/jobs/config/settings.yaml",
                 ],
             },
             "runtime_config": {
