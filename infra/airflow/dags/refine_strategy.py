@@ -56,6 +56,9 @@ class DataprocRefineStrategy(RefineStrategy):
         return {
             "pyspark_batch": {
                 "main_python_file_uri": f"gs://{self.storage_config.bucket_name}/jobs/{pipeline_config.refine_uri}",
+                "python_file_uris": [
+                    f"gs://{self.storage_config.bucket_name}/jobs/modules.zip",
+                ],
             },
             "runtime_config": {
                 "container_image": self.cluster_config.image_tag,

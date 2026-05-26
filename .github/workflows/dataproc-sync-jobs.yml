@@ -37,12 +37,19 @@ jobs:
           service_account: ${{ env.SERVICE_ACCOUNT_EMAIL }}
           project_id: ${{ env.PROJECT_ID }}
 
-      - name: Sync src/
+      - name: Upload entrypoints
         run: |
           gcloud storage cp -r src/refine/* gs://${{ env.BUCKET_NAME }}/jobs/refine/
-          gcloud storage cp -r src/config/* gs://${{ env.BUCKET_NAME }}/jobs/config/
-          gcloud storage cp -r src/common/* gs://${{ env.BUCKET_NAME }}/jobs/common/
 
       - name: Upload settings
         run: |
           gcloud storage cp config/settings.yaml gs://${{ env.BUCKET_NAME }}/jobs/config/settings.yaml
+
+      - name: Package src/
+        run: |
+          cd src
+          zip -r ../modules.zip config/ common/
+
+      - name: Upload src/
+        run: |
+          gcloud storage cp modules.zip gs://${{ env.BUCKET_NAME }}/jobs/modules.zip
