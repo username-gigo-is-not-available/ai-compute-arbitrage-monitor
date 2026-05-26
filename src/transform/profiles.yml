@@ -3,9 +3,9 @@ transform:
     dev:
       type: bigquery
       method: oauth
-      project:
-      dataset:
+      project: ai-compute-arbitrage-monitor
+      dataset: ai_compute_arbitrage_monitor_dataset
       threads: 4
-      location:
+      location: EU
       priority: interactive
   target: dev

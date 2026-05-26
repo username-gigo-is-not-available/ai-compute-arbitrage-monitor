@@ -180,7 +180,6 @@ terraform apply
 
 ```bash
 cd src/transform
-cp profiles.yml.example profiles.yml
 # Fill in project-id, dataset, location 
 dbt debug # make sure connection works
 dbt deps # install dependencies

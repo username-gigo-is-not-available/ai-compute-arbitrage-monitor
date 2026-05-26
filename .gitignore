@@ -12,7 +12,6 @@ logs/
 src/transform/dev.duckdb
 src/transform/dbt_packages
 src/transform/target
-src/transform/profiles.yml
 src/transform/.user.yml
 infra/**/.terraform
 infra/**/terraform.tfstate
