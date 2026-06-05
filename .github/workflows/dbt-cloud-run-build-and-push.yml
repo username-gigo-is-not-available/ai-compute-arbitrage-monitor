@@ -1,4 +1,4 @@
-name: Build & Push Dataproc Image
+name: Build & Push dbt Image
 
 on:
   push:
@@ -6,7 +6,8 @@ on:
       - master
     paths:
       - "pyproject.toml"
-      - "infra/docker/Dockerfile.dataproc"
+      - "infra/docker/Dockerfile.dbt"
+      - "src/transform/**"
 
 env:
   PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
@@ -14,11 +15,11 @@ env:
   SERVICE_ACCOUNT_EMAIL: ${{ secrets.GCP_SERVICE_ACCOUNT_EMAIL }}
   IDENTITY_PROVIDER_NAME: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER_NAME }}
   REPOSITORY_NAME: ${{ vars.GCP_REPOSITORY_NAME }}
-  IMAGE_NAME: ${{ vars.GCP_DATAPROC_IMAGE_NAME }}
+  IMAGE_NAME: ${{ vars.GCP_DBT_CLOUD_RUN_IMAGE_NAME }}
 
 jobs:
   build-and-push:
-    name: Build & Push Image
+    name: Build & Push dbt Image
     runs-on: ubuntu-latest
 
     permissions:
@@ -44,7 +45,7 @@ jobs:
         run: |
           IMAGE=${{ env.REGION_NAME }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY_NAME }}/${{ env.IMAGE_NAME }}
           docker build \
-            -f infra/terraform/Dockerfile.dataproc \
+            -f infra/Dockerfile.dbt \
             -t $IMAGE:$(git rev-parse --short HEAD) \
             -t $IMAGE:latest \
             .

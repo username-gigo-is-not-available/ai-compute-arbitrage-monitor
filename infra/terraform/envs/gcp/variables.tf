@@ -22,3 +22,7 @@ variable "gcs_bucket_name" {}
 variable "gh_wif_pool_id" {}
 variable "gh_wif_pool_provider_id" {}
 variable "gh_repository_uri" {}
+
+# dbt Cloud Run
+variable "dbt_cloud_run_job_name" {}
+variable "dbt_cloud_run_image_name" {}

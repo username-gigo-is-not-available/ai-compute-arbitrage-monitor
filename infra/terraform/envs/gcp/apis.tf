@@ -5,6 +5,7 @@ locals {
     artifact_registry     = "artifactregistry.googleapis.com"
     container_file_system = "containerfilesystem.googleapis.com"
     composer              = "composer.googleapis.com"
+    run                   = "run.googleapis.com"
   }
 }
 

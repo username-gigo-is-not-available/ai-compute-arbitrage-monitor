@@ -22,6 +22,28 @@ resource "google_project_iam_member" "dataproc_roles" {
   member  = "serviceAccount:${google_service_account.dataproc_sa.email}"
 }
 
+# ── dbt Cloud Run Service Account ────────────────────────────────────────────────────────
+
+resource "google_service_account" "dbt_cloud_run_sa" {
+  account_id   = "dbt-cloud-run-sa"
+  display_name = "dbt Cloud Run Service Account"
+
+  depends_on = [google_project_service.enabled_services["iam"]]
+}
+
+resource "google_project_iam_member" "dbt_roles" {
+  for_each = toset([
+    "roles/bigquery.dataEditor",
+    "roles/bigquery.jobUser",
+    "roles/storage.objectViewer",
+  ])
+
+  project = var.project_id
+  role    = each.key
+  member  = "serviceAccount:${google_service_account.dbt_cloud_run_sa.email}"
+}
+
+
 # ── Composer Service Account ───────────────────────────────────────────────────
 
 resource "google_service_account" "composer_sa" {
@@ -38,7 +60,8 @@ resource "google_project_iam_member" "composer_roles" {
     "roles/storage.objectAdmin",
     "roles/bigquery.dataEditor",
     "roles/bigquery.jobUser",
-    "roles/dataproc.editor"
+    "roles/dataproc.editor",
+    "roles/run.invoker"
   ])
 
   project = var.project_id
@@ -50,6 +73,14 @@ resource "google_project_iam_member" "composer_roles" {
 
 resource "google_service_account_iam_member" "composer_impersonates_dataproc" {
   service_account_id = google_service_account.dataproc_sa.name
+  role               = "roles/iam.serviceAccountUser"
+  member             = "serviceAccount:${google_service_account.composer_sa.email}"
+}
+
+# ── Composer Service Account impersonates dbt Cloud Run Service Account ───────────────────────────────────────────────────
+
+resource "google_service_account_iam_member" "composer_impersonates_dbt_cloud_run" {
+  service_account_id = google_service_account.dbt_cloud_run_sa.name
   role               = "roles/iam.serviceAccountUser"
   member             = "serviceAccount:${google_service_account.composer_sa.email}"
 }

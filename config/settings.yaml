@@ -55,3 +55,17 @@ gcp:
     runtime_packages: ["common", "config", "refine"]
     subnetwork_name: "projects/ai-compute-arbitrage-monitor/regions/europe-west3/subnetworks/ai-compute-arbitrage-monitor-subnet"
     service_account_email: "dataproc-sa@ai-compute-arbitrage-monitor.iam.gserviceaccount.com"
+  cloud_run:
+    job_name: "ai-compute-arbitrage-monitor-dbt-job"
+  composer:
+    runtime_packages: ["common", "config", "ingest", "serializers"]
+
+dbt:
+  local:
+    project_directory_path: "/opt/airflow/src/transform"
+    profiles_directory_path: "/opt/airflow/src/transform"
+    target_directory_path: "/tmp/target"
+  gcp:
+    project_directory_path: "/app/transform"
+    profiles_directory_path: "/app/transform"
+    target_directory_path: "/tmp/target"
