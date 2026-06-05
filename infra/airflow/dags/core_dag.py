@@ -4,21 +4,13 @@ from datetime import datetime
 
 from airflow import DAG
 
+from infra.airflow.dags.transform_strategy import TransformStrategy
 from marts_dag_factory import MartsDagFactory
 from refine_strategy import RefineStrategy
-from transform_adapter import DbtAdapter
 from core_dag_factory import DagFactory
 from pipeline_config import PipelineConfig
 from common.enums import DatasetType, DatasetName
 from config.loader import ConfigLoader
-
-
-def make_refine_fn(module_path: str):
-    def refine_fn():
-        from importlib import import_module
-        import_module(module_path).run()
-
-    return refine_fn
 
 
 PIPELINE_CONFIGS: list[PipelineConfig] = [
@@ -60,10 +52,10 @@ for pipeline_config in PIPELINE_CONFIGS:
     globals()[pipeline_config.dag_id] = DagFactory(
         pipeline_config=pipeline_config,
         refine_strategy=RefineStrategy.build_strategy(config=ConfigLoader()),
-        dbt=DbtAdapter()
+        transform_strategy=TransformStrategy.build_strategy(config=ConfigLoader()),
     ).build()
 
 gpu_arbitrage__marts = MartsDagFactory(
     pipeline_configs=PIPELINE_CONFIGS,
-    dbt=DbtAdapter()
+    transform_strategy=TransformStrategy.build_strategy(config=ConfigLoader()),
 ).build()

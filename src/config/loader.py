@@ -7,6 +7,8 @@ import yaml
 from dotenv import load_dotenv
 
 from config.cluster import GCPClusterConfig
+from config.dbt import DbtConfig
+from config.execution import CloudRunConfig
 from config.http import HttpConfig
 from config.storage import GCPStorageConfig
 from config.seeds.erc import ERCConfig
@@ -52,6 +54,23 @@ class ConfigLoader:
             seeds_directory_name=path_data["seeds_directory_name"],
             sources_directory_name=path_data["sources_directory_name"],
             bucket_name=self._raw["gcp"]["gcs"]["bucket_name"]
+        )
+
+    def get_dbt(self) -> DbtConfig:
+        execution_type: ExecutionType = self.get_execution_type()
+        dbt_config = self._raw["dbt"][execution_type.lower()]
+        return DbtConfig(
+            project_directory_path=dbt_config["project_directory"],
+            profiles_directory_path=dbt_config["profiles_directory"],
+            target_directory_path=dbt_config["target_directory"],
+        )
+
+    def get_cloud_run(self) -> CloudRunConfig:
+        gcp_config: dict[str, Any] = self._raw["gcp"]
+        return CloudRunConfig(
+            project_id=gcp_config["project_id"],
+            region_name=gcp_config["region_name"],
+            job_name=gcp_config["cloud_run"]["job_name"],
         )
 
     def _setup_logging(self) -> None:
