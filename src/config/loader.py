@@ -60,9 +60,9 @@ class ConfigLoader:
         execution_type: ExecutionType = self.get_execution_type()
         dbt_config = self._raw["dbt"][execution_type.lower()]
         return DbtConfig(
-            project_directory_path=dbt_config["project_directory"],
-            profiles_directory_path=dbt_config["profiles_directory"],
-            target_directory_path=dbt_config["target_directory"],
+            project_directory_path=dbt_config["project_directory_path"],
+            profiles_directory_path=dbt_config["profiles_directory_path"],
+            target_directory_path=dbt_config["target_directory_path"],
         )
 
     def get_cloud_run(self) -> CloudRunConfig:
