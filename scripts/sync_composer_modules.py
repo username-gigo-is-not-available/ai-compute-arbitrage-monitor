@@ -44,7 +44,7 @@ def main() -> None:
     gcs_cp("infra/airflow/dags/*", dst_dags)
 
     for module in packages:
-        gcs_cp(f"src/{module}/", f"{dst_dags}{module}/")
+        gcs_cp(f"src/{module}/*", f"{dst_dags}{module}/")
 
     gcs_cp("config/settings.yaml", f"{dst_dags}config/settings.yaml")
 
