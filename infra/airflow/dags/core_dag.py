@@ -4,7 +4,7 @@ from datetime import datetime
 
 from airflow import DAG
 
-from infra.airflow.dags.transform_strategy import TransformStrategy
+from transform_strategy import TransformStrategy
 from marts_dag_factory import MartsDagFactory
 from refine_strategy import RefineStrategy
 from core_dag_factory import DagFactory

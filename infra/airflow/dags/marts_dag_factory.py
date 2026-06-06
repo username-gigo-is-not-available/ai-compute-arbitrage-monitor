@@ -5,7 +5,7 @@ from datetime import timedelta
 from airflow import DAG
 from airflow.sdk import Asset, AssetAny
 
-from infra.airflow.dags.transform_strategy import TransformStrategy
+from transform_strategy import TransformStrategy
 from pipeline_config import PipelineConfig
 
 DEFAULT_ARGS = {

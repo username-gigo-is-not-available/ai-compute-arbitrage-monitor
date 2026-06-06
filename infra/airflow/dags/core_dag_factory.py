@@ -7,7 +7,7 @@ from airflow.providers.standard.operators.python import PythonOperator
 from airflow.sdk import Asset
 
 from callable_builder import CallableBuilder
-from infra.airflow.dags.transform_strategy import TransformStrategy
+from transform_strategy import TransformStrategy
 from pipeline_config import PipelineConfig
 from refine_strategy import RefineStrategy
 
