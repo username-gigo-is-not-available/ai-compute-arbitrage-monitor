@@ -6,4 +6,6 @@ RUN pip install --no-cache-dir dbt-bigquery==1.11.1
 
 COPY src/transform/ ./transform/
 
+RUN dbt deps --project-dir ./transform --profiles-dir ./transform
+
 ENTRYPOINT ["dbt"]
