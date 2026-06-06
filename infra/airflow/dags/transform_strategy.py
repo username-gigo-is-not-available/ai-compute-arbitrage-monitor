@@ -83,14 +83,14 @@ class CloudRunTransformStrategy(TransformStrategy):
         )
 
     def build_run_operator(self, tag: str, task_id: str = "process") -> BaseOperator:
-        return self.build_operator(["run", "--select", tag], task_id)
+        return self.build_operator(["run", *self.dbt_adapter.base_args, "--select", tag], task_id)
 
     def build_test_operator(self, tag: str, task_id: str = "test") -> BaseOperator:
-        return self.build_operator(["test", "--select", tag], task_id)
+        return self.build_operator(["test", *self.dbt_adapter.base_args, "--select", tag], task_id)
 
-    def build_run_operation_operator(
-        self, operation_name: str, tag: str, task_id: str = "register_external_tables"
-    ) -> BaseOperator:
+    def build_run_operation_operator(self, operation_name: str, tag: str,
+                                     task_id: str = "register_external_tables") -> BaseOperator:
         return self.build_operator(
-            ["run-operation", operation_name, "--args", f"select: {tag}"], task_id
+            ["run-operation", operation_name, *self.dbt_adapter.base_args, "--args", f"select: {tag}"],
+            task_id
         )

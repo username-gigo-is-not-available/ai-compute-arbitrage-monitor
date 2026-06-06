@@ -1,4 +1,3 @@
-import os
 import shutil
 
 from config.dbt import DbtConfig
@@ -12,12 +11,16 @@ class DbtAdapter:
     def dbt_bin_directory_path(self) -> str:
         return shutil.which("dbt") or "/home/airflow/.local/bin/dbt"
 
+    @property
+    def base_args(self) -> list[str]:
+        return [
+            "--project-dir", self.dbt_config.project_directory_path,
+            "--profiles-dir", self.dbt_config.profiles_directory_path,
+            "--target-path", self.dbt_config.target_directory_path,
+        ]
+
     def base_flags(self) -> str:
-        return (
-            f" --project-dir {self.dbt_config.project_directory_path}"
-            f" --profiles-dir {self.dbt_config.profiles_directory_path}"
-            f" --target-path {self.dbt_config.target_directory_path}"
-        )
+        return " " + " ".join(self.base_args)
 
     def run(self, tag: str) -> str:
         return f"{self.dbt_bin_directory_path} run{self.base_flags()} --select {tag}"
