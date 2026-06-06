@@ -41,7 +41,7 @@ def main() -> None:
 
     dst_dags = f"gs://{bucket}/dags/"
 
-    gcs_cp("infra/airflow/dags/", dst_dags)
+    gcs_cp("infra/airflow/dags/*", dst_dags)
 
     for module in packages:
         gcs_cp(f"src/{module}/", f"{dst_dags}{module}/")
