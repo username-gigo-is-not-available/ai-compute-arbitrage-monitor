@@ -28,6 +28,7 @@ dependencies = [
     "diagrams>=0.25.1",
 ]
 
+
 [project.optional-dependencies]
 dev = [
     "pytest>=7.0.0",
