@@ -69,3 +69,4 @@ dbt:
     project_directory_path: "/app/transform"
     profiles_directory_path: "/app/transform"
     target_directory_path: "/tmp/target"
+
