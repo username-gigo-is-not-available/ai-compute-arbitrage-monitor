@@ -61,7 +61,7 @@ resource "google_project_iam_member" "composer_roles" {
     "roles/bigquery.dataEditor",
     "roles/bigquery.jobUser",
     "roles/dataproc.editor",
-    "roles/run.invoker"
+    "roles/run.developer"
   ])
 
   project = var.project_id
