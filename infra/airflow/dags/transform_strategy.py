@@ -7,7 +7,8 @@ from airflow.providers.google.cloud.operators.cloud_run import CloudRunExecuteJo
 from airflow.sdk import BaseOperator
 
 from common.enums import ExecutionType
-from config.loader import CloudRunConfig, ConfigLoader
+from config.loader import ConfigLoader
+from config.execution import CloudRunConfig
 from transform_adapter import DbtAdapter
 
 
