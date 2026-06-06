@@ -11,6 +11,7 @@ on:
       - "src/ingest/**"
       - "src/serializers/**"
       - "config/settings.yaml"
+      - "scripts/sync_composer_modules.py"
 
 env:
   PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}

@@ -9,6 +9,7 @@ on:
       - "src/config/**"
       - "src/common/**"
       - "config/settings.yaml"
+      - "scripts/package_dataproc_modules.py"
 
 env:
   PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
