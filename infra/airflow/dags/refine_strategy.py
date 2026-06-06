@@ -89,4 +89,5 @@ class DataprocRefineStrategy(RefineStrategy):
             region=self.cluster_config.region_name,
             batch=self.batch_config(pipeline_config),
             batch_id=self.generate_batch_id(pipeline_config),
+            deferrable=True
         )
