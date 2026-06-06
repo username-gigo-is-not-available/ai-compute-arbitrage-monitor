@@ -32,9 +32,9 @@ class TransformStrategy(ABC):
         execution_type = config.get_execution_type()
         dbt_adapter = DbtAdapter(config.get_dbt())
         if execution_type == ExecutionType.GCP:
-            return CloudRunTransformStrategy(cloud_run_config=config.get_cloud_run(), dbt=dbt_adapter)
+            return CloudRunTransformStrategy(cloud_run_config=config.get_cloud_run(), dbt_adapter=dbt_adapter)
         elif execution_type == ExecutionType.LOCAL:
-            return LocalTransformStrategy(dbt=dbt_adapter)
+            return LocalTransformStrategy(dbt_adapter=dbt_adapter)
         else:
             raise NotImplementedError(f"No dbt strategy for execution_type={execution_type}")
 
