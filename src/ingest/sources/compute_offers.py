@@ -7,10 +7,10 @@ from typing import Any
 from aiohttp import ClientSession
 from pydantic import ValidationError
 
-from config.loader import BronzeConfigLoader
+from config.loader import ConfigLoader
 from config.sources.vast_ai import VastAIConfig
 from ingest.base import AsyncBatchIngestor
-from common.enums import OfferType
+from common.enums import OfferType, DataStageType
 from ingest.models.vast_ai_offer import VastAIOffer
 
 
@@ -92,8 +92,8 @@ class VastAISource(AsyncBatchIngestor):
 
 
 async def main():
-    loader: BronzeConfigLoader = BronzeConfigLoader()
-    vast_ai_config: VastAIConfig = loader.get_vast_ai()
+    loader: ConfigLoader = ConfigLoader()
+    vast_ai_config: VastAIConfig = loader.get_vast_ai(stage=DataStageType.BRONZE)
     if not vast_ai_config.enabled:
         return
 

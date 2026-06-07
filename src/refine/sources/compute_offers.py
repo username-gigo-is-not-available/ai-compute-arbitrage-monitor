@@ -2,7 +2,9 @@ from dataclasses import dataclass, field
 from typing import Callable
 from pyspark.sql import DataFrame, SparkSession
 
-from config.loader import SilverConfigLoader
+from common.enums import DataStageType
+from config.loader import ConfigLoader
+from config.sources.vast_ai import VastAIConfig
 from refine.assets.filtering import deduplicate
 from refine.init import initialize_spark
 from refine.base import Pipeline
@@ -31,11 +33,15 @@ class ComputeOffersPipeline(Pipeline):
 
 def run():
     session: SparkSession = initialize_spark()
-    config_loader: SilverConfigLoader = SilverConfigLoader()
+    loader: ConfigLoader = ConfigLoader()
+    vast_ai_config: VastAIConfig = loader.get_vast_ai(stage=DataStageType.SILVER)
+    if not vast_ai_config.enabled:
+        return
+
     compute_offers_pipeline: ComputeOffersPipeline = ComputeOffersPipeline(
         session=session,
         schema=COMPUTE_OFFER_SCHEMA,
-        config=config_loader.get_vast_ai(),
+        config=vast_ai_config
     )
     compute_offers_pipeline.run()
 

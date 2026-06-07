@@ -8,9 +8,10 @@ from http import HTTPStatus
 import certifi
 from bs4 import BeautifulSoup, Tag
 
+from common.enums import DataStageType
 from config.seeds.erc import ERCConfig
 from config.http import HttpConfig
-from config.loader import BronzeConfigLoader
+from config.loader import BronzeConfigLoader, ConfigLoader
 from ingest.base import SyncBatchIngestor
 from ingest.models.electricity_tariff_price import ElectricityTariffPrice
 
@@ -63,10 +64,11 @@ class ElectricityTariffPricesSeed(SyncBatchIngestor):
 
 
 def main():
-    loader: BronzeConfigLoader = BronzeConfigLoader()
-    erc_config: ERCConfig = loader.get_erc()
+    loader: ConfigLoader = ConfigLoader()
+    erc_config: ERCConfig = loader.get_erc(stage=DataStageType.BRONZE)
     if not erc_config.enabled:
         return
+
     electricity_tariff: ElectricityTariffPricesSeed = ElectricityTariffPricesSeed(config=erc_config, http_config=loader.get_http())
     logging.info(f"Starting seed {electricity_tariff.name}...")
     electricity_tariff.run()

@@ -1,7 +1,8 @@
 import asyncio
 import logging
 
-from config.loader import BronzeConfigLoader
+from common.enums import DataStageType
+from config.loader import ConfigLoader
 from ingest.seeds.electricity_tariffs_schedule import ElectricityTariffScheduleSeed
 from ingest.seeds.electricity_tariff_prices import ElectricityTariffPricesSeed
 from ingest.sources.exchange_rates import ExchangeRateSource
@@ -9,12 +10,12 @@ from ingest.sources.compute_offers import VastAISource
 
 
 async def main():
-    loader = BronzeConfigLoader()
+    loader = ConfigLoader()
 
-    erc_config = loader.get_erc()
-    evn_config = loader.get_evn()
-    vast_ai_config = loader.get_vast_ai()
-    exchange_rate_config = loader.get_exchange_rate()
+    erc_config = loader.get_erc(DataStageType.BRONZE)
+    evn_config = loader.get_evn(DataStageType.BRONZE)
+    vast_ai_config = loader.get_vast_ai(DataStageType.BRONZE)
+    exchange_rate_config = loader.get_exchange_rate(DataStageType.BRONZE)
 
     async_sources = [
         (exchange_rate_config, ExchangeRateSource(config=exchange_rate_config, http_config=loader.get_http())),

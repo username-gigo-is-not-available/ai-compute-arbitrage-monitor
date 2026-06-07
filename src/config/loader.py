@@ -15,7 +15,7 @@ from config.seeds.erc import ERCConfig
 from config.seeds.evn import EVNConfig
 from config.sources.exchange_rate import ExchangeRateConfig
 from config.sources.vast_ai import VastAIConfig
-from common.enums import DataStageType, ExecutionType
+from common.enums import DataStageType, ExecutionType, DatasetType, DatasetName
 
 load_dotenv()
 
@@ -73,6 +73,30 @@ class ConfigLoader:
             job_name=gcp_config["cloud_run"]["job_name"],
         )
 
+    def get_vast_ai(self, stage: DataStageType) -> VastAIConfig:
+        return VastAIConfig(
+            **self._raw["sources"]["vast_ai"],
+            **self._paths.paths_for_dataset_stage(stage, DatasetType.SOURCES)
+        )
+
+    def get_exchange_rate(self, stage: DataStageType) -> ExchangeRateConfig:
+        return ExchangeRateConfig(
+            **self._raw["sources"]["exchange_rate"],
+            **self._paths.paths_for_dataset_stage(stage, DatasetType.SOURCES)
+        )
+
+    def get_erc(self, stage: DataStageType) -> ERCConfig:
+        return ERCConfig(
+            **self._raw["seeds"]["erc"],
+            **self._paths.paths_for_dataset_stage(stage, DatasetType.SEEDS)
+        )
+
+    def get_evn(self, stage: DataStageType) -> EVNConfig:
+        return EVNConfig(
+            **self._raw["seeds"]["evn"],
+            **self._paths.paths_for_dataset_stage(stage, DatasetType.SEEDS)
+        )
+
     def _setup_logging(self) -> None:
         log_config = self._raw.get("logging", {})
         logging.basicConfig(
@@ -93,64 +117,3 @@ class ConfigLoader:
             logging.error(f"Could not load config file {path}: {e}")
             return {}
 
-
-class BronzeConfigLoader(ConfigLoader):
-    def __init__(self, config_path: Path = Path(os.getenv("SETTINGS_PATH", "settings.yaml"))):
-        super().__init__(config_path)
-
-    def get_vast_ai(self) -> VastAIConfig:
-        return VastAIConfig(
-            **self._raw["sources"]["vast_ai"],
-            output_directory_path=self._paths.sources_directory_path_for_stage(DataStageType.BRONZE)
-        )
-
-    def get_exchange_rate(self) -> ExchangeRateConfig:
-        return ExchangeRateConfig(
-            **self._raw["sources"]["exchange_rate"],
-            output_directory_path=self._paths.sources_directory_path_for_stage(DataStageType.BRONZE)
-        )
-
-    def get_erc(self) -> ERCConfig:
-        return ERCConfig(
-            **self._raw["seeds"]["erc"],
-            output_directory_path=self._paths.seeds_directory_path_for_stage(DataStageType.BRONZE)
-        )
-
-    def get_evn(self) -> EVNConfig:
-        return EVNConfig(
-            **self._raw["seeds"]["evn"],
-            output_directory_path=self._paths.seeds_directory_path_for_stage(DataStageType.BRONZE)
-        )
-
-
-class SilverConfigLoader(ConfigLoader):
-    def __init__(self, config_path: Path = Path(os.getenv("SETTINGS_PATH", "settings.yaml"))):
-        super().__init__(config_path)
-
-    def get_vast_ai(self) -> VastAIConfig:
-        return VastAIConfig(
-            **self._raw["sources"]["vast_ai"],
-            input_directory_path=self._paths.sources_directory_path_for_stage(DataStageType.BRONZE),
-            output_directory_path=self._paths.sources_directory_path_for_stage(DataStageType.SILVER),
-        )
-
-    def get_exchange_rate(self) -> ExchangeRateConfig:
-        return ExchangeRateConfig(
-            **self._raw["sources"]["exchange_rate"],
-            input_directory_path=self._paths.sources_directory_path_for_stage(DataStageType.BRONZE),
-            output_directory_path=self._paths.sources_directory_path_for_stage(DataStageType.SILVER),
-        )
-
-    def get_erc(self) -> ERCConfig:
-        return ERCConfig(
-            **self._raw["seeds"]["erc"],
-            input_directory_path=self._paths.seeds_directory_path_for_stage(DataStageType.BRONZE),
-            output_directory_path=self._paths.seeds_directory_path_for_stage(DataStageType.SILVER)
-        )
-
-    def get_evn(self) -> EVNConfig:
-        return EVNConfig(
-            **self._raw["seeds"]["evn"],
-            input_directory_path=self._paths.seeds_directory_path_for_stage(DataStageType.BRONZE),
-            output_directory_path=self._paths.seeds_directory_path_for_stage(DataStageType.SILVER)
-        )

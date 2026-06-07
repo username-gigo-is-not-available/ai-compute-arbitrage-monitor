@@ -1,6 +1,7 @@
 import logging
 
-from config.loader import SilverConfigLoader
+from common.enums import DataStageType
+from config.loader import ConfigLoader
 from refine.init import initialize_spark
 from refine.seeds.electricity_tariff_prices import ElectricityTariffPricesPipeline
 from refine.seeds.electricity_tariffs_schedule import ElectricityTariffsSchedulePipeline
@@ -14,12 +15,12 @@ from refine.schemas.exchange_rate import EXCHANGE_RATE_SCHEMA
 if __name__ == "__main__":
     session = initialize_spark()
     try:
-        loader = SilverConfigLoader()
+        loader = ConfigLoader()
 
-        erc_config = loader.get_erc()
-        evn_config = loader.get_evn()
-        vast_ai_config = loader.get_vast_ai()
-        exchange_rate_config = loader.get_exchange_rate()
+        erc_config = loader.get_erc(DataStageType.SILVER)
+        evn_config = loader.get_evn(DataStageType.SILVER)
+        vast_ai_config = loader.get_vast_ai(DataStageType.SILVER)
+        exchange_rate_config = loader.get_exchange_rate(DataStageType.SILVER)
 
         pipelines = [
             (erc_config,

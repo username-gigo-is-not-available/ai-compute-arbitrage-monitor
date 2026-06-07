@@ -7,12 +7,12 @@ import certifi
 import requests
 from bs4 import BeautifulSoup
 
+from config.loader import ConfigLoader
 from config.seeds.evn import EVNConfig
 from config.http import HttpConfig
-from config.loader import BronzeConfigLoader
 from ingest.base import SyncBatchIngestor
 from ingest.models.electricity_tariff_schedule import ElectricityTariffSchedule
-from common.enums import TariffType
+from common.enums import TariffType, DataStageType
 
 
 class ElectricityTariffScheduleSeed(SyncBatchIngestor):
@@ -79,10 +79,11 @@ class ElectricityTariffScheduleSeed(SyncBatchIngestor):
 
 
 def main():
-    loader: BronzeConfigLoader = BronzeConfigLoader()
-    evn_config: EVNConfig = loader.get_evn()
+    loader: ConfigLoader = ConfigLoader()
+    evn_config: EVNConfig = loader.get_evn(stage=DataStageType.BRONZE)
     if not evn_config.enabled:
         return
+
     schedule_seed = ElectricityTariffScheduleSeed(config=evn_config, http_config=loader.get_http())
     logging.info(f"Starting seed {schedule_seed.name}...")
     schedule_seed.run()
