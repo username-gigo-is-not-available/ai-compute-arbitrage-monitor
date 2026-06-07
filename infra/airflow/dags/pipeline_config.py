@@ -18,21 +18,6 @@ class PipelineConfig:
     refine_module_base: str = "refine"
     description: str = ""
 
-    def __post_init__(self) -> None:
-        for module_path in [self.ingest_module, self.refine_module]:
-            try:
-                spec: ModuleSpec = importlib.util.find_spec(module_path)
-                if spec is None:
-                    logging.warning(
-                        f"PipelineConfig({self.dataset_name}): '{module_path}' "
-                        f"not found — tasks will fail at runtime."
-                    )
-            except ModuleNotFoundError as e:
-                logging.warning(
-                    f"PipelineConfig({self.dataset_name}): '{module_path}' "
-                    f"cannot be resolved — {e}. Tasks will fail at runtime."
-                )
-
     @property
     def dag_id(self) -> str:
         return f"ai_compute_arbitrage_monitor__{self.dataset_name}"
