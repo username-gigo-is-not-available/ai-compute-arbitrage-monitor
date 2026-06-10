@@ -3,8 +3,8 @@ import logging
 
 from common.enums import DataStageType
 from config.loader import ConfigLoader
-from ingest.seeds.electricity_tariffs_schedule import ElectricityTariffScheduleSeed
-from ingest.seeds.electricity_tariff_prices import ElectricityTariffPricesSeed
+from ingest.seeds.electricity_tariff_schedule import ElectricityTariffScheduleSeed
+from ingest.seeds.electricity_tariff_tiers import ElectricityTariffTiersSeed
 from ingest.sources.exchange_rates import ExchangeRateSource
 from ingest.sources.compute_offers import VastAISource
 
@@ -23,7 +23,7 @@ async def main():
     ]
 
     seeds = [
-        (erc_config, ElectricityTariffPricesSeed(config=erc_config, http_config=loader.get_http())),
+        (erc_config, ElectricityTariffTiersSeed(config=erc_config, http_config=loader.get_http())),
         (evn_config, ElectricityTariffScheduleSeed(config=evn_config, http_config=loader.get_http())),
     ]
 

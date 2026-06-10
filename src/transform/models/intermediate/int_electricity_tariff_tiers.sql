@@ -1,10 +1,10 @@
 {{
     config(
-        tags = ['electricity_tariff_prices']
+        tags = ['electricity_tariff_tiers']
     )
 }}
 with source as (
-    select * from {{ ref('stg_electricity_tariff_prices') }}
+    select * from {{ ref('stg_electricity_tariff_tiers') }}
 ),
 
 transformed as (

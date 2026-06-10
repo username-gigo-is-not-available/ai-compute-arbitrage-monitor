@@ -1,9 +1,9 @@
 {{ config(
-    tags         = ['electricity_tariffs_schedule'],
+    tags         = ['electricity_tariff_schedule'],
     materialized = 'table'
 ) }}
 with source as (
-    select * from {{ ref('int_electricity_tariffs_schedule') }}
+    select * from {{ ref('int_electricity_tariff_schedule') }}
 ),
 
 scd as (

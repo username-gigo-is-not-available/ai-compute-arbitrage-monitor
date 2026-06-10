@@ -1,6 +1,6 @@
 {{
     config(
-        tags = ['electricity_tariffs_schedule']
+        tags = ['electricity_tariff_schedule']
     )
 }}
 with calendar as (
@@ -14,7 +14,7 @@ with calendar as (
 
 source as (
     select *
-    from {{ ref('stg_electricity_tariffs_schedule') }}
+    from {{ ref('stg_electricity_tariff_schedule') }}
 )
 
 select

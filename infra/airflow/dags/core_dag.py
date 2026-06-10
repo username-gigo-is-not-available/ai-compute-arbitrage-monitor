@@ -29,14 +29,14 @@ PIPELINE_CONFIGS: list[PipelineConfig] = [
         description="MKD/USD exchange rate → Bronze → Silver → Gold",
     ),
     PipelineConfig(
-        dataset_name=DatasetName.ELECTRICITY_TARIFF_PRICES,
+        dataset_name=DatasetName.ELECTRICITY_TARIFF_TIERS,
         dataset_type=DatasetType.SEEDS,
         schedule="@daily",
         start_date=datetime(2026, 1, 1),
         description="EVN tariff prices → Bronze → Silver → Gold",
     ),
     PipelineConfig(
-        dataset_name=DatasetName.ELECTRICITY_TARIFFS_SCHEDULE,
+        dataset_name=DatasetName.ELECTRICITY_TARIFF_SCHEDULE,
         dataset_type=DatasetType.SEEDS,
         schedule="@daily",
         start_date=datetime(2026, 1, 1),

@@ -74,7 +74,7 @@ select
     max(f.profit_per_tflop_business_low_usd)       as max_profit_per_tflop_business_low_usd
 
 from {{ ref('fct_compute_offers') }} f
-left join {{ ref('dim_electricity_tariffs_schedule') }} ts
+left join {{ ref('dim_electricity_tariff_schedule') }} ts
     on  mod(extract(dayofweek from f.valid_from) + 5, 7) + 1 = ts.day_of_week
     and extract(hour from f.valid_from)                       = ts.hour
     and cast(f.valid_from as date) >= ts.valid_from

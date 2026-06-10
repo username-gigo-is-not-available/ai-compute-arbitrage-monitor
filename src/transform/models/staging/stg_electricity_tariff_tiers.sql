@@ -1,12 +1,12 @@
 {{ config(
     materialized = 'incremental',
     unique_key = 'valid_from',
-    tags = ['electricity_tariff_prices']
+    tags = ['electricity_tariff_tiers']
 ) }}
 
 with source as (
     select *
-    from {{ source('seeds', 'electricity_tariff_prices') }}
+    from {{ source('seeds', 'electricity_tariff_tiers') }}
 ),
 
 renamed as (

@@ -1,8 +1,8 @@
 version: 2
 
 models:
-  - name: dim_electricity_tariff_prices
-    description: "Electricity tariff price dimension - SCD Type 2 on tariff_description_mk, tracking price changes over time"
+  - name: dim_electricity_tariff_tiers
+    description: "Electricity tariff tiers dimension - SCD Type 2 on tariff_description_mk, tracking price changes over time"
     columns:
       - name: skey
         description: "Surrogate key derived from tariff_description_mk and valid_from"
@@ -66,7 +66,7 @@ models:
           arguments:
             expression: "valid_from < valid_to"
 
-  - name: dim_electricity_tariffs_schedule
+  - name: dim_electricity_tariff_schedule
     description: "Electricity tariff schedule dimension - SCD Type 2 on day/hour, tracking schedule changes over time"
     columns:
       - name: skey

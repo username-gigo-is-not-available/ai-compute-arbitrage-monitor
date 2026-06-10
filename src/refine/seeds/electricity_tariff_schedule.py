@@ -18,7 +18,7 @@ def deduplicate_electricity_tariffs_schedule(df: DataFrame) -> DataFrame:
 
 
 @dataclass
-class ElectricityTariffsSchedulePipeline(Pipeline):
+class ElectricityTariffSchedulePipeline(Pipeline):
     transform_steps: list[Callable[[DataFrame], DataFrame]] = field(default_factory=lambda: [
         trim_whitespace,
         empty_to_null,
@@ -34,7 +34,7 @@ def run():
     if not evn_config.enabled:
         return
 
-    electricity_tariffs_schedule_pipeline: ElectricityTariffsSchedulePipeline = ElectricityTariffsSchedulePipeline(
+    electricity_tariffs_schedule_pipeline: ElectricityTariffSchedulePipeline = ElectricityTariffSchedulePipeline(
         session=session,
         schema=ELECTRICITY_TARIFF_SCHEDULE_SCHEMA,
         config=evn_config

@@ -3,12 +3,12 @@ import logging
 from common.enums import DataStageType
 from config.loader import ConfigLoader
 from refine.init import initialize_spark
-from refine.seeds.electricity_tariff_prices import ElectricityTariffPricesPipeline
-from refine.seeds.electricity_tariffs_schedule import ElectricityTariffsSchedulePipeline
+from refine.seeds.electricity_tariff_tiers import ElectricityTariffTiersPipeline
+from refine.seeds.electricity_tariff_schedule import ElectricityTariffSchedulePipeline
 from refine.sources.exchange_rates import ExchangeRatesPipeline
 from refine.sources.compute_offers import ComputeOffersPipeline
 from refine.schemas.compute_offers import COMPUTE_OFFER_SCHEMA
-from refine.schemas.electricity_tariff import ELECTRICITY_TARIFF_SCHEMA
+from refine.schemas.electricity_tariff_tiers import ELECTRICITY_TARIFF_TIERS_SCHEMA
 from refine.schemas.electricity_tariff_schedule import ELECTRICITY_TARIFF_SCHEDULE_SCHEMA
 from refine.schemas.exchange_rate import EXCHANGE_RATE_SCHEMA
 
@@ -24,10 +24,10 @@ if __name__ == "__main__":
 
         pipelines = [
             (erc_config,
-             ElectricityTariffPricesPipeline(session=session, schema=ELECTRICITY_TARIFF_SCHEMA, config=erc_config)
+             ElectricityTariffTiersPipeline(session=session, schema=ELECTRICITY_TARIFF_TIERS_SCHEMA, config=erc_config)
              ),
-            (evn_config, ElectricityTariffsSchedulePipeline(session=session, schema=ELECTRICITY_TARIFF_SCHEDULE_SCHEMA,
-                                                            config=evn_config)),
+            (evn_config, ElectricityTariffSchedulePipeline(session=session, schema=ELECTRICITY_TARIFF_SCHEDULE_SCHEMA,
+                                                           config=evn_config)),
             (vast_ai_config,
              ComputeOffersPipeline(session=session, schema=COMPUTE_OFFER_SCHEMA, config=vast_ai_config)),
             (exchange_rate_config,

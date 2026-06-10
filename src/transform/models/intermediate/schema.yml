@@ -323,8 +323,8 @@ models:
         tests:
           - not_null
 
-  - name: int_electricity_tariff_prices
-    description: "Intermediate electricity tariffs prices - tariff type extracted and description translated to English"
+  - name: int_electricity_tariff_tiers
+    description: "Intermediate electricity tariffs tiers - tariff type extracted and description translated to English"
     columns:
       - name: tariff_type
         description: "Tariff tier extracted from Macedonian tariff description - low or high"
@@ -380,7 +380,7 @@ models:
               - tariff_description_mk
               - valid_from
 
-  - name: int_electricity_tariffs_schedule
+  - name: int_electricity_tariff_schedule
     description: "Intermediate tariff schedule - exploded from hour ranges into one row per (day_of_week, hour) combination"
     columns:
       - name: day_of_week

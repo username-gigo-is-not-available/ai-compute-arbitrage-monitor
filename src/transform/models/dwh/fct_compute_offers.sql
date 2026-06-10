@@ -66,7 +66,7 @@ exchange_rates as (
       and to_currency   = 'MKD'
 ),
 
-tariff_prices_pivoted as (
+tariff_tiers_pivoted as (
     select
         valid_from,
         valid_to,
@@ -78,7 +78,7 @@ tariff_prices_pivoted as (
         max(case when tariff_description_en = 'business_high_tariff_block'    then price_mkd_per_kwh end) as business_high_tariff_block,
         max(case when tariff_description_en = 'business_low_tariff_block'     then price_mkd_per_kwh end) as business_low_tariff_block,
         max(case when tariff_description_en = 'distribution_fee'              then price_mkd_per_kwh end) as distribution_fee
-    from {{ ref('dim_electricity_tariff_prices') }}
+    from {{ ref('dim_electricity_tariff_tiers') }}
     group by valid_from, valid_to
 ),
 
@@ -106,7 +106,7 @@ joined as (
         on  cast(o.valid_from as date) >= er.valid_from
         and cast(o.valid_from as date) <  er.valid_to
 
-    left join tariff_prices_pivoted tp
+    left join tariff_tiers_pivoted tp
         on  cast(o.valid_from as date) >= tp.valid_from
         and cast(o.valid_from as date) <  tp.valid_to
 ),

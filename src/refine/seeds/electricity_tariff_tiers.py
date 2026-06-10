@@ -10,7 +10,7 @@ from refine.assets.cleaning import trim_whitespace, replace_substring, empty_to_
 from refine.assets.filtering import deduplicate
 from refine.init import initialize_spark
 from refine.base import Pipeline
-from refine.schemas.electricity_tariff import ELECTRICITY_TARIFF_SCHEMA
+from refine.schemas.electricity_tariff_tiers import ELECTRICITY_TARIFF_TIERS_SCHEMA
 
 
 def fix_decimal_separator(df: DataFrame) -> DataFrame:
@@ -22,7 +22,7 @@ def deduplicate_electricity_tariffs_prices(df: DataFrame) -> DataFrame:
 
 
 @dataclass
-class ElectricityTariffPricesPipeline(Pipeline):
+class ElectricityTariffTiersPipeline(Pipeline):
     transform_steps: list[Callable[[DataFrame], DataFrame]] = field(default_factory=lambda: [
         trim_whitespace,
         empty_to_null,
@@ -39,9 +39,9 @@ def run():
     if not erc_config.enabled:
         return
 
-    electricity_tariff_prices_pipeline: ElectricityTariffPricesPipeline = ElectricityTariffPricesPipeline(
+    electricity_tariff_prices_pipeline: ElectricityTariffTiersPipeline = ElectricityTariffTiersPipeline(
         session=session,
-        schema=ELECTRICITY_TARIFF_SCHEMA,
+        schema=ELECTRICITY_TARIFF_TIERS_SCHEMA,
         config=erc_config
     )
     electricity_tariff_prices_pipeline.run()

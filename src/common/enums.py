@@ -20,8 +20,8 @@ class DatasetType(StrEnum):
 class DatasetName(StrEnum):
     COMPUTE_OFFERS = auto()
     EXCHANGE_RATES = auto()
-    ELECTRICITY_TARIFF_PRICES = auto()
-    ELECTRICITY_TARIFFS_SCHEDULE = auto()
+    ELECTRICITY_TARIFF_TIERS = auto()
+    ELECTRICITY_TARIFF_SCHEDULE = auto()
 
 
 class VerificationStatusType(StrEnum):

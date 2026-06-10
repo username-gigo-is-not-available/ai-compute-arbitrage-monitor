@@ -298,8 +298,8 @@ models:
         tests:
           - not_null
 
-  - name: stg_electricity_tariff_prices
-    description: "Staged Macedonian EVN electricity tariff prices in MKD"
+  - name: stg_electricity_tariff_tiers
+    description: "Staged Macedonian EVN electricity tariff tiers"
     tests:
       - dbt_utils.unique_combination_of_columns:
           arguments:
@@ -336,7 +336,7 @@ models:
         tests:
           - not_null
 
-  - name: stg_electricity_tariffs_schedule
+  - name: stg_electricity_tariff_schedule
     description: "Time-of-use schedule mapping day/hour ranges to tariff types"
     tests:
       - dbt_utils.unique_combination_of_columns:

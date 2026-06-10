@@ -25,16 +25,16 @@ sources:
     description: "Data seeds stored as Parquet in GCS, exposed as External Tables in BQ"
     schema: seed
     tables:
-      - name: electricity_tariff_prices
+      - name: electricity_tariff_tiers
         external:
-          location: "gs://ai-compute-arbitrage-monitor-lake/silver/seeds/electricity_tariff_prices/*.parquet"
+          location: "gs://ai-compute-arbitrage-monitor-lake/silver/seeds/electricity_tariff_tiers/*.parquet"
           options:
             format: parquet
           autodetect: true
       
-      - name: electricity_tariffs_schedule
+      - name: electricity_tariff_schedule
         external:
-          location: "gs://ai-compute-arbitrage-monitor-lake/silver/seeds/electricity_tariffs_schedule/*.parquet"
+          location: "gs://ai-compute-arbitrage-monitor-lake/silver/seeds/electricity_tariff_schedule/*.parquet"
           options:
             format: parquet
           autodetect: true
