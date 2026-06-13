@@ -1,5 +1,6 @@
 import asyncio
 import logging
+from dataclasses import dataclass
 from datetime import datetime, UTC
 from http import HTTPStatus
 from typing import Any
@@ -7,17 +8,16 @@ from typing import Any
 from aiohttp import ClientSession
 from pydantic import ValidationError
 
+from common.classes import Dataset
 from config.loader import ConfigLoader
-from config.sources.vast_ai import VastAIConfig
-from ingest.base import AsyncBatchIngestor
-from common.enums import OfferType, DataStageType
+from config.apis.vast_ai import VastAIConfig
+from config.storage import GCPStorageConfig
+from ingest.base import AsyncIngestor
+from common.enums import OfferType, DatasetType, DatasetName
 from ingest.models.vast_ai_offer import VastAIOffer
 
-
-class VastAISource(AsyncBatchIngestor):
-
-    def __init__(self, config: VastAIConfig, name: str = None):
-        super().__init__(config=config, name=name)
+@dataclass
+class VastAISource(AsyncIngestor):
 
     async def load(self) -> list[VastAIOffer]:
         async with ClientSession() as session:
@@ -93,17 +93,20 @@ class VastAISource(AsyncBatchIngestor):
 
 async def main():
     loader: ConfigLoader = ConfigLoader()
-    vast_ai_config: VastAIConfig = loader.get_vast_ai(stage=DataStageType.BRONZE)
+    vast_ai_config: VastAIConfig = loader.get_vast_ai()
+    storage_config: GCPStorageConfig = loader.get_storage()
+    compute_offers: Dataset = Dataset(dataset_name=DatasetName.COMPUTE_OFFERS, dataset_type=DatasetType.SOURCES)
     if not vast_ai_config.enabled:
         return
 
-    vast_ai: VastAISource = VastAISource(config=vast_ai_config)
+    vast_ai: VastAISource = VastAISource(dataset=compute_offers, config=vast_ai_config, storage_config=storage_config)
     logging.info(f"Starting source {vast_ai.name}...")
     await vast_ai.run()
 
 
 def run():
     asyncio.run(main())
+
 
 if __name__ == "__main__":
     run()

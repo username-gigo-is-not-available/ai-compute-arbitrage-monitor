@@ -1,11 +1,9 @@
 import os
 
-from pydantic import Field
-
-from config.file_config import FileConfig
+from pydantic import Field, BaseModel
 
 
-class ExchangeRateConfig(FileConfig):
+class ExchangeRateConfig(BaseModel):
     enabled: bool
     base_url: str
     from_currency: str
@@ -15,4 +13,3 @@ class ExchangeRateConfig(FileConfig):
     @property
     def url(self) -> str:
         return f"{self.base_url}/{self.api_key}/latest/{self.from_currency}"
-

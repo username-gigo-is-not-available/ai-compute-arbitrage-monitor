@@ -3,9 +3,11 @@ from typing import Callable
 
 from pyspark.sql import DataFrame, SparkSession
 
-from common.enums import DataStageType
+from common.classes import Dataset
+from common.enums import DatasetType, DatasetName
 from config.loader import ConfigLoader
-from config.seeds.evn import EVNConfig
+from config.apis.evn import EVNConfig
+from config.storage import GCPStorageConfig
 from refine.assets.filtering import deduplicate
 from refine.init import initialize_spark
 from refine.base import Pipeline
@@ -30,14 +32,18 @@ class ElectricityTariffSchedulePipeline(Pipeline):
 def run():
     session: SparkSession = initialize_spark()
     loader: ConfigLoader = ConfigLoader()
-    evn_config: EVNConfig = loader.get_evn(stage=DataStageType.SILVER)
+    evn_config: EVNConfig = loader.get_evn()
+    storage_config: GCPStorageConfig = loader.get_storage()
+    electricity_tariff_schedule: Dataset = Dataset(dataset_name=DatasetName.ELECTRICITY_TARIFF_SCHEDULE, dataset_type=DatasetType.SEEDS)
     if not evn_config.enabled:
         return
 
     electricity_tariffs_schedule_pipeline: ElectricityTariffSchedulePipeline = ElectricityTariffSchedulePipeline(
         session=session,
         schema=ELECTRICITY_TARIFF_SCHEDULE_SCHEMA,
-        config=evn_config
+        dataset=electricity_tariff_schedule,
+        config=evn_config,
+        storage_config=storage_config,
     )
 
     electricity_tariffs_schedule_pipeline.run()

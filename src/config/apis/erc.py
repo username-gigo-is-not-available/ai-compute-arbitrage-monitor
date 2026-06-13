@@ -1,7 +1,7 @@
-from config.file_config import FileConfig
+from pydantic import BaseModel
 
 
-class ERCConfig(FileConfig):
+class ERCConfig(BaseModel):
     enabled: bool
     url: str
     data: dict[str, int]

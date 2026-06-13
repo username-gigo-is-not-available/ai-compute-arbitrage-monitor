@@ -1,29 +1,25 @@
 execution_type: "local"
-sources:
+
+apis:
   vast_ai:
     enabled: true
     base_url: "https://console.vast.ai/api/v0"
     limit: 10000
-    file_name: "compute_offers"
 
   exchange_rate:
     enabled: true
     base_url: "https://v6.exchangerate-api.com/v6"
     from_currency: "USD"
     to_currency: "MKD"
-    file_name: "exchange_rates"
 
-seeds:
   erc:
     enabled: true
     url: "https://www.erc.org.mk/ceni.aspx"
     data: { e: 2 }
-    file_name: "electricity_tariff_tiers"
 
   evn:
     enabled: true
     url: "https://www.evn.mk/Invoices.aspx#s4"
-    file_name: "electricity_tariff_schedule"
     expected_schedule_text: >
       Ниската тарифа е од 13:00 до 15:00 часот и од 22:00 до 07:00
       часот секој ден, како и од 22:00 часот (сабота) до 07:00
@@ -39,11 +35,6 @@ http:
   timeout_seconds: 30
   retry_count: 5
   retry_delay_seconds: 60
-
-paths:
-  base_directory_path: "../data"
-  seeds_directory_name: "seeds"
-  sources_directory_name: "sources"
 
 gcp:
   project_id: "ai-compute-arbitrage-monitor"

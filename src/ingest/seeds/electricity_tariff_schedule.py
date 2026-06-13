@@ -1,4 +1,5 @@
 import logging
+from dataclasses import dataclass, field
 from datetime import datetime, UTC
 from http import HTTPStatus
 from typing import Any
@@ -7,30 +8,29 @@ import certifi
 import requests
 from bs4 import BeautifulSoup
 
-from config.loader import ConfigLoader
-from config.seeds.evn import EVNConfig
+from common.classes import Dataset
+from common.enums import TariffType, DatasetType, DatasetName
+from config.apis.evn import EVNConfig
 from config.http import HttpConfig
-from ingest.base import SyncBatchIngestor
+from config.loader import ConfigLoader
+from config.storage import GCPStorageConfig
+from ingest.base import SyncIngestor
 from ingest.models.electricity_tariff_schedule import ElectricityTariffSchedule
-from common.enums import TariffType, DataStageType
 
 
-class ElectricityTariffScheduleSeed(SyncBatchIngestor):
+@dataclass
+class ElectricityTariffScheduleSeed(SyncIngestor):
+    http_config: HttpConfig
+    schedule: list[dict[str, Any]] = field(init=False)
 
-    def __init__(self, config: EVNConfig, http_config: HttpConfig, name: str = None):
-        super().__init__(config=config, name=name)
-        self.http_config = http_config
-        self.schedule: list[dict[str, Any]] = [
-            *[{"day_of_week": day, "tariff_type": TariffType.LOW, "start_hour": 0, "end_hour": 7, "valid_from": "01.01.2026"} for day in
-              range(1, 7)],
-            *[{"day_of_week": day, "tariff_type": TariffType.HIGH, "start_hour": 7, "end_hour": 13, "valid_from": "01.01.2026"} for day in
-              range(1, 7)],
-            *[{"day_of_week": day, "tariff_type": TariffType.LOW, "start_hour": 13, "end_hour": 15, "valid_from": "01.01.2026"} for day in
-              range(1, 7)],
-            *[{"day_of_week": day, "tariff_type": TariffType.HIGH, "start_hour": 15, "end_hour": 22, "valid_from": "01.01.2026"} for day in
-              range(1, 7)],
-            *[{"day_of_week": day, "tariff_type": TariffType.LOW, "start_hour": 22, "end_hour": 24, "valid_from": "01.01.2026"} for day in
-              range(1, 7)],
+    def __post_init__(self):
+        super().__post_init__()
+        self.schedule = [
+            *[{"day_of_week": day, "tariff_type": TariffType.LOW,  "start_hour": 0,  "end_hour": 7,  "valid_from": "01.01.2026"} for day in range(1, 7)],
+            *[{"day_of_week": day, "tariff_type": TariffType.HIGH, "start_hour": 7,  "end_hour": 13, "valid_from": "01.01.2026"} for day in range(1, 7)],
+            *[{"day_of_week": day, "tariff_type": TariffType.LOW,  "start_hour": 13, "end_hour": 15, "valid_from": "01.01.2026"} for day in range(1, 7)],
+            *[{"day_of_week": day, "tariff_type": TariffType.HIGH, "start_hour": 15, "end_hour": 22, "valid_from": "01.01.2026"} for day in range(1, 7)],
+            *[{"day_of_week": day, "tariff_type": TariffType.LOW,  "start_hour": 22, "end_hour": 24, "valid_from": "01.01.2026"} for day in range(1, 7)],
             {"day_of_week": 7, "tariff_type": TariffType.LOW, "start_hour": 0, "end_hour": 24, "valid_from": "01.01.2026"},
         ]
 
@@ -58,6 +58,7 @@ class ElectricityTariffScheduleSeed(SyncBatchIngestor):
                 f"Got:      {scraped_text}"
             )
             return []
+
         ingested_at: datetime = datetime.now(UTC)
         return [record for row in self.schedule if (record := self.parse(data=row, timestamp=ingested_at))]
 
@@ -71,7 +72,7 @@ class ElectricityTariffScheduleSeed(SyncBatchIngestor):
                 tariff_type=row["tariff_type"],
                 start_hour=row["start_hour"],
                 end_hour=row["end_hour"],
-                valid_from=row["valid_from"]
+                valid_from=row["valid_from"],
             )
         except (KeyError, ValueError, TypeError) as e:
             self.logger.warning(f"Could not parse schedule row {row}: {e}")
@@ -80,16 +81,25 @@ class ElectricityTariffScheduleSeed(SyncBatchIngestor):
 
 def main():
     loader: ConfigLoader = ConfigLoader()
-    evn_config: EVNConfig = loader.get_evn(stage=DataStageType.BRONZE)
+    evn_config: EVNConfig = loader.get_evn()
+    storage_config: GCPStorageConfig = loader.get_storage()
+    electricity_tariff_schedule: Dataset = Dataset(dataset_name=DatasetName.ELECTRICITY_TARIFF_SCHEDULE, dataset_type=DatasetType.SEEDS)
     if not evn_config.enabled:
         return
 
-    schedule_seed = ElectricityTariffScheduleSeed(config=evn_config, http_config=loader.get_http())
+    schedule_seed = ElectricityTariffScheduleSeed(
+        dataset=electricity_tariff_schedule,
+        config=evn_config,
+        storage_config=storage_config,
+        http_config=loader.get_http(),
+    )
     logging.info(f"Starting seed {schedule_seed.name}...")
     schedule_seed.run()
 
+
 def run():
     main()
+
 
 if __name__ == "__main__":
     run()

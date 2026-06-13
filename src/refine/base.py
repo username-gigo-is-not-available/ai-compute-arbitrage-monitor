@@ -5,7 +5,10 @@ from typing import Callable
 from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql.types import StructType
 
+from common.classes import Dataset
+from common.enums import DataStageType
 from common.types import DatasetConfig
+from config.storage import GCPStorageConfig
 from refine.assets.casting import cast_to_schema
 from refine.assets.extract import add_processed_at_column
 
@@ -14,21 +17,25 @@ from refine.assets.extract import add_processed_at_column
 class Pipeline:
     session: SparkSession
     schema: StructType
+    dataset: Dataset
     config: DatasetConfig
+    storage_config: GCPStorageConfig
     transform_steps: list[Callable[[DataFrame], DataFrame]] = field(default_factory=list)
     logger: logging.Logger = field(init=False)
 
     def __post_init__(self):
-        self.logger = logging.getLogger(self.__class__.__name__)
+        self.name = self.__class__.__name__
+        self.logger = logging.getLogger(self.name)
 
     def read(self) -> DataFrame:
-        input_path: str = self.config.input_path_with_suffix(".parquet")
+        input_path: str = self.storage_config.directory_path_with_extension(stage=DataStageType.BRONZE, dataset=self.dataset)
         self.logger.info(f"Reading from {input_path}")
-        return self.session.read.parquet(str(input_path))
+        return self.session.read.parquet(input_path)
 
     def save(self, df: DataFrame) -> DataFrame:
-        self.logger.info(f"Writing to {self.config.output_path}")
-        df.write.mode("overwrite").parquet(str(self.config.output_path))
+        output_path: str = self.storage_config.directory_path_with_extension(stage=DataStageType.SILVER, dataset=self.dataset)
+        self.logger.info(f"Writing to {output_path}")
+        df.write.mode("overwrite").parquet(output_path)
         self.logger.info("Write complete")
         return df
 

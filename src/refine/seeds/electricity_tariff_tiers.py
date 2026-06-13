@@ -3,9 +3,11 @@ from typing import Callable
 
 from pyspark.sql import DataFrame, SparkSession
 
-from common.enums import DataStageType
+from common.classes import Dataset
+from common.enums import DataStageType, DatasetName, DatasetType
 from config.loader import ConfigLoader
-from config.seeds.erc import ERCConfig
+from config.apis.erc import ERCConfig
+from config.storage import GCPStorageConfig
 from refine.assets.cleaning import trim_whitespace, replace_substring, empty_to_null, parse_valid_from
 from refine.assets.filtering import deduplicate
 from refine.init import initialize_spark
@@ -35,14 +37,18 @@ class ElectricityTariffTiersPipeline(Pipeline):
 def run():
     session: SparkSession = initialize_spark()
     loader: ConfigLoader = ConfigLoader()
-    erc_config: ERCConfig = loader.get_erc(stage=DataStageType.SILVER)
+    erc_config: ERCConfig = loader.get_erc()
+    storage_config: GCPStorageConfig = loader.get_storage()
+    electricity_tariff_tiers: Dataset = Dataset(dataset_name=DatasetName.ELECTRICITY_TARIFF_TIERS, dataset_type=DatasetType.SEEDS)
     if not erc_config.enabled:
         return
 
     electricity_tariff_prices_pipeline: ElectricityTariffTiersPipeline = ElectricityTariffTiersPipeline(
         session=session,
         schema=ELECTRICITY_TARIFF_TIERS_SCHEMA,
-        config=erc_config
+        dataset=electricity_tariff_tiers,
+        config=erc_config,
+        storage_config=storage_config,
     )
     electricity_tariff_prices_pipeline.run()
 

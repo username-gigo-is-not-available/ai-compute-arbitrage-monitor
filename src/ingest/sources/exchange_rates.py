@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import ssl
+from dataclasses import dataclass, field
 from datetime import datetime, UTC
 from http import HTTPStatus
 from typing import Any
@@ -8,19 +9,24 @@ from typing import Any
 import certifi
 from aiohttp import ClientSession, ClientTimeout
 
-from common.enums import DataStageType
+from common.classes import Dataset
+from common.enums import DatasetType, DatasetName
+from config.apis.exchange_rate import ExchangeRateConfig
 from config.http import HttpConfig
 from config.loader import ConfigLoader
-from config.sources.exchange_rate import ExchangeRateConfig
-from ingest.base import AsyncBatchIngestor
+from config.storage import GCPStorageConfig
+from ingest.base import AsyncIngestor
 from ingest.models.exchange_rate import ExchangeRate
 
 
-class ExchangeRateSource(AsyncBatchIngestor):
+@dataclass
+class ExchangeRateSource(AsyncIngestor):
+    http_config: HttpConfig
+    timestamp_format: str = field(init=False)
+    ssl_context: ssl.SSLContext = field(init=False)
 
-    def __init__(self, config: ExchangeRateConfig, http_config: HttpConfig, name: str = None):
-        super().__init__(config=config, name=name)
-        self.http_config = http_config
+    def __post_init__(self):
+        super().__post_init__()
         self.timestamp_format = "%a, %d %b %Y %H:%M:%S %z"
         self.ssl_context = ssl.create_default_context(cafile=certifi.where())
 
@@ -56,13 +62,18 @@ class ExchangeRateSource(AsyncBatchIngestor):
 
 async def main():
     loader: ConfigLoader = ConfigLoader()
-    exchange_rate_config: ExchangeRateConfig = loader.get_exchange_rate(stage=DataStageType.BRONZE)
+    exchange_rate_config: ExchangeRateConfig = loader.get_exchange_rate()
+    storage_config: GCPStorageConfig = loader.get_storage()
+    exchange_rates: Dataset = Dataset(dataset_name=DatasetName.EXCHANGE_RATES, dataset_type=DatasetType.SOURCES)
     if not exchange_rate_config.enabled:
         return
 
-    exchange_rate: ExchangeRateSource = ExchangeRateSource(config=exchange_rate_config,
-                                                           http_config=loader.get_http()
-                                                           )
+    exchange_rate = ExchangeRateSource(
+        dataset=exchange_rates,
+        config=exchange_rate_config,
+        storage_config=storage_config,
+        http_config=loader.get_http(),
+    )
     logging.info(f"Starting source {exchange_rate.name}...")
     await exchange_rate.run()
 

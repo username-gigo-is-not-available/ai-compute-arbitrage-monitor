@@ -1,38 +1,32 @@
 import logging
+from dataclasses import dataclass
 from datetime import datetime, UTC
+from http import HTTPStatus
 from typing import Any
 
-import requests
-from http import HTTPStatus
-
 import certifi
+import requests
 from bs4 import BeautifulSoup, Tag
 
-from common.enums import DataStageType
-from config.seeds.erc import ERCConfig
+from common.classes import Dataset
+from common.enums import DatasetName, DatasetType
+from config.apis.erc import ERCConfig
 from config.http import HttpConfig
 from config.loader import ConfigLoader
-from ingest.base import SyncBatchIngestor
+from config.storage import GCPStorageConfig
+from ingest.base import SyncIngestor
 from ingest.models.electricity_tariff_tier import ElectricityTariffTier
 
 
-class ElectricityTariffTiersSeed(SyncBatchIngestor):
-
-    def __init__(self, config: ERCConfig, http_config: HttpConfig, name: str = None):
-        super().__init__(config=config, name=name)
-        self.config = config
-        self.http_config = http_config
+@dataclass
+class ElectricityTariffTiersSeed(SyncIngestor):
+    http_config: HttpConfig
 
     def load(self) -> list[ElectricityTariffTier]:
         url: str = self.config.url
         data: dict[str, Any] = self.config.data
         timeout_seconds: int = self.http_config.timeout_seconds
-        response = requests.post(
-            url,
-            data=data,
-            timeout=timeout_seconds,
-            verify=certifi.where()
-        )
+        response = requests.post(url, data=data, timeout=timeout_seconds, verify=certifi.where())
         status: int = response.status_code
         if status != HTTPStatus.OK:
             self.logger.error(f"Electricity tariff prices load returned HTTP status: {status}.")
@@ -43,9 +37,7 @@ class ElectricityTariffTiersSeed(SyncBatchIngestor):
         for row in parser.select(self.config.table_rows_selector):
             electricity_tariff: ElectricityTariffTier = self.parse(data=row, timestamp=ingested_at)
             if electricity_tariff:
-                electricity_tariffs.append(
-                    electricity_tariff
-                )
+                electricity_tariffs.append(electricity_tariff)
         return electricity_tariffs
 
     def parse(self, **kwargs) -> ElectricityTariffTier | None:
@@ -65,16 +57,25 @@ class ElectricityTariffTiersSeed(SyncBatchIngestor):
 
 def main():
     loader: ConfigLoader = ConfigLoader()
-    erc_config: ERCConfig = loader.get_erc(stage=DataStageType.BRONZE)
+    erc_config: ERCConfig = loader.get_erc()
+    storage_config: GCPStorageConfig = loader.get_storage()
+    electricity_tariff_tiers: Dataset = Dataset(dataset_name=DatasetName.ELECTRICITY_TARIFF_TIERS, dataset_type=DatasetType.SEEDS)
     if not erc_config.enabled:
         return
 
-    electricity_tariff: ElectricityTariffTiersSeed = ElectricityTariffTiersSeed(config=erc_config, http_config=loader.get_http())
+    electricity_tariff = ElectricityTariffTiersSeed(
+        dataset=electricity_tariff_tiers,
+        config=erc_config,
+        storage_config=storage_config,
+        http_config=loader.get_http(),
+    )
     logging.info(f"Starting seed {electricity_tariff.name}...")
     electricity_tariff.run()
 
+
 def run():
     main()
+
 
 if __name__ == "__main__":
     run()

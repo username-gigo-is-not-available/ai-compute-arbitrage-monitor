@@ -6,16 +6,16 @@ from typing import Any
 import yaml
 from dotenv import load_dotenv
 
+from common.enums import ExecutionType
+from config.apis.erc import ERCConfig
+from config.apis.evn import EVNConfig
+from config.apis.exchange_rate import ExchangeRateConfig
+from config.apis.vast_ai import VastAIConfig
 from config.cluster import GCPClusterConfig
 from config.dbt import DbtConfig
 from config.execution import CloudRunConfig
 from config.http import HttpConfig
 from config.storage import GCPStorageConfig
-from config.seeds.erc import ERCConfig
-from config.seeds.evn import EVNConfig
-from config.sources.exchange_rate import ExchangeRateConfig
-from config.sources.vast_ai import VastAIConfig
-from common.enums import DataStageType, ExecutionType, DatasetType, DatasetName
 
 load_dotenv()
 
@@ -34,6 +34,18 @@ class ConfigLoader:
             logging.warning(f"Unknown execution type '{execution_type}', falling back to local.")
             return ExecutionType.LOCAL
 
+    def get_evn(self) -> EVNConfig:
+        return EVNConfig(**self._raw["apis"]["evn"])
+
+    def get_vast_ai(self) -> VastAIConfig:
+        return VastAIConfig(**self._raw["apis"]["vast_ai"])
+
+    def get_exchange_rate(self) -> ExchangeRateConfig:
+        return ExchangeRateConfig(**self._raw["apis"]["exchange_rate"])
+
+    def get_erc(self) -> ERCConfig:
+        return ERCConfig(**self._raw["apis"]["erc"])
+
     def get_cluster(self) -> GCPClusterConfig:
         gcp_config: dict[str, Any] = self._raw["gcp"]
         return GCPClusterConfig(
@@ -49,10 +61,7 @@ class ConfigLoader:
         return HttpConfig(**self._raw["http"])
 
     def get_storage(self) -> GCPStorageConfig:
-        path_data: dict[str, Any] = self._raw["paths"]
         return GCPStorageConfig(
-            seeds_directory_name=path_data["seeds_directory_name"],
-            sources_directory_name=path_data["sources_directory_name"],
             bucket_name=self._raw["gcp"]["gcs"]["bucket_name"]
         )
 
@@ -71,30 +80,6 @@ class ConfigLoader:
             project_id=gcp_config["project_id"],
             region_name=gcp_config["region_name"],
             job_name=gcp_config["cloud_run"]["job_name"],
-        )
-
-    def get_vast_ai(self, stage: DataStageType) -> VastAIConfig:
-        return VastAIConfig(
-            **self._raw["sources"]["vast_ai"],
-            **self._paths.paths_for_dataset_stage(stage, DatasetType.SOURCES)
-        )
-
-    def get_exchange_rate(self, stage: DataStageType) -> ExchangeRateConfig:
-        return ExchangeRateConfig(
-            **self._raw["sources"]["exchange_rate"],
-            **self._paths.paths_for_dataset_stage(stage, DatasetType.SOURCES)
-        )
-
-    def get_erc(self, stage: DataStageType) -> ERCConfig:
-        return ERCConfig(
-            **self._raw["seeds"]["erc"],
-            **self._paths.paths_for_dataset_stage(stage, DatasetType.SEEDS)
-        )
-
-    def get_evn(self, stage: DataStageType) -> EVNConfig:
-        return EVNConfig(
-            **self._raw["seeds"]["evn"],
-            **self._paths.paths_for_dataset_stage(stage, DatasetType.SEEDS)
         )
 
     def _setup_logging(self) -> None:
