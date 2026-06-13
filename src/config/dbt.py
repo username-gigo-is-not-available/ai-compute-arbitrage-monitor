@@ -1,8 +1,7 @@
-from dataclasses import dataclass
+from pydantic import BaseModel
 
 
-@dataclass(frozen=True)
-class DbtConfig:
+class DbtConfig(BaseModel):
     project_directory_path: str
     profiles_directory_path: str
     target_directory_path: str
