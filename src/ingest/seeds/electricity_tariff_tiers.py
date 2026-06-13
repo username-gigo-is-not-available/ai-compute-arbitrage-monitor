@@ -19,7 +19,7 @@ from ingest.models.electricity_tariff_tier import ElectricityTariffTier
 
 
 @dataclass
-class ElectricityTariffTiersSeed(SyncIngestor):
+class ElectricityTariffTiersIngestor(SyncIngestor):
     http_config: HttpConfig
 
     def load(self) -> list[ElectricityTariffTier]:
@@ -63,14 +63,14 @@ def main():
     if not erc_config.enabled:
         return
 
-    electricity_tariff = ElectricityTariffTiersSeed(
+    electricity_tariff_tiers_ingestor = ElectricityTariffTiersIngestor(
         dataset=electricity_tariff_tiers,
         config=erc_config,
         storage_config=storage_config,
         http_config=loader.get_http(),
     )
-    logging.info(f"Starting seed {electricity_tariff.name}...")
-    electricity_tariff.run()
+    logging.info(f"Starting seed {electricity_tariff_tiers_ingestor.name}...")
+    electricity_tariff_tiers_ingestor.run()
 
 
 def run():

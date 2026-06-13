@@ -19,7 +19,7 @@ from ingest.models.electricity_tariff_schedule import ElectricityTariffSchedule
 
 
 @dataclass
-class ElectricityTariffScheduleSeed(SyncIngestor):
+class ElectricityTariffScheduleIngestor(SyncIngestor):
     http_config: HttpConfig
     schedule: list[dict[str, Any]] = field(init=False)
 
@@ -83,18 +83,18 @@ def main():
     loader: ConfigLoader = ConfigLoader()
     evn_config: EVNConfig = loader.get_evn()
     storage_config: GCPStorageConfig = loader.get_storage()
-    electricity_tariff_schedule: Dataset = Dataset(dataset_name=DatasetName.ELECTRICITY_TARIFF_SCHEDULE, dataset_type=DatasetType.SEEDS)
+    electricity_tariff_schedule_dataset: Dataset = Dataset(dataset_name=DatasetName.ELECTRICITY_TARIFF_SCHEDULE, dataset_type=DatasetType.SEEDS)
     if not evn_config.enabled:
         return
 
-    schedule_seed = ElectricityTariffScheduleSeed(
-        dataset=electricity_tariff_schedule,
+    electricity_tariff_schedule_ingestor = ElectricityTariffScheduleIngestor(
+        dataset=electricity_tariff_schedule_dataset,
         config=evn_config,
         storage_config=storage_config,
         http_config=loader.get_http(),
     )
-    logging.info(f"Starting seed {schedule_seed.name}...")
-    schedule_seed.run()
+    logging.info(f"Starting seed {electricity_tariff_schedule_ingestor.name}...")
+    electricity_tariff_schedule_ingestor.run()
 
 
 def run():

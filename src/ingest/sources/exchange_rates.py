@@ -20,7 +20,7 @@ from ingest.models.exchange_rate import ExchangeRate
 
 
 @dataclass
-class ExchangeRateSource(AsyncIngestor):
+class ExchangeRateIngestor(AsyncIngestor):
     http_config: HttpConfig
     timestamp_format: str = field(init=False)
     ssl_context: ssl.SSLContext = field(init=False)
@@ -68,14 +68,14 @@ async def main():
     if not exchange_rate_config.enabled:
         return
 
-    exchange_rate = ExchangeRateSource(
+    exchange_rate_ingestor = ExchangeRateIngestor(
         dataset=exchange_rates,
         config=exchange_rate_config,
         storage_config=storage_config,
         http_config=loader.get_http(),
     )
-    logging.info(f"Starting source {exchange_rate.name}...")
-    await exchange_rate.run()
+    logging.info(f"Starting source {exchange_rate_ingestor.name}...")
+    await exchange_rate_ingestor.run()
 
 
 def run():

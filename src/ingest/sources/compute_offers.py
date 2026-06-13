@@ -17,7 +17,7 @@ from common.enums import OfferType, DatasetType, DatasetName
 from ingest.models.vast_ai_offer import VastAIOffer
 
 @dataclass
-class VastAISource(AsyncIngestor):
+class ComputeOffersIngestor(AsyncIngestor):
 
     async def load(self) -> list[VastAIOffer]:
         async with ClientSession() as session:
@@ -99,9 +99,9 @@ async def main():
     if not vast_ai_config.enabled:
         return
 
-    vast_ai: VastAISource = VastAISource(dataset=compute_offers, config=vast_ai_config, storage_config=storage_config)
-    logging.info(f"Starting source {vast_ai.name}...")
-    await vast_ai.run()
+    compute_offers_ingestor: ComputeOffersIngestor = ComputeOffersIngestor(dataset=compute_offers, config=vast_ai_config, storage_config=storage_config)
+    logging.info(f"Starting source {compute_offers_ingestor.name}...")
+    await compute_offers_ingestor.run()
 
 
 def run():
