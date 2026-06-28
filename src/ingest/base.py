@@ -38,7 +38,7 @@ class Ingestor(ABC):
             self.logger.warning(f"{self.name} returned no data, skipping store.")
 
     def store(self, data: list[IngestorRecord]) -> None:
-        output_path: str = self.storage_config.directory_path(DataStageType.BRONZE, self.dataset)
+        output_path: str = self.storage_config.directory_path_with_extension(DataStageType.BRONZE, self.dataset)
         records: list[dict[str, Any]] = JsonSerializer.serialize_batch(data)
         table = pa.Table.from_pylist(records)
         pq.write_table(table, output_path)
