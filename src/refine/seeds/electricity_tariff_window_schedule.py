@@ -16,7 +16,7 @@ from refine.assets.patterns import SCHEDULE_LOW_TARIFF_HOUR_PAIR_PATTERN, WEEKDA
 from refine.base import Pipeline
 from refine.init import initialize_spark
 from refine.schemas.base import META_COLUMNS_SCHEMA
-from refine.schemas.electricity_tariff_window_schedule import ELECTRICITY_TARIFF_SCHEDULE_SCHEMA
+from refine.schemas.electricity_tariff_window_schedule import ELECTRICITY_TARIFF_WINDOW_SCHEDULE_SCHEMA
 
 
 def extract_low_tariff_window_hours(text: str) -> set[int]:
@@ -64,7 +64,7 @@ class ElectricityTariffWindowSchedulePipeline(Pipeline):
             for h in range(24)
         ]
         meta_field_names = {column.name for column in META_COLUMNS_SCHEMA}
-        schema = StructType([f for f in ELECTRICITY_TARIFF_SCHEDULE_SCHEMA.fields if f.name not in meta_field_names])
+        schema = StructType([f for f in ELECTRICITY_TARIFF_WINDOW_SCHEDULE_SCHEMA.fields if f.name not in meta_field_names])
         return self.session.createDataFrame(rows, schema=schema)
 
 
@@ -80,7 +80,7 @@ def run():
 
     electricity_tariff_window_schedule_pipeline: ElectricityTariffWindowSchedulePipeline = ElectricityTariffWindowSchedulePipeline(
         session=session,
-        schema=ELECTRICITY_TARIFF_SCHEDULE_SCHEMA,
+        schema=ELECTRICITY_TARIFF_WINDOW_SCHEDULE_SCHEMA,
         dataset=electricity_tariff_window_schedule,
         config=evn_config,
         storage_config=storage_config,

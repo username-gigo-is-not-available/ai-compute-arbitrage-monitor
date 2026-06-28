@@ -2,7 +2,7 @@ from pyspark.sql.types import StructType, StructField, StringType, IntegerType, 
 
 from refine.schemas.base import META_COLUMNS_SCHEMA
 
-ELECTRICITY_TARIFF_SCHEDULE_SCHEMA = StructType(
+ELECTRICITY_TARIFF_WINDOW_SCHEDULE_SCHEMA = StructType(
     META_COLUMNS_SCHEMA +
     [
         StructField("tariff_window", StringType(), nullable=False),
