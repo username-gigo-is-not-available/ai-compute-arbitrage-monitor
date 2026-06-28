@@ -24,14 +24,14 @@ class ElectricityTariffWindowScheduleIngestor(EVNBaseIngestor):
         valid_from_text: str = parser.select_one(self.config.tariff_tiers_valid_from_text_selector).text.strip()
         schedule_text: str = parser.select_one(self.config.schedule_text_selector).text.strip()
 
-        electricity_tariff_schedule: ElectricityTariffWindowSchedule = self.parse(
+        electricity_tariff_window_schedule: ElectricityTariffWindowSchedule = self.parse(
             timestamp=ingested_at,
             schedule_text=schedule_text,
             valid_from_text=valid_from_text,
         )
-        if electricity_tariff_schedule is None:
+        if electricity_tariff_window_schedule is None:
             return []
-        return [electricity_tariff_schedule]
+        return [electricity_tariff_window_schedule]
 
     def parse(self, **kwargs) -> ElectricityTariffWindowSchedule | None:
         row: dict = kwargs.get("data")
