@@ -10,7 +10,7 @@ from common.enums import DataStageType
 from common.types import DatasetConfig
 from config.storage import GCPStorageConfig
 from refine.assets.casting import cast_to_schema
-from refine.assets.extract import add_processed_at_column
+from refine.assets.extraction import add_processed_at_column
 
 
 @dataclass
@@ -48,14 +48,20 @@ class Pipeline:
         df = df.transform(add_processed_at_column)
         return cast_to_schema(df, self.schema)
 
+    def generate(self, df: DataFrame) -> DataFrame | None:
+        return None
+
     def run(self):
         name = self.__class__.__name__
         self.logger.info(f"{name} starting")
         df = self.read()
         self.logger.info(f"{name} read complete")
+        generated_df = self.generate(df)
+        if generated_df is not None:
+            self.logger.info(f"{name} generation complete")
+            df = generated_df
         df = self.transform(df)
         self.logger.info(f"{name} transform complete")
         result = self.save(df)
         self.logger.info(f"{name} complete")
         return result
-
