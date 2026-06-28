@@ -23,14 +23,9 @@ def replace_substring(df: DataFrame, column: str, current: str, replacement: str
     return df.withColumn(column, F.regexp_replace(F.col(column), current, replacement))
 
 
-def parse_date(df: DataFrame, column: str, date_format: str) -> DataFrame:
-    return df.withColumn(column, F.to_date(F.col(column), date_format))
-
 def empty_to_null(df: DataFrame, columns: list[str] | None = None) -> DataFrame:
     columns: list[str] = columns or [f.name for f in df.schema.fields if isinstance(f.dataType, StringType)]
     for column in columns:
         df = df.withColumn(column, F.when(F.col(column) != "", F.col(column)).otherwise(F.lit(None)))
     return df
 
-def parse_valid_from(df: DataFrame) -> DataFrame:
-    return parse_date(df, column="valid_from", date_format="dd.MM.yyyy")
