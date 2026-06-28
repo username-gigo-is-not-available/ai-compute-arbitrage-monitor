@@ -54,7 +54,7 @@ PIPELINE_CONFIGS: list[PipelineConfig] = [
         dataset_type=DatasetType.SEEDS,
         schedule="@daily",
         start_date=datetime(2026, 1, 1),
-        description="EVN tariff schedule → Bronze → Silver → Gold",
+        description="EVN tariff window schedule → Bronze → Silver → Gold",
     ),
 ]
 
