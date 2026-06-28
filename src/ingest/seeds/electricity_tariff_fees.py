@@ -31,7 +31,7 @@ class ElectricityTariffFeesIngestor(EVNBaseIngestor):
         if parser is None:
             return []
         ingested_at: datetime = datetime.now(UTC)
-        valid_from_text: str = self.get_valid_from_text(parser)
+        valid_from_text: str = parser.select_one(self.config.tariff_tiers_valid_from_text_selector).text.strip()
 
         cell_specifications: list[CellSpecification] = [
             CellSpecification(
