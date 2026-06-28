@@ -7,7 +7,6 @@ import yaml
 from dotenv import load_dotenv
 
 from common.enums import ExecutionType
-from config.apis.erc import ERCConfig
 from config.apis.evn import EVNConfig
 from config.apis.exchange_rate import ExchangeRateConfig
 from config.apis.vast_ai import VastAIConfig
@@ -42,9 +41,6 @@ class ConfigLoader:
 
     def get_exchange_rate(self) -> ExchangeRateConfig:
         return ExchangeRateConfig(**self._raw["apis"]["exchange_rate"])
-
-    def get_erc(self) -> ERCConfig:
-        return ERCConfig(**self._raw["apis"]["erc"])
 
     def get_cluster(self) -> GCPClusterConfig:
         gcp_config: dict[str, Any] = self._raw["gcp"]
