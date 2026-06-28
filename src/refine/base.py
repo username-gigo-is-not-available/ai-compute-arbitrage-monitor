@@ -28,12 +28,12 @@ class Pipeline:
         self.logger = logging.getLogger(self.name)
 
     def read(self) -> DataFrame:
-        input_path: str = self.storage_config.directory_path_with_extension(stage=DataStageType.BRONZE, dataset=self.dataset)
+        input_path: str = self.storage_config.directory_path(stage=DataStageType.BRONZE, dataset=self.dataset)
         self.logger.info(f"Reading from {input_path}")
         return self.session.read.parquet(input_path)
 
     def save(self, df: DataFrame) -> DataFrame:
-        output_path: str = self.storage_config.directory_path_with_extension(stage=DataStageType.SILVER, dataset=self.dataset)
+        output_path: str = self.storage_config.directory_path(stage=DataStageType.SILVER, dataset=self.dataset)
         self.logger.info(f"Writing to {output_path}")
         df.write.mode("overwrite").parquet(output_path)
         self.logger.info("Write complete")
