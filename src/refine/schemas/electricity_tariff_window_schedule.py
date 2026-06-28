@@ -5,7 +5,7 @@ from refine.schemas.base import META_COLUMNS_SCHEMA
 ELECTRICITY_TARIFF_SCHEDULE_SCHEMA = StructType(
     META_COLUMNS_SCHEMA +
     [
-        StructField("tariff_type", StringType(), nullable=False),
+        StructField("tariff_window", StringType(), nullable=False),
         StructField("day_of_week", IntegerType(), nullable=False),
         StructField("start_hour", IntegerType(), nullable=False),
         StructField("end_hour", IntegerType(), nullable=False),
