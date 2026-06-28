@@ -12,7 +12,7 @@ from refine.assets.filtering import deduplicate
 from refine.init import initialize_spark
 from refine.assets.cleaning import trim_whitespace, empty_to_null
 from refine.base import Pipeline
-from refine.schemas.exchange_rate import EXCHANGE_RATE_SCHEMA
+from refine.schemas.exchange_rates import EXCHANGE_RATE_SCHEMA
 
 
 def deduplicate_exchange_rate(df: DataFrame) -> DataFrame:
