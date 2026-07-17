@@ -3,7 +3,6 @@ from dataclasses import field, dataclass
 from typing import Callable
 
 from pyspark.sql import DataFrame, SparkSession
-from pyspark.sql.types import StructType
 
 from common.classes import Dataset
 from common.enums import DatasetType, DatasetName, TariffWindowType
@@ -15,7 +14,6 @@ from refine.assets.extraction import extract_valid_from_date
 from refine.assets.patterns import SCHEDULE_LOW_TARIFF_HOUR_PAIR_PATTERN, WEEKDAY_WEEKEND_SPLIT
 from refine.base import Pipeline
 from refine.init import initialize_spark
-from refine.schemas.base import META_COLUMNS_SCHEMA
 from refine.schemas.electricity_tariff_window_schedule import ELECTRICITY_TARIFF_WINDOW_SCHEDULE_SCHEMA
 
 
@@ -45,27 +43,28 @@ class ElectricityTariffWindowSchedulePipeline(Pipeline):
     ])
 
     def generate(self, df: DataFrame) -> DataFrame | None:
-        schedule_text: str = df.first()['schedule_text']
+        row = df.first()
+        schedule_text = row['schedule_text']
+        ingested_at = row['ingested_at']
         valid_from = extract_valid_from_date(df).first()['valid_from']
 
         parts = schedule_text.split(WEEKDAY_WEEKEND_SPLIT)
-
         weekday_text, _ = parts
         low_hours = extract_low_tariff_window_hours(weekday_text)
+
         rows = [
             {
                 "tariff_window": get_tariff_window(day, h, low_hours).value,
                 "day_of_week": day,
                 "start_hour": h,
                 "end_hour": h + 1,
-                "valid_from": valid_from
+                "valid_from": valid_from,
+                "ingested_at": ingested_at
             }
             for day in range(1, 8)
             for h in range(24)
         ]
-        meta_field_names = {column.name for column in META_COLUMNS_SCHEMA}
-        schema = StructType([f for f in ELECTRICITY_TARIFF_WINDOW_SCHEDULE_SCHEMA.fields if f.name not in meta_field_names])
-        return self.session.createDataFrame(rows, schema=schema)
+        return self.session.createDataFrame(rows)
 
 
 def run():

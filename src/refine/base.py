@@ -11,6 +11,7 @@ from common.types import DatasetConfig
 from config.storage import GCPStorageConfig
 from refine.assets.casting import cast_to_schema
 from refine.assets.extraction import add_processed_at_column
+from refine.schemas.base import META_COLUMNS_SCHEMA
 
 
 @dataclass
@@ -46,7 +47,7 @@ class Pipeline:
             df = df.transform(step)
         self.logger.info("Applying cast_to_schema")
         df = df.transform(add_processed_at_column)
-        return cast_to_schema(df, self.schema)
+        return cast_to_schema(df, StructType(self.schema.fields + META_COLUMNS_SCHEMA.fields))
 
     def generate(self, df: DataFrame) -> DataFrame | None:
         return None
