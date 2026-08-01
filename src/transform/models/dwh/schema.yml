@@ -2,44 +2,48 @@ version: 2
 
 models:
   - name: dim_electricity_tariff_tiers
-    description: "Electricity tariff tiers dimension - SCD Type 2 on tariff_description_mk, tracking price changes over time"
+    description: "Electricity tariff tiers dimension - SCD Type 2 tracking price changes over time"
     columns:
       - name: skey
-        description: "Surrogate key derived from tariff_description_mk and valid_from"
+        description: "Surrogate key derived from consumer_category, tariff_window_type, tariff_block_number, and valid_from"
         tests:
           - not_null
           - unique
 
-      - name: tariff_type
-        description: "Tariff tier - low or high"
-        tests:
-          - accepted_values:
-              values: [ 'low', 'high' ]
-
-      - name: tariff_description_en
-        description: "Tariff description translated to English"
-        tests:
-          - not_null
-          - accepted_values:
-              values: [
-                'household_high_tariff_block_1', 'household_high_tariff_block_2',
-                'household_high_tariff_block_3', 'household_high_tariff_block_4',
-                'household_low_tariff_block', 'business_high_tariff_block',
-                'business_low_tariff_block', 'distribution_fee'
-              ]
-
-      - name: tariff_description_mk
-        description: "Original Macedonian tariff description from source"
+      - name: consumer_category
+        description: "Consumer category (e.g., household, business)"
         tests:
           - not_null
 
-      - name: price_mkd_per_kwh
-        description: "Price per kilowatt-hour in Macedonian Denar for this version"
+      - name: label
+        description: "Tariff label in Macedonian"
+        tests:
+          - not_null
+
+      - name: metric
+        description: "Unit of measurement (e.g., kWh)"
+        tests:
+          - not_null
+
+      - name: value
+        description: "Price per unit in MKD"
         tests:
           - not_null
           - dbt_utils.expression_is_true:
               arguments:
                 expression: "> 0"
+
+      - name: tariff_window_type
+        description: "Tariff window - low or high"
+        tests:
+          - accepted_values:
+              values: [ 'low', 'high' ]
+
+      - name: tariff_block_number
+        description: "Tariff block number (1-4) or null"
+        tests:
+          - accepted_values:
+              values: [ 1, 2, 3, 4 ]
 
       - name: valid_from
         description: "Date from which this tariff version is effective"
@@ -66,8 +70,8 @@ models:
           arguments:
             expression: "valid_from < valid_to"
 
-  - name: dim_electricity_tariff_schedule
-    description: "Electricity tariff schedule dimension - SCD Type 2 on day/hour, tracking schedule changes over time"
+  - name: dim_electricity_tariff_window_schedule
+    description: "Electricity tariff window schedule dimension - SCD Type 2 on day/hour, tracking schedule changes over time"
     columns:
       - name: skey
         description: "Surrogate key derived from day_of_week, hour and valid_from"
@@ -91,8 +95,8 @@ models:
               arguments:
                 expression: ">= 0 and hour < 24"
 
-      - name: tariff_type
-        description: "Tariff tier applicable at this day/hour slot - low or high"
+      - name: tariff_window_type
+        description: "Tariff window applicable at this day/hour slot - low or high"
         tests:
           - not_null
           - accepted_values:
@@ -497,10 +501,53 @@ models:
                 severity: warn
 
       # -----------------------------------------------------------------------
-      # electricity costs (USD/hr) - one column per EVN tariff scenario
+      # tariff context
       # -----------------------------------------------------------------------
-      - name: cost_household_1_high_usd_per_hr
-        description: "Electricity cost per hour in USD under household high tariff block 1 (lowest consumption band)"
+      - name: tariff_tier_skey
+        description: "Foreign key to dim_electricity_tariff_tiers"
+        tests:
+          - not_null
+
+      - name: consumer_category
+        description: "Consumer category (e.g., household, business)"
+        tests:
+          - not_null
+
+      - name: tariff_label
+        description: "Tariff label in Macedonian"
+        tests:
+          - not_null
+
+      - name: tariff_metric
+        description: "Unit of measurement (e.g., kWh)"
+        tests:
+          - not_null
+
+      - name: tariff_value
+        description: "Price per unit in MKD for this tariff tier"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: "> 0"
+
+      - name: tariff_window_type
+        description: "Tariff window - low or high"
+        tests:
+          - accepted_values:
+              values: [ 'low', 'high' ]
+
+      - name: tariff_block_number
+        description: "Tariff block number (1-4) or null"
+        tests:
+          - accepted_values:
+              values: [ 1, 2, 3, 4 ]
+
+      # -----------------------------------------------------------------------
+      # costs (USD/hr)
+      # -----------------------------------------------------------------------
+      - name: cost_usd_per_hr
+        description: "Electricity cost per hour in USD for this tariff tier"
         tests:
           - not_null:
               config:
@@ -511,160 +558,17 @@ models:
               config:
                 severity: warn
 
-      - name: cost_household_2_high_usd_per_hr
-        description: "Electricity cost per hour in USD under household high tariff block 2"
-        tests:
-          - not_null:
-              config:
-                severity: warn
-          - dbt_utils.expression_is_true:
-              arguments:
-                expression: "> 0"
-              config:
-                severity: warn
-
-      - name: cost_household_3_high_usd_per_hr
-        description: "Electricity cost per hour in USD under household high tariff block 3"
-        tests:
-          - not_null:
-              config:
-                severity: warn
-          - dbt_utils.expression_is_true:
-              arguments:
-                expression: "> 0"
-              config:
-                severity: warn
-
-      - name: cost_household_4_high_usd_per_hr
-        description: "Electricity cost per hour in USD under household high tariff block 4 (highest consumption band)"
-        tests:
-          - not_null:
-              config:
-                severity: warn
-          - dbt_utils.expression_is_true:
-              arguments:
-                expression: "> 0"
-              config:
-                severity: warn
-
-      - name: cost_household_low_usd_per_hr
-        description: "Electricity cost per hour in USD under household low tariff (off-peak, single block)"
-        tests:
-          - not_null:
-              config:
-                severity: warn
-          - dbt_utils.expression_is_true:
-              arguments:
-                expression: "> 0"
-              config:
-                severity: warn
-
-      - name: cost_business_high_usd_per_hr
-        description: "Electricity cost per hour in USD under business high tariff"
-        tests:
-          - not_null:
-              config:
-                severity: warn
-          - dbt_utils.expression_is_true:
-              arguments:
-                expression: "> 0"
-              config:
-                severity: warn
-
-      - name: cost_business_low_usd_per_hr
-        description: "Electricity cost per hour in USD under business low tariff"
-        tests:
-          - not_null:
-              config:
-                severity: warn
-          - dbt_utils.expression_is_true:
-              arguments:
-                expression: "> 0"
-              config:
-                severity: warn
       # -----------------------------------------------------------------------
-      # profits (USD/hr) - revenue minus cost per scenario
+      # profits (USD/hr)
       # -----------------------------------------------------------------------
-      - name: profit_household_1_high_usd_per_hr
-        description: "Hourly profit in USD under household high tariff block 1 - negative means unprofitable"
-
-      - name: profit_household_2_high_usd_per_hr
-        description: "Hourly profit in USD under household high tariff block 2 - negative means unprofitable"
-
-      - name: profit_household_3_high_usd_per_hr
-        description: "Hourly profit in USD under household high tariff block 3 - negative means unprofitable"
-
-      - name: profit_household_4_high_usd_per_hr
-        description: "Hourly profit in USD under household high tariff block 4 - negative means unprofitable"
-
-      - name: profit_household_low_usd_per_hr
-        description: "Hourly profit in USD under household low tariff - negative means unprofitable"
-
-      - name: profit_business_high_usd_per_hr
-        description: "Hourly profit in USD under business high tariff - negative means unprofitable"
-
-      - name: profit_business_low_usd_per_hr
-        description: "Hourly profit in USD under business low tariff - negative means unprofitable"
+      - name: profit_usd_per_hr
+        description: "Hourly profit in USD for this tariff tier - negative means unprofitable"
 
       # -----------------------------------------------------------------------
-      # cost per TFLOP (USD) - electricity cost normalised to compute
+      # cost per TFLOP (USD)
       # -----------------------------------------------------------------------
-      - name: cost_per_tflop_household_1_high_usd
-        description: "Electricity cost per TFLOP in USD under household high tariff block 1"
-        tests:
-          - dbt_utils.expression_is_true:
-              arguments:
-                expression: "> 0"
-              config:
-                severity: warn
-
-      - name: cost_per_tflop_household_2_high_usd
-        description: "Electricity cost per TFLOP in USD under household high tariff block 2"
-        tests:
-          - dbt_utils.expression_is_true:
-              arguments:
-                expression: "> 0"
-              config:
-                severity: warn
-
-      - name: cost_per_tflop_household_3_high_usd
-        description: "Electricity cost per TFLOP in USD under household high tariff block 3"
-        tests:
-          - dbt_utils.expression_is_true:
-              arguments:
-                expression: "> 0"
-              config:
-                severity: warn
-
-      - name: cost_per_tflop_household_4_high_usd
-        description: "Electricity cost per TFLOP in USD under household high tariff block 4"
-        tests:
-          - dbt_utils.expression_is_true:
-              arguments:
-                expression: "> 0"
-              config:
-                severity: warn
-
-      - name: cost_per_tflop_household_low_usd
-        description: "Electricity cost per TFLOP in USD under household low tariff"
-        tests:
-          - dbt_utils.expression_is_true:
-              arguments:
-                expression: "> 0"
-              config:
-                severity: warn
-
-      - name: cost_per_tflop_business_high_usd
-        description: "Electricity cost per TFLOP in USD under business high tariff"
-        tests:
-          - dbt_utils.expression_is_true:
-              arguments:
-                expression: "> 0"
-              config:
-                severity: warn
-
-      - name: cost_per_tflop_business_low_usd
-        description: "Electricity cost per TFLOP in USD under business low tariff"
+      - name: cost_per_tflop_usd
+        description: "Electricity cost per TFLOP in USD for this tariff tier"
         tests:
           - dbt_utils.expression_is_true:
               arguments:
@@ -673,28 +577,10 @@ models:
                 severity: warn
 
       # -----------------------------------------------------------------------
-      # profit per TFLOP (USD) - profit normalised to compute
+      # profit per TFLOP (USD)
       # -----------------------------------------------------------------------
-      - name: profit_per_tflop_household_1_high_usd
-        description: "Hourly profit per TFLOP in USD under household high tariff block 1 - negative means unprofitable"
-
-      - name: profit_per_tflop_household_2_high_usd
-        description: "Hourly profit per TFLOP in USD under household high tariff block 2 - negative means unprofitable"
-
-      - name: profit_per_tflop_household_3_high_usd
-        description: "Hourly profit per TFLOP in USD under household high tariff block 3 - negative means unprofitable"
-
-      - name: profit_per_tflop_household_4_high_usd
-        description: "Hourly profit per TFLOP in USD under household high tariff block 4 - negative means unprofitable"
-
-      - name: profit_per_tflop_household_low_usd
-        description: "Hourly profit per TFLOP in USD under household low tariff - negative means unprofitable"
-
-      - name: profit_per_tflop_business_high_usd
-        description: "Hourly profit per TFLOP in USD under business high tariff - negative means unprofitable"
-
-      - name: profit_per_tflop_business_low_usd
-        description: "Hourly profit per TFLOP in USD under business low tariff - negative means unprofitable"
+      - name: profit_per_tflop_usd
+        description: "Hourly profit per TFLOP in USD for this tariff tier - negative means unprofitable"
 
     tests:
       - dbt_utils.unique_combination_of_columns:
@@ -702,6 +588,7 @@ models:
             combination_of_columns:
               - offer_id
               - valid_from
+              - tariff_tier_skey
       - dbt_utils.expression_is_true:
           arguments:
             expression: "valid_from < valid_to"

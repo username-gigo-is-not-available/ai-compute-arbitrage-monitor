@@ -1,7 +1,7 @@
 {{
     config(
         materialized     = 'incremental',
-        unique_key       = ['offer_id', 'valid_from'],
+        unique_key       = ['offer_id', 'valid_from', 'tariff_tier_skey'],
         on_schema_change = 'append_new_columns',
         tags = ['compute_offers'],
         partition_by     = {
@@ -57,7 +57,7 @@ offers as (
 
 exchange_rates as (
     select
-        skey,
+        skey as exchange_rate_skey,
         value,
         valid_from,
         valid_to
@@ -66,20 +66,18 @@ exchange_rates as (
       and to_currency   = 'MKD'
 ),
 
-tariff_tiers_pivoted as (
+tariff_tiers as (
     select
+        skey as tariff_tier_skey,
+        consumer_category,
+        label,
+        metric,
+        value as tariff_value,
+        tariff_window_type,
+        tariff_block_number,
         valid_from,
-        valid_to,
-        max(case when tariff_description_en = 'household_high_tariff_block_1' then price_mkd_per_kwh end) as household_high_tariff_block_1,
-        max(case when tariff_description_en = 'household_high_tariff_block_2' then price_mkd_per_kwh end) as household_high_tariff_block_2,
-        max(case when tariff_description_en = 'household_high_tariff_block_3' then price_mkd_per_kwh end) as household_high_tariff_block_3,
-        max(case when tariff_description_en = 'household_high_tariff_block_4' then price_mkd_per_kwh end) as household_high_tariff_block_4,
-        max(case when tariff_description_en = 'household_low_tariff_block'    then price_mkd_per_kwh end) as household_low_tariff_block,
-        max(case when tariff_description_en = 'business_high_tariff_block'    then price_mkd_per_kwh end) as business_high_tariff_block,
-        max(case when tariff_description_en = 'business_low_tariff_block'     then price_mkd_per_kwh end) as business_low_tariff_block,
-        max(case when tariff_description_en = 'distribution_fee'              then price_mkd_per_kwh end) as distribution_fee
+        valid_to
     from {{ ref('dim_electricity_tariff_tiers') }}
-    group by valid_from, valid_to
 ),
 
 joined as (
@@ -87,18 +85,17 @@ joined as (
         o.*,
 
         -- dim skeys
-        er.skey as exchange_rate_skey,
+        er.exchange_rate_skey,
+        tt.tariff_tier_skey,
 
         er.value as usd_to_mkd_rate,
 
-        tp.household_high_tariff_block_1,
-        tp.household_high_tariff_block_2,
-        tp.household_high_tariff_block_3,
-        tp.household_high_tariff_block_4,
-        tp.household_low_tariff_block,
-        tp.business_high_tariff_block,
-        tp.business_low_tariff_block,
-        tp.distribution_fee
+        tt.consumer_category,
+        tt.label as tariff_label,
+        tt.metric as tariff_metric,
+        tt.tariff_value,
+        tt.tariff_window_type,
+        tt.tariff_block_number
 
     from offers o
 
@@ -106,9 +103,9 @@ joined as (
         on  cast(o.valid_from as date) >= er.valid_from
         and cast(o.valid_from as date) <  er.valid_to
 
-    left join tariff_tiers_pivoted tp
-        on  cast(o.valid_from as date) >= tp.valid_from
-        and cast(o.valid_from as date) <  tp.valid_to
+    left join tariff_tiers tt
+        on  cast(o.valid_from as date) >= tt.valid_from
+        and cast(o.valid_from as date) <  tt.valid_to
 ),
 
 calculations as (
@@ -124,13 +121,7 @@ calculations as (
 cost_metrics as (
     select
         *,
-        (total_system_kwh_per_hr * (household_high_tariff_block_1 + distribution_fee)) / nullif(usd_to_mkd_rate, 0) as cost_household_1_high_usd_per_hr,
-        (total_system_kwh_per_hr * (household_high_tariff_block_2 + distribution_fee)) / nullif(usd_to_mkd_rate, 0) as cost_household_2_high_usd_per_hr,
-        (total_system_kwh_per_hr * (household_high_tariff_block_3 + distribution_fee)) / nullif(usd_to_mkd_rate, 0) as cost_household_3_high_usd_per_hr,
-        (total_system_kwh_per_hr * (household_high_tariff_block_4 + distribution_fee)) / nullif(usd_to_mkd_rate, 0) as cost_household_4_high_usd_per_hr,
-        (total_system_kwh_per_hr * (household_low_tariff_block    + distribution_fee)) / nullif(usd_to_mkd_rate, 0) as cost_household_low_usd_per_hr,
-        (total_system_kwh_per_hr * (business_high_tariff_block    + distribution_fee)) / nullif(usd_to_mkd_rate, 0) as cost_business_high_usd_per_hr,
-        (total_system_kwh_per_hr * (business_low_tariff_block     + distribution_fee)) / nullif(usd_to_mkd_rate, 0) as cost_business_low_usd_per_hr
+        (total_system_kwh_per_hr * tariff_value) / nullif(usd_to_mkd_rate, 0) as cost_usd_per_hr
     from calculations
 )
 
@@ -154,6 +145,7 @@ select
     -- foreign keys to dims (skeys)
     -- -------------------------------------------------------------------------
     exchange_rate_skey,
+    tariff_tier_skey,
 
     -- -------------------------------------------------------------------------
     -- host context
@@ -233,47 +225,33 @@ select
     usd_to_mkd_rate,
 
     -- -------------------------------------------------------------------------
+    -- tariff context
+    -- -------------------------------------------------------------------------
+    consumer_category,
+    tariff_label,
+    tariff_metric,
+    tariff_value,
+    tariff_window_type,
+    tariff_block_number,
+
+    -- -------------------------------------------------------------------------
     -- costs (USD/hr)
     -- -------------------------------------------------------------------------
-    cost_household_1_high_usd_per_hr,
-    cost_household_2_high_usd_per_hr,
-    cost_household_3_high_usd_per_hr,
-    cost_household_4_high_usd_per_hr,
-    cost_household_low_usd_per_hr,
-    cost_business_high_usd_per_hr,
-    cost_business_low_usd_per_hr,
+    cost_usd_per_hr,
 
     -- -------------------------------------------------------------------------
     -- profits (USD/hr)
     -- -------------------------------------------------------------------------
-    revenue_usd_per_hr - cost_household_1_high_usd_per_hr as profit_household_1_high_usd_per_hr,
-    revenue_usd_per_hr - cost_household_2_high_usd_per_hr as profit_household_2_high_usd_per_hr,
-    revenue_usd_per_hr - cost_household_3_high_usd_per_hr as profit_household_3_high_usd_per_hr,
-    revenue_usd_per_hr - cost_household_4_high_usd_per_hr as profit_household_4_high_usd_per_hr,
-    revenue_usd_per_hr - cost_household_low_usd_per_hr    as profit_household_low_usd_per_hr,
-    revenue_usd_per_hr - cost_business_high_usd_per_hr    as profit_business_high_usd_per_hr,
-    revenue_usd_per_hr - cost_business_low_usd_per_hr     as profit_business_low_usd_per_hr,
+    revenue_usd_per_hr - cost_usd_per_hr as profit_usd_per_hr,
 
     -- -------------------------------------------------------------------------
     -- cost per TFLOP (USD)
     -- -------------------------------------------------------------------------
-    cost_household_1_high_usd_per_hr / nullif(total_system_tflops, 0) as cost_per_tflop_household_1_high_usd,
-    cost_household_2_high_usd_per_hr / nullif(total_system_tflops, 0) as cost_per_tflop_household_2_high_usd,
-    cost_household_3_high_usd_per_hr / nullif(total_system_tflops, 0) as cost_per_tflop_household_3_high_usd,
-    cost_household_4_high_usd_per_hr / nullif(total_system_tflops, 0) as cost_per_tflop_household_4_high_usd,
-    cost_household_low_usd_per_hr    / nullif(total_system_tflops, 0) as cost_per_tflop_household_low_usd,
-    cost_business_high_usd_per_hr    / nullif(total_system_tflops, 0) as cost_per_tflop_business_high_usd,
-    cost_business_low_usd_per_hr     / nullif(total_system_tflops, 0) as cost_per_tflop_business_low_usd,
+    cost_usd_per_hr / nullif(total_system_tflops, 0) as cost_per_tflop_usd,
 
     -- -------------------------------------------------------------------------
     -- profit per TFLOP (USD)
     -- -------------------------------------------------------------------------
-    (revenue_usd_per_hr - cost_household_1_high_usd_per_hr) / nullif(total_system_tflops, 0) as profit_per_tflop_household_1_high_usd,
-    (revenue_usd_per_hr - cost_household_2_high_usd_per_hr) / nullif(total_system_tflops, 0) as profit_per_tflop_household_2_high_usd,
-    (revenue_usd_per_hr - cost_household_3_high_usd_per_hr) / nullif(total_system_tflops, 0) as profit_per_tflop_household_3_high_usd,
-    (revenue_usd_per_hr - cost_household_4_high_usd_per_hr) / nullif(total_system_tflops, 0) as profit_per_tflop_household_4_high_usd,
-    (revenue_usd_per_hr - cost_household_low_usd_per_hr)    / nullif(total_system_tflops, 0) as profit_per_tflop_household_low_usd,
-    (revenue_usd_per_hr - cost_business_high_usd_per_hr)    / nullif(total_system_tflops, 0) as profit_per_tflop_business_high_usd,
-    (revenue_usd_per_hr - cost_business_low_usd_per_hr)     / nullif(total_system_tflops, 0) as profit_per_tflop_business_low_usd
+    (revenue_usd_per_hr - cost_usd_per_hr) / nullif(total_system_tflops, 0) as profit_per_tflop_usd
 
 from cost_metrics
