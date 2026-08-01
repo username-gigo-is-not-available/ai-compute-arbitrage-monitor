@@ -29,7 +29,7 @@ def extract_low_tariff_window_hours(text: str) -> set[int]:
     return low_hours
 
 
-def get_tariff_window(day: int, hour: int, low_hours: set[int]) -> TariffWindowType:
+def get_tariff_window_type(day: int, hour: int, low_hours: set[int]) -> TariffWindowType:
     if day == 7 or hour in low_hours:
         return TariffWindowType.LOW
     return TariffWindowType.HIGH
@@ -54,7 +54,7 @@ class ElectricityTariffWindowSchedulePipeline(Pipeline):
 
         rows = [
             {
-                "tariff_window": get_tariff_window(day, h, low_hours).value,
+                "tariff_window_type": get_tariff_window_type(day, h, low_hours).value,
                 "day_of_week": day,
                 "start_hour": h,
                 "end_hour": h + 1,

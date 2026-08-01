@@ -1,17 +1,17 @@
 {{ config(
     materialized = 'incremental',
     unique_key = 'valid_from',
-    tags = ['electricity_tariff_schedule']
+    tags = ['electricity_tariff_window_schedule']
 ) }}
 
 with source as (
     select *
-    from {{ source('seeds', 'electricity_tariff_schedule') }}
+    from {{ source('seeds', 'electricity_tariff_window_schedule') }}
 ),
 
 renamed as (
     select
-        cast(tariff_type as string)                                    as tariff_type,
+        cast(tariff_window_type as string)                             as tariff_window_type,
         cast(day_of_week as int64)                                     as day_of_week,
         cast(start_hour as int64)                                      as start_hour,
         cast(end_hour as int64)                                        as end_hour,
