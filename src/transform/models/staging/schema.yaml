@@ -304,21 +304,42 @@ models:
       - dbt_utils.unique_combination_of_columns:
           arguments:
             combination_of_columns:
-              - tariff_description
+              - consumer_category
+              - tariff_tier
               - valid_from
     columns:
-      - name: tariff_description
-        description: "Tariff description - by household, business, tier, block"
+      - name: consumer_category
+        description: "Tariff category the price applies to - e.g. household or business, tariff tier (high/low), and block number where applicable"
+        tests:
+          - not_null
+          - accepted_values:
+              values: [ 'household', 'business' ]
+
+      - name: label
+        description: "Macedonian-language name of the billed component, e.g. active electrical energy consumption or distribution fee"
         tests:
           - not_null
 
-      - name: price_mkd_per_kwh
-        description: "Price per kilowatt-hour in Macedonian Denar"
+      - name: metric
+        description: "Unit of measurement for the price, e.g. kWh"
+        tests:
+          - not_null
+
+      - name: value
+        description: "Price per unit (per metric) in Macedonian Denar"
         tests:
           - not_null
           - dbt_utils.expression_is_true:
               arguments:
                 expression: "> 0"
+
+      - name: tariff_tier
+        description: "Raw Macedonian tariff time code identifying the block/tier this price applies to
+           — ВТ1 through ВТ4 (high tariff, by consumption block) or НТ (low tariff)."
+        tests:
+            - not_null
+            - accepted_values:
+                values: [ 'ВТ1', 'ВТ2', 'ВТ3', 'ВТ4', 'НТ' ]
 
       - name: valid_from
         description: "Date from which this tariff price is valid"
@@ -336,7 +357,7 @@ models:
         tests:
           - not_null
 
-  - name: stg_electricity_tariff_schedule
+  - name: stg_electricity_tariff_window_schedule
     description: "Time-of-use schedule mapping day/hour ranges to tariff types"
     tests:
       - dbt_utils.unique_combination_of_columns:
@@ -347,8 +368,8 @@ models:
               - end_hour
               - valid_from
     columns:
-      - name: tariff_type
-        description: "Tariff tier for this time window - low or high"
+      - name: tariff_window_type
+        description: "Tariff window type for this time window - low or high"
         tests:
           - not_null
           - accepted_values:
