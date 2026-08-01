@@ -3,17 +3,19 @@ version: 2
 models:
   - name: mart_arbitrage_opportunities
     description: >
-      Current arbitrage opportunities ranked globally by profit per TFLOP under the business
-      high tariff. Filtered to verified, rentable, unrented offers with valid compute metrics.
-      One row per offer instance. Partitioned rank per offer_type.
+      Current arbitrage opportunities ranked by profit per TFLOP within each (offer_type, tariff tier).
+      Filtered to verified, rentable, unrented offers with valid compute metrics.
+      One row per (offer, tariff tier). Partitioned rank per (offer_type, tariff_tier_skey).
     tests:
       - dbt_utils.unique_combination_of_columns:
           combination_of_columns:
             - offer_type
-            - arbitrage_rank
+            - offer_id
+            - valid_from
+            - tariff_tier_skey
     columns:
       - name: arbitrage_rank
-        description: "Rank by profit_per_tflop_business_high_usd descending within offer_type - rank 1 is the best opportunity"
+        description: "Rank by profit_per_tflop_usd descending within (offer_type, tariff_tier_skey) - rank 1 is the best opportunity for that tier"
         tests:
           - not_null
 
@@ -145,35 +147,41 @@ models:
       - name: usd_to_mkd_rate
         description: "USD to MKD exchange rate locked at valid_from"
 
-      - name: profit_household_1_high_usd_per_hr
-        description: "Profit in USD/hr under household high tariff block 1"
-      - name: profit_household_2_high_usd_per_hr
-        description: "Profit in USD/hr under household high tariff block 2"
-      - name: profit_household_3_high_usd_per_hr
-        description: "Profit in USD/hr under household high tariff block 3"
-      - name: profit_household_4_high_usd_per_hr
-        description: "Profit in USD/hr under household high tariff block 4"
-      - name: profit_household_low_usd_per_hr
-        description: "Profit in USD/hr under household low tariff"
-      - name: profit_business_high_usd_per_hr
-        description: "Profit in USD/hr under business high tariff"
-      - name: profit_business_low_usd_per_hr
-        description: "Profit in USD/hr under business low tariff"
+      # tariff tier context
+      - name: tariff_tier_skey
+        description: "Surrogate key of the tariff tier this row represents"
+        tests:
+          - not_null
 
-      - name: profit_per_tflop_household_1_high_usd
-        description: "Profit per TFLOP in USD under household high tariff block 1"
-      - name: profit_per_tflop_household_2_high_usd
-        description: "Profit per TFLOP in USD under household high tariff block 2"
-      - name: profit_per_tflop_household_3_high_usd
-        description: "Profit per TFLOP in USD under household high tariff block 3"
-      - name: profit_per_tflop_household_4_high_usd
-        description: "Profit per TFLOP in USD under household high tariff block 4"
-      - name: profit_per_tflop_household_low_usd
-        description: "Profit per TFLOP in USD under household low tariff"
-      - name: profit_per_tflop_business_high_usd
-        description: "Profit per TFLOP in USD under business high tariff"
-      - name: profit_per_tflop_business_low_usd
-        description: "Profit per TFLOP in USD under business low tariff"
+      - name: consumer_category
+        description: "Consumer category for this tier e.g. household, business"
+        tests:
+          - not_null
+
+      - name: tariff_window_type
+        description: "Tariff window type for this tier - low or high"
+        tests:
+          - not_null
+          - accepted_values:
+              values: [ 'low', 'high' ]
+              config:
+                severity: warn
+
+      - name: tariff_block_number
+        description: "Tariff block number within the consumer category (1-4 for household high, null for low/business)"
+
+      # generic cost / profit columns (tier-scoped)
+      - name: cost_usd_per_hr
+        description: "Electricity cost in USD/hr for this tariff tier"
+
+      - name: profit_usd_per_hr
+        description: "Profit in USD/hr for this tariff tier"
+
+      - name: cost_per_tflop_usd
+        description: "Electricity cost per TFLOP in USD for this tariff tier"
+
+      - name: profit_per_tflop_usd
+        description: "Profit per TFLOP in USD for this tariff tier - used for ranking"
 
       - name: valid_from
         description: "Timestamp of the offer snapshot"
@@ -182,17 +190,18 @@ models:
 
   - name: mart_best_offers_by_gpu
     description: >
-      Best available on-demand or reserved offer per GPU model, deduped to the latest snapshot.
-      Filtered to verified, rentable, unrented offers. All metrics normalized per GPU.
-      One row per (gpu_architecture, gpu_model_name).
+      Best available offer per (GPU variant, tariff tier), deduped to the latest snapshot.
+      Filtered to verified, rentable, unrented offers. Selection is by profit_usd_per_hr / number_of_gpus
+      within each (offer_type, gpu_architecture, gpu_model_name, gpu_memory_gb, tariff_tier_skey) group.
+      One row per (offer_type, gpu_architecture, gpu_model_name, gpu_memory_gb, tariff_tier_skey).
     tests:
       - dbt_utils.unique_combination_of_columns:
           combination_of_columns:
             - offer_type
+            - gpu_architecture
             - gpu_model_name
-            - tflops_per_gpu
-            - gpu_tdp_watts
             - gpu_memory_gb
+            - tariff_tier_skey
     columns:
       - name: offer_type
         description: "Offer type e.g. on_demand, reserved, bid"
@@ -215,14 +224,8 @@ models:
       - name: gpu_tdp_watts
         description: "GPU TDP in watts"
 
-      - name: gpu_bandwidth_gbytes_per_sec
-        description: "GPU memory bandwidth in GB/s"
-
-      - name: gpu_max_cuda_version_supported
-        description: "Maximum CUDA version supported"
-
       - name: tflops_per_gpu
-        description: "TFLOPS normalized per GPU (total_tflops_available / number_of_gpus)"
+        description: "TFLOPS per GPU"
         tests:
           - not_null:
               config:
@@ -249,64 +252,57 @@ models:
       - name: revenue_per_gpu_usd_per_hr
         description: "Revenue per GPU in USD/hr"
 
-      - name: cost_household_1_high_per_gpu_usd_per_hr
-        description: "Electricity cost per GPU in USD/hr under household high tariff block 1"
-      - name: cost_household_2_high_per_gpu_usd_per_hr
-        description: "Electricity cost per GPU in USD/hr under household high tariff block 2"
-      - name: cost_household_3_high_per_gpu_usd_per_hr
-        description: "Electricity cost per GPU in USD/hr under household high tariff block 3"
-      - name: cost_household_4_high_per_gpu_usd_per_hr
-        description: "Electricity cost per GPU in USD/hr under household high tariff block 4"
-      - name: cost_household_low_per_gpu_usd_per_hr
-        description: "Electricity cost per GPU in USD/hr under household low tariff"
-      - name: cost_business_high_per_gpu_usd_per_hr
-        description: "Electricity cost per GPU in USD/hr under business high tariff"
-      - name: cost_business_low_per_gpu_usd_per_hr
-        description: "Electricity cost per GPU in USD/hr under business low tariff"
+      # generic per-GPU cost / profit columns (tier-scoped)
+      - name: cost_per_gpu_usd_per_hr
+        description: "Electricity cost per GPU in USD/hr for this tariff tier"
 
-      - name: profit_household_1_high_per_gpu_usd_per_hr
-        description: "Profit per GPU in USD/hr under household high tariff block 1"
-      - name: profit_household_2_high_per_gpu_usd_per_hr
-        description: "Profit per GPU in USD/hr under household high tariff block 2"
-      - name: profit_household_3_high_per_gpu_usd_per_hr
-        description: "Profit per GPU in USD/hr under household high tariff block 3"
-      - name: profit_household_4_high_per_gpu_usd_per_hr
-        description: "Profit per GPU in USD/hr under household high tariff block 4"
-      - name: profit_household_low_per_gpu_usd_per_hr
-        description: "Profit per GPU in USD/hr under household low tariff"
-      - name: profit_business_high_per_gpu_usd_per_hr
-        description: "Profit per GPU in USD/hr under business high tariff"
-      - name: profit_business_low_per_gpu_usd_per_hr
-        description: "Profit per GPU in USD/hr under business low tariff"
+      - name: profit_per_gpu_usd_per_hr
+        description: "Profit per GPU in USD/hr for this tariff tier - used for best-offer selection"
 
-      - name: profit_per_tflop_household_1_high_usd
-        description: "Profit per TFLOP in USD under household high tariff block 1"
-      - name: profit_per_tflop_household_2_high_usd
-        description: "Profit per TFLOP in USD under household high tariff block 2"
-      - name: profit_per_tflop_household_3_high_usd
-        description: "Profit per TFLOP in USD under household high tariff block 3"
-      - name: profit_per_tflop_household_4_high_usd
-        description: "Profit per TFLOP in USD under household high tariff block 4"
-      - name: profit_per_tflop_household_low_usd
-        description: "Profit per TFLOP in USD under household low tariff"
-      - name: profit_per_tflop_business_high_usd
-        description: "Profit per TFLOP in USD under business high tariff"
-      - name: profit_per_tflop_business_low_usd
-        description: "Profit per TFLOP in USD under business low tariff"
+      - name: cost_per_tflop_usd
+        description: "Electricity cost per TFLOP in USD for this tariff tier"
+
+      - name: profit_per_tflop_usd
+        description: "Profit per TFLOP in USD for this tariff tier"
+
+      # tariff tier context
+      - name: tariff_tier_skey
+        description: "Surrogate key of the tariff tier this row represents"
+        tests:
+          - not_null
+
+      - name: consumer_category
+        description: "Consumer category for this tier e.g. household, business"
+        tests:
+          - not_null
+
+      - name: tariff_window_type
+        description: "Tariff window type for this tier - low or high"
+        tests:
+          - not_null
+          - accepted_values:
+              values: [ 'low', 'high' ]
+              config:
+                severity: warn
+
+      - name: tariff_block_number
+        description: "Tariff block number within the consumer category"
 
       - name: valid_from
-        description: "Timestamp of the latest snapshot for this GPU model"
+        description: "Timestamp of the latest snapshot for this GPU variant and tier"
         tests:
           - not_null
 
   - name: mart_profitability_trends
     description: >
-      Hourly aggregated offer-level profitability metrics grouped by GPU variant and tariff window.
-      Joins fct_compute_offers to dim_electricity_tariffs_schedule to label each hour as high
-      or low tariff. Metrics are raw offer-level averages (not per-GPU normalized) - use
-      mart_best_offers_by_gpu or mart_gpu_model_summary for per-GPU comparisons.
-      One row per (hour_bucket, offer_type, gpu_architecture, gpu_model_name, gpu_memory_gb,
-      gpu_tdp_watts, gpu_bandwidth_gbytes_per_sec, gpu_max_cuda_version_supported, tariff_window).
+      Hourly aggregated offer-level profitability metrics grouped by GPU variant, scheduled tariff window,
+      and tariff tier context. Joins fct_compute_offers to dim_electricity_tariff_window_schedule to label
+      each hour as scheduled high or low tariff. The scheduled window is aliased as scheduled_tariff_window
+      to distinguish it from the tier's own tariff_window_type. Metrics are raw offer-level averages
+      (not per-GPU normalized) - use mart_best_offers_by_gpu or mart_gpu_model_summary for per-GPU comparisons.
+      One row per (hour_bucket, offer_type, gpu_architecture, gpu_model_name, gpu_memory_gb, gpu_tdp_watts,
+      gpu_bandwidth_gbytes_per_sec, gpu_max_cuda_version_supported, number_of_gpus, scheduled_tariff_window,
+      tariff_tier_skey).
     tests:
       - dbt_utils.unique_combination_of_columns:
           combination_of_columns:
@@ -319,7 +315,8 @@ models:
             - gpu_bandwidth_gbytes_per_sec
             - gpu_max_cuda_version_supported
             - number_of_gpus
-            - tariff_window
+            - scheduled_tariff_window
+            - tariff_tier_skey
     columns:
       - name: hour_bucket
         description: "Timestamp truncated to the hour"
@@ -339,8 +336,8 @@ models:
           - dbt_utils.expression_is_true:
               arguments:
                 expression: ">= 0 and hour_of_day < 24"
-      - name: tariff_window
-        description: "Tariff tier active at this hour - low or high"
+      - name: scheduled_tariff_window
+        description: "Scheduled tariff window at this hour - low or high (from dim_electricity_tariff_window_schedule)"
         tests:
           - accepted_values:
               values: [ 'low', 'high' ]
@@ -377,97 +374,52 @@ models:
                 expression: "> 0"
       - name: avg_revenue_usd_per_hr
         description: "Average offer revenue in USD/hr"
-      - name: avg_profit_household_1_high_usd_per_hr
-        description: "Average offer profit in USD/hr under household high tariff block 1"
-      - name: avg_profit_household_2_high_usd_per_hr
-        description: "Average offer profit in USD/hr under household high tariff block 2"
-      - name: avg_profit_household_3_high_usd_per_hr
-        description: "Average offer profit in USD/hr under household high tariff block 3"
-      - name: avg_profit_household_4_high_usd_per_hr
-        description: "Average offer profit in USD/hr under household high tariff block 4"
-      - name: avg_profit_household_low_usd_per_hr
-        description: "Average offer profit in USD/hr under household low tariff"
-      - name: avg_profit_business_high_usd_per_hr
-        description: "Average offer profit in USD/hr under business high tariff"
-      - name: avg_profit_business_low_usd_per_hr
-        description: "Average offer profit in USD/hr under business low tariff"
-      - name: min_profit_household_1_high_usd_per_hr
-        description: "Minimum offer profit in USD/hr under household high tariff block 1"
-      - name: min_profit_household_2_high_usd_per_hr
-        description: "Minimum offer profit in USD/hr under household high tariff block 2"
-      - name: min_profit_household_3_high_usd_per_hr
-        description: "Minimum offer profit in USD/hr under household high tariff block 3"
-      - name: min_profit_household_4_high_usd_per_hr
-        description: "Minimum offer profit in USD/hr under household high tariff block 4"
-      - name: min_profit_household_low_usd_per_hr
-        description: "Minimum offer profit in USD/hr under household low tariff"
-      - name: min_profit_business_high_usd_per_hr
-        description: "Minimum offer profit in USD/hr under business high tariff"
-      - name: min_profit_business_low_usd_per_hr
-        description: "Minimum offer profit in USD/hr under business low tariff"
-      - name: max_profit_household_1_high_usd_per_hr
-        description: "Maximum offer profit in USD/hr under household high tariff block 1"
-      - name: max_profit_household_2_high_usd_per_hr
-        description: "Maximum offer profit in USD/hr under household high tariff block 2"
-      - name: max_profit_household_3_high_usd_per_hr
-        description: "Maximum offer profit in USD/hr under household high tariff block 3"
-      - name: max_profit_household_4_high_usd_per_hr
-        description: "Maximum offer profit in USD/hr under household high tariff block 4"
-      - name: max_profit_household_low_usd_per_hr
-        description: "Maximum offer profit in USD/hr under household low tariff"
-      - name: max_profit_business_high_usd_per_hr
-        description: "Maximum offer profit in USD/hr under business high tariff"
-      - name: max_profit_business_low_usd_per_hr
-        description: "Maximum offer profit in USD/hr under business low tariff"
-      - name: avg_profit_per_tflop_household_1_high_usd
-        description: "Average profit per TFLOP in USD under household high tariff block 1"
-      - name: avg_profit_per_tflop_household_2_high_usd
-        description: "Average profit per TFLOP in USD under household high tariff block 2"
-      - name: avg_profit_per_tflop_household_3_high_usd
-        description: "Average profit per TFLOP in USD under household high tariff block 3"
-      - name: avg_profit_per_tflop_household_4_high_usd
-        description: "Average profit per TFLOP in USD under household high tariff block 4"
-      - name: avg_profit_per_tflop_household_low_usd
-        description: "Average profit per TFLOP in USD under household low tariff"
-      - name: avg_profit_per_tflop_business_high_usd
-        description: "Average profit per TFLOP in USD under business high tariff"
-      - name: avg_profit_per_tflop_business_low_usd
-        description: "Average profit per TFLOP in USD under business low tariff"
-      - name: min_profit_per_tflop_household_1_high_usd
-        description: "Minimum profit per TFLOP in USD under household high tariff block 1"
-      - name: min_profit_per_tflop_household_2_high_usd
-        description: "Minimum profit per TFLOP in USD under household high tariff block 2"
-      - name: min_profit_per_tflop_household_3_high_usd
-        description: "Minimum profit per TFLOP in USD under household high tariff block 3"
-      - name: min_profit_per_tflop_household_4_high_usd
-        description: "Minimum profit per TFLOP in USD under household high tariff block 4"
-      - name: min_profit_per_tflop_household_low_usd
-        description: "Minimum profit per TFLOP in USD under household low tariff"
-      - name: min_profit_per_tflop_business_high_usd
-        description: "Minimum profit per TFLOP in USD under business high tariff"
-      - name: min_profit_per_tflop_business_low_usd
-        description: "Minimum profit per TFLOP in USD under business low tariff"
-      - name: max_profit_per_tflop_household_1_high_usd
-        description: "Maximum profit per TFLOP in USD under household high tariff block 1"
-      - name: max_profit_per_tflop_household_2_high_usd
-        description: "Maximum profit per TFLOP in USD under household high tariff block 2"
-      - name: max_profit_per_tflop_household_3_high_usd
-        description: "Maximum profit per TFLOP in USD under household high tariff block 3"
-      - name: max_profit_per_tflop_household_4_high_usd
-        description: "Maximum profit per TFLOP in USD under household high tariff block 4"
-      - name: max_profit_per_tflop_household_low_usd
-        description: "Maximum profit per TFLOP in USD under household low tariff"
-      - name: max_profit_per_tflop_business_high_usd
-        description: "Maximum profit per TFLOP in USD under business high tariff"
-      - name: max_profit_per_tflop_business_low_usd
-        description: "Maximum profit per TFLOP in USD under business low tariff"
+
+      # generic profit aggregates (tier-scoped)
+      - name: avg_profit_usd_per_hr
+        description: "Average offer profit in USD/hr for this tariff tier"
+      - name: min_profit_usd_per_hr
+        description: "Minimum offer profit in USD/hr for this tariff tier"
+      - name: max_profit_usd_per_hr
+        description: "Maximum offer profit in USD/hr for this tariff tier"
+
+      - name: avg_profit_per_tflop_usd
+        description: "Average profit per TFLOP in USD for this tariff tier"
+      - name: min_profit_per_tflop_usd
+        description: "Minimum profit per TFLOP in USD for this tariff tier"
+      - name: max_profit_per_tflop_usd
+        description: "Maximum profit per TFLOP in USD for this tariff tier"
+
+      # tariff tier context
+      - name: tariff_tier_skey
+        description: "Surrogate key of the tariff tier this row represents"
+        tests:
+          - not_null
+
+      - name: consumer_category
+        description: "Consumer category for this tier e.g. household, business"
+        tests:
+          - not_null
+
+      - name: tariff_window_type
+        description: "Tariff window type for this tier - low or high (the tier's own window, distinct from scheduled_tariff_window)"
+        tests:
+          - not_null
+          - accepted_values:
+              values: [ 'low', 'high' ]
+              config:
+                severity: warn
+
+      - name: tariff_block_number
+        description: "Tariff block number within the consumer category"
 
   - name: mart_gpu_model_summary
     description: >
-      Summary profitability statistics aggregated by GPU model and offer type.
-      Current offers only (valid_to is null). Includes profitability rates across
-      all EVN tariff scenarios, host quality metrics, and per-GPU normalized averages.
-      One row per (gpu_model_name, offer_type).
+      Summary profitability statistics aggregated by GPU model, offer type, and tariff tier.
+      Current offers only (valid_to is 9999-12-31). Includes a single pct_profitable column
+      (share of offers with profit_usd_per_hr > 0 for that tier), host quality metrics,
+      and per-GPU normalized averages. One row per (offer_type, gpu_architecture, gpu_model_name,
+      tflops_per_gpu, gpu_memory_gb, tariff_tier_skey).
     tests:
       - dbt_utils.unique_combination_of_columns:
           combination_of_columns:
@@ -476,6 +428,7 @@ models:
             - gpu_model_name
             - gpu_memory_gb
             - tflops_per_gpu
+            - tariff_tier_skey
     columns:
       - name: offer_type
         description: "Offer type e.g. on_demand, reserved, bid"
@@ -489,12 +442,10 @@ models:
         description: "GPU model name"
         tests:
           - not_null
-      - name: gpu_memory_gb
-        description: "GPU VRAM in gigabytes - part of grain to separate RTX 4090 16GB vs 32GB"
       - name: tflops_per_gpu
         description: "TFLOPS per GPU - part of grain"
-      - name: gpu_tdp_watts
-        description: "GPU TDP in watts - part of grain"
+      - name: gpu_memory_gb
+        description: "GPU VRAM in gigabytes - part of grain to separate RTX 4090 16GB vs 32GB"
 
       - name: total_offer_observations
         description: "Total number of current offer snapshots in this group"
@@ -510,60 +461,12 @@ models:
       - name: avg_revenue_per_gpu_usd_per_hr
         description: "Average revenue per GPU in USD/hr"
 
-      - name: pct_profitable_household_1_high
-        description: "Percentage of offers profitable under household high tariff block 1"
+      - name: pct_profitable
+        description: "Percentage of offers with profit_usd_per_hr > 0 for this tariff tier"
         tests:
           - dbt_utils.expression_is_true:
               arguments:
-                expression: ">= 0 and pct_profitable_household_1_high <= 100"
-              config:
-                severity: warn
-      - name: pct_profitable_household_2_high
-        description: "Percentage of offers profitable under household high tariff block 2"
-        tests:
-          - dbt_utils.expression_is_true:
-              arguments:
-                expression: ">= 0 and pct_profitable_household_2_high <= 100"
-              config:
-                severity: warn
-      - name: pct_profitable_household_3_high
-        description: "Percentage of offers profitable under household high tariff block 3"
-        tests:
-          - dbt_utils.expression_is_true:
-              arguments:
-                expression: ">= 0 and pct_profitable_household_3_high <= 100"
-              config:
-                severity: warn
-      - name: pct_profitable_household_4_high
-        description: "Percentage of offers profitable under household high tariff block 4"
-        tests:
-          - dbt_utils.expression_is_true:
-              arguments:
-                expression: ">= 0 and pct_profitable_household_4_high <= 100"
-              config:
-                severity: warn
-      - name: pct_profitable_household_low
-        description: "Percentage of offers profitable under household low tariff block"
-        tests:
-          - dbt_utils.expression_is_true:
-              arguments:
-                expression: ">= 0 and pct_profitable_household_low <= 100"
-              config:
-                severity: warn
-      - name: pct_profitable_business_high
-        description: "Percentage of offers profitable under business high tariff"
-        tests:
-          - dbt_utils.expression_is_true:
-              arguments:
-                expression: ">= 0 and pct_profitable_business_high <= 100"
-              config:
-                severity: warn
-      - name: pct_profitable_business_low
-        description: "Percentage of offers profitable under business low tariff"
-        tests:
-          - dbt_utils.expression_is_true:
-              arguments:
-                expression: ">= 0 and pct_profitable_business_low <= 100"
+                expression: ">= 0 and pct_profitable <= 100"
               config:
                 severity: warn
 
@@ -587,6 +490,29 @@ models:
 
       - name: avg_reliability_score
         description: "Average host reliability score"
+
+      # tariff tier context
+      - name: tariff_tier_skey
+        description: "Surrogate key of the tariff tier this row represents"
+        tests:
+          - not_null
+
+      - name: consumer_category
+        description: "Consumer category for this tier e.g. household, business"
+        tests:
+          - not_null
+
+      - name: tariff_window_type
+        description: "Tariff window type for this tier - low or high"
+        tests:
+          - not_null
+          - accepted_values:
+              values: [ 'low', 'high' ]
+              config:
+                severity: warn
+
+      - name: tariff_block_number
+        description: "Tariff block number within the consumer category"
 
       - name: last_seen_at
         description: "Most recent ingest timestamp in this group"

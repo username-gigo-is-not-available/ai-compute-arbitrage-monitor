@@ -23,9 +23,9 @@ ranked as (
     select
         *,
         row_number() over (
-            partition by offer_type
+            partition by offer_type, tariff_tier_skey
             order by
-                profit_per_tflop_business_high_usd desc,
+                profit_per_tflop_usd desc,
                 reliability_score desc,
                 gpu_tdp_watts asc,
                 pcie_bandwidth_gbytes_per_sec desc,
@@ -92,23 +92,19 @@ select
     -- rates
     usd_to_mkd_rate,
 
-    -- profits (USD/hr)
-    profit_household_1_high_usd_per_hr,
-    profit_household_2_high_usd_per_hr,
-    profit_household_3_high_usd_per_hr,
-    profit_household_4_high_usd_per_hr,
-    profit_household_low_usd_per_hr,
-    profit_business_high_usd_per_hr,
-    profit_business_low_usd_per_hr,
+    -- tariff tier context
+    tariff_tier_skey,
+    consumer_category,
+    tariff_window_type,
+    tariff_block_number,
 
-    -- profit per TFLOP (USD)
-    profit_per_tflop_household_1_high_usd,
-    profit_per_tflop_household_2_high_usd,
-    profit_per_tflop_household_3_high_usd,
-    profit_per_tflop_household_4_high_usd,
-    profit_per_tflop_household_low_usd,
-    profit_per_tflop_business_high_usd,
-    profit_per_tflop_business_low_usd,
+    -- costs / profits (USD/hr)
+    cost_usd_per_hr,
+    profit_usd_per_hr,
+
+    -- cost / profit per TFLOP (USD)
+    cost_per_tflop_usd,
+    profit_per_tflop_usd,
 
     valid_from
 
