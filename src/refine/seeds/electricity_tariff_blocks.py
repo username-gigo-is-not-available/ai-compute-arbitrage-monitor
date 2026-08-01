@@ -10,17 +10,17 @@ from config.loader import ConfigLoader
 from config.storage import GCPStorageConfig
 from refine.assets.cleaning import trim_whitespace, empty_to_null
 from refine.assets.extraction import extract_pattern, extract_valid_from_date
-from refine.assets.patterns import KWH_BOUNDS_PATTERN, BLOCK_NUMBER_PATTERN
+from refine.assets.patterns import KWH_BOUNDS_PATTERN, TARIFF_BLOCK_NUMBER_PATTERN
 from refine.init import initialize_spark
 from refine.base import Pipeline
 from refine.schemas.electricity_tariff_blocks import ELECTRICITY_TARIFF_BLOCKS_SCHEMA
 
 
-def extract_block_number(df: DataFrame) -> DataFrame:
+def extract_tariff_block_number(df: DataFrame) -> DataFrame:
     return extract_pattern(df,
-                           source_column="block_number_text",
-                           target_column="block_number",
-                           pattern=BLOCK_NUMBER_PATTERN)
+                           source_column="tariff_block_number_text",
+                           target_column="tariff_block_number",
+                           pattern=TARIFF_BLOCK_NUMBER_PATTERN)
 
 
 def extract_lower_bound_kwh(df: DataFrame) -> DataFrame:
@@ -44,7 +44,7 @@ class ElectricityTariffBlocksPipeline(Pipeline):
     transform_steps: list[Callable[[DataFrame], DataFrame]] = field(default_factory=lambda: [
         trim_whitespace,
         empty_to_null,
-        extract_block_number,
+        extract_tariff_block_number,
         extract_lower_bound_kwh,
         extract_upper_bound_kwh,
         extract_valid_from_date

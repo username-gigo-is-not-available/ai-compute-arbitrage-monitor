@@ -49,8 +49,8 @@ class ElectricityTariffBlocksIngestor(EVNBaseIngestor):
             return ElectricityTariffBlock(
                 ingested_at=ingested_at,
                 consumer_category=ConsumerCategoryType.HOUSEHOLD,
-                tariff_window=TariffWindowType.HIGH,
-                block_number_text=row.text,
+                tariff_window_type=TariffWindowType.HIGH,
+                tariff_block_number_text=row.text,
                 kwh_boundaries_text=row.next_sibling.text,
                 valid_from_text=valid_from_text,
 
