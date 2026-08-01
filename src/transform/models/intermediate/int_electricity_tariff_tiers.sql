@@ -9,10 +9,12 @@ with source as (
 
 transformed as (
     select
-        {{ extract_tariff_type('tariff_description') }}         as tariff_type,
-        {{ translate_tariff_description('tariff_description') }} as tariff_description_en,
-        tariff_description                                      as tariff_description_mk,
-        price_mkd_per_kwh,
+        consumer_category,
+        label,
+        metric,
+        value,
+        {{ extract_tariff_window('tariff_tier') }} as tariff_type,
+        {{ extract_tariff_block_number('tariff_tier') }} as tariff_block_number,
         valid_from,
         ingested_at,
         processed_at
