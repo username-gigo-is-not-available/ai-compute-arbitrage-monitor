@@ -27,6 +27,20 @@ def forward_fill_label(df: DataFrame) -> DataFrame:
 def forward_fill_metric(df: DataFrame) -> DataFrame:
     return forward_fill(df, order_by_column="consumer_category", fill_column="metric")
 
+def normalize_tariff_tier(df: DataFrame) -> DataFrame:
+    """Normalize tariff_tier: collapse Cyrillic lookalikes to Latin, strip internal whitespace.
+
+    Source scrapes intermittently emit Cyrillic Н/Т instead of Latin H/T
+    (e.g. 'НТ' instead of 'HT'), and inconsistent spacing between the
+    tier code and block number (e.g. 'ВТ 1' instead of 'ВТ1'). Scoped to
+    tariff_tier only — not safe as a general-purpose transform since it
+    would corrupt genuine Cyrillic content in free-text columns.
+    """
+    df = replace_substring(df, column="tariff_tier", current="В", replacement="B")
+    df = replace_substring(df, column="tariff_tier", current="Н", replacement="H")
+    df = replace_substring(df, column="tariff_tier", current="Т", replacement="T")
+    df = replace_substring(df, column="tariff_tier", current=r"\s+", replacement="")
+    return df
 
 @dataclass
 class ElectricityTariffTiersPipeline(Pipeline):
@@ -36,7 +50,8 @@ class ElectricityTariffTiersPipeline(Pipeline):
         replace_decimal_separator,
         extract_valid_from_date,
         forward_fill_label,
-        forward_fill_metric
+        forward_fill_metric,
+        normalize_tariff_tier
     ])
 
 

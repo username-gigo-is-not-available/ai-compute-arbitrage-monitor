@@ -339,8 +339,7 @@ models:
         tests:
             - not_null
             - accepted_values:
-                values: [ 'ВТ1', 'ВТ2', 'ВТ3', 'ВТ4', 'НТ' ]
-
+                values: [ 'BT1', 'BT2', 'BT3', 'BT4', 'BT', 'HT' ]
       - name: valid_from
         description: "Date from which this tariff price is valid"
         tests:

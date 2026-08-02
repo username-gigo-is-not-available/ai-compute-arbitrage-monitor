@@ -44,6 +44,7 @@ models:
         tests:
           - accepted_values:
               values: [ 1, 2, 3, 4 ]
+              quote: false
 
       - name: valid_from
         description: "Date from which this tariff version is effective"
@@ -64,7 +65,9 @@ models:
     tests:
       - dbt_utils.unique_combination_of_columns:
           combination_of_columns:
-            - tariff_description_mk
+            - consumer_category
+            - tariff_window_type
+            - tariff_block_number
             - valid_from
       - dbt_utils.expression_is_true:
           arguments:
@@ -542,6 +545,7 @@ models:
         tests:
           - accepted_values:
               values: [ 1, 2, 3, 4 ]
+              quote: false
 
       # -----------------------------------------------------------------------
       # costs (USD/hr)

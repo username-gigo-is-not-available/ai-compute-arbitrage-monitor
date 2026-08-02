@@ -16,8 +16,6 @@ scd as (
         tariff_window_type,
         tariff_block_number,
         valid_from,
-        ingested_at,
-        prcessed_at,
         coalesce(
             cast({{ valid_to('valid_from', 'consumer_category, tariff_window_type, tariff_block_number') }} as date),
             date '9999-12-31'

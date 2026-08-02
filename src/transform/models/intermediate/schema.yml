@@ -361,11 +361,9 @@ models:
       - name: tariff_block_number
         description: "Household high-tariff consumption block (1-4), extracted from tariff_tier e.g. ВТ1 -> 1. Null for low tariff (НТ) and undifferentiated high tariff (business ВТ), which have no block distinction."
         tests:
-          - dbt_utils.expression_is_true:
-              arguments:
-                expression: ">= 1 and tariff_block_number <= 4"
-              config:
-                severity: warn
+          - accepted_values:
+              values: [ 1, 2, 3, 4 ]
+              quote: false
 
       - name: valid_from
         description: "Date from which this tariff price is valid"
