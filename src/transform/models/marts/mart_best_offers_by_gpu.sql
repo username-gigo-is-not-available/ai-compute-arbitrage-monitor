@@ -35,6 +35,8 @@ select
     gpu_model_name,
     gpu_memory_gb,
     gpu_tdp_watts,
+    gpu_bandwidth_gbytes_per_sec,
+    gpu_max_cuda_version_supported,
     tflops_per_gpu,
     kwh_per_tflop,
     verification_flag,

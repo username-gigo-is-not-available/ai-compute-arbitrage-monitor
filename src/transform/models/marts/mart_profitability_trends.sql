@@ -25,22 +25,21 @@ with joined as (
         f.tariff_tier_skey,
         f.consumer_category,
         f.tariff_window_type,
-        f.tariff_block_number,
-        ts.tariff_window_type as scheduled_tariff_window
+        f.tariff_block_number
 
     from {{ ref('fct_compute_offers') }} f
-    left join {{ ref('dim_electricity_tariff_window_schedule') }} ts
+    join {{ ref('dim_electricity_tariff_window_schedule') }} ts
         on  mod(extract(dayofweek from f.valid_from) + 5, 7) + 1 = ts.day_of_week
         and extract(hour from f.valid_from)                       = ts.hour
         and cast(f.valid_from as date) >= ts.valid_from
         and cast(f.valid_from as date) <  ts.valid_to
+        and f.tariff_window_type = ts.tariff_window_type
 )
 
 select
     timestamp_trunc(valid_from, hour)                             as hour_bucket,
     mod(extract(dayofweek from valid_from) + 5, 7) + 1           as day_of_week,
     extract(hour from valid_from)                                 as hour_of_day,
-    scheduled_tariff_window,
     offer_type,
     gpu_architecture,
     gpu_model_name,
@@ -64,8 +63,8 @@ select
     -- tariff tier context
     tariff_tier_skey,
     consumer_category,
-    tariff_window_type,
+    tariff_window_type as scheduled_tariff_window_type,
     tariff_block_number
 
 from joined
-group by 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 21, 22, 23, 24
+group by 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 20, 21, 22, 23

@@ -164,8 +164,6 @@ models:
           - not_null
           - accepted_values:
               values: [ 'low', 'high' ]
-              config:
-                severity: warn
 
       - name: tariff_block_number
         description: "Tariff block number within the consumer category (1-4 for household high, null for low/business)"
@@ -223,6 +221,12 @@ models:
 
       - name: gpu_tdp_watts
         description: "GPU TDP in watts"
+
+      - name: gpu_bandwidth_gbytes_per_sec
+        description: "GPU memory bandwidth in GB/s"
+
+      - name: gpu_max_cuda_version_supported
+        description: "Maximum CUDA version supported by the GPU driver"
 
       - name: tflops_per_gpu
         description: "TFLOPS per GPU"
@@ -282,8 +286,6 @@ models:
           - not_null
           - accepted_values:
               values: [ 'low', 'high' ]
-              config:
-                severity: warn
 
       - name: tariff_block_number
         description: "Tariff block number within the consumer category"
@@ -295,14 +297,13 @@ models:
 
   - name: mart_profitability_trends
     description: >
-      Hourly aggregated offer-level profitability metrics grouped by GPU variant, scheduled tariff window,
-      and tariff tier context. Joins fct_compute_offers to dim_electricity_tariff_window_schedule to label
-      each hour as scheduled high or low tariff. The scheduled window is aliased as scheduled_tariff_window
-      to distinguish it from the tier's own tariff_window_type. Metrics are raw offer-level averages
+      Hourly aggregated offer-level profitability metrics grouped by GPU variant, scheduled tariff window type,
+      and tariff tier context. Joins fct_compute_offers to dim_electricity_tariff_window_schedule to filter
+      to hours where the tariff tier's window matches the EVN schedule. Metrics are raw offer-level averages
       (not per-GPU normalized) - use mart_best_offers_by_gpu or mart_gpu_model_summary for per-GPU comparisons.
       One row per (hour_bucket, offer_type, gpu_architecture, gpu_model_name, gpu_memory_gb, gpu_tdp_watts,
-      gpu_bandwidth_gbytes_per_sec, gpu_max_cuda_version_supported, number_of_gpus, scheduled_tariff_window,
-      tariff_tier_skey).
+      gpu_bandwidth_gbytes_per_sec, gpu_max_cuda_version_supported, number_of_gpus, scheduled_tariff_window_type,
+      consumer_category, tariff_block_number, tariff_tier_skey).
     tests:
       - dbt_utils.unique_combination_of_columns:
           combination_of_columns:
@@ -315,8 +316,10 @@ models:
             - gpu_bandwidth_gbytes_per_sec
             - gpu_max_cuda_version_supported
             - number_of_gpus
-            - scheduled_tariff_window
             - tariff_tier_skey
+            - consumer_category
+            - scheduled_tariff_window_type
+            - tariff_block_number
     columns:
       - name: hour_bucket
         description: "Timestamp truncated to the hour"
@@ -336,13 +339,6 @@ models:
           - dbt_utils.expression_is_true:
               arguments:
                 expression: ">= 0 and hour_of_day < 24"
-      - name: scheduled_tariff_window
-        description: "Scheduled tariff window at this hour - low or high (from dim_electricity_tariff_window_schedule)"
-        tests:
-          - accepted_values:
-              values: [ 'low', 'high' ]
-              config:
-                severity: warn
       - name: offer_type
         description: "Offer type e.g. on_demand, reserved, bid"
         tests:
@@ -401,14 +397,12 @@ models:
         tests:
           - not_null
 
-      - name: tariff_window_type
-        description: "Tariff window type for this tier - low or high (the tier's own window, distinct from scheduled_tariff_window)"
+      - name: scheduled_tariff_window_type
+        description: "Effective tariff window at this hour - the tier's window matched with the EVN schedule - low or high"
         tests:
           - not_null
           - accepted_values:
               values: [ 'low', 'high' ]
-              config:
-                severity: warn
 
       - name: tariff_block_number
         description: "Tariff block number within the consumer category"
@@ -508,8 +502,6 @@ models:
           - not_null
           - accepted_values:
               values: [ 'low', 'high' ]
-              config:
-                severity: warn
 
       - name: tariff_block_number
         description: "Tariff block number within the consumer category"

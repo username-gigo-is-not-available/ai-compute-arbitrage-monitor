@@ -21,18 +21,19 @@
                 {% if results and results.columns[0][0] %}
                     {% set latest_ts = results.columns[0][0] %}
 
-                    update {{ this }}
+                    update {{ this }} as fct
                     set valid_to = '{{ latest_ts }}'
                     where valid_to = timestamp '9999-12-31'
                       and valid_from < '{{ latest_ts }}'
-                      and offer_id not in (
-                          select offer_id
-                          from {{ ref('int_compute_offers') }}
-                          where valid_from = '{{ latest_ts }}'
+                      and not exists (
+                          select 1
+                          from {{ ref('int_compute_offers') }} ico
+                          where ico.valid_from = '{{ latest_ts }}'
+                            and ico.offer_id = fct.offer_id
                       );
                 {% endif %}
             {% endif %}
-        """
+    """
     )
 }}
 
