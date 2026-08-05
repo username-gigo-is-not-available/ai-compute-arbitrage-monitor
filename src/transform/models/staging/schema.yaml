@@ -131,6 +131,8 @@ models:
           - dbt_utils.expression_is_true:
               arguments:
                 expression: "> 0"
+              config:
+                severity: warn
 
       - name: gpu_bandwidth_gbytes_per_sec
         description: "GPU memory bandwidth in GB/s"

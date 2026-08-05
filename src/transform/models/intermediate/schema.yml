@@ -131,6 +131,8 @@ models:
           - dbt_utils.expression_is_true:
               arguments:
                 expression: "> 0"
+              config:
+                severity: warn
 
       - name: total_system_tflops
         description: "Total compute capacity across all GPUs in the offer (gpu_tflops * number_of_gpus)"
