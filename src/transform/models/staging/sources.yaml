@@ -32,19 +32,19 @@ sources:
             format: parquet
           autodetect: true
 
-#      - name: electricity_tariff_blocks
-#        external:
-#          location: "gs://ai-compute-arbitrage-monitor-lake/silver/seeds/electricity_tariff_blocks/*.parquet"
-#          options:
-#            format: parquet
-#          autodetect: true
-#
-#      - name: electricity_tariff_fees
-#        external:
-#          location: "gs://ai-compute-arbitrage-monitor-lake/silver/seeds/electricity_tariff_fees/*.parquet"
-#          options:
-#            format: parquet
-#          autodetect: true
+      - name: electricity_tariff_blocks
+        external:
+          location: "gs://ai-compute-arbitrage-monitor-lake/silver/seeds/electricity_tariff_blocks/*.parquet"
+          options:
+            format: parquet
+          autodetect: true
+
+      - name: electricity_tariff_fees
+        external:
+          location: "gs://ai-compute-arbitrage-monitor-lake/silver/seeds/electricity_tariff_fees/*.parquet"
+          options:
+            format: parquet
+          autodetect: true
 
       - name: electricity_tariff_window_schedule
         external:

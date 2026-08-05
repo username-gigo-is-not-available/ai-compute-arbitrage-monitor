@@ -81,6 +81,31 @@ tariff_tiers as (
     from {{ ref('dim_electricity_tariff_tiers') }}
 ),
 
+tariff_fees as (
+    select
+        consumer_category,
+        max(case when fee_type = 'distribution' then value end) as distribution_fee,
+        max(case when fee_type = 'access' then value end) as access_fee,
+        valid_from,
+        valid_to
+    from {{ ref('dim_electricity_tariff_fees') }}
+    where is_latest = true
+    group by consumer_category, valid_from, valid_to
+),
+
+tariff_blocks as (
+    select
+        consumer_category,
+        tariff_window_type,
+        tariff_block_number,
+        lower_bound_kwh,
+        upper_bound_kwh,
+        valid_from,
+        valid_to
+    from {{ ref('dim_electricity_tariff_blocks') }}
+    where is_latest = true
+),
+
 joined as (
     select
         o.*,
@@ -96,7 +121,13 @@ joined as (
         tt.metric as tariff_metric,
         tt.tariff_value,
         tt.tariff_window_type,
-        tt.tariff_block_number
+        tt.tariff_block_number,
+
+        tf.distribution_fee,
+        tf.access_fee,
+
+        tb.lower_bound_kwh,
+        tb.upper_bound_kwh
 
     from offers o
 
@@ -107,6 +138,18 @@ joined as (
     left join tariff_tiers tt
         on  cast(o.valid_from as date) >= tt.valid_from
         and cast(o.valid_from as date) <  tt.valid_to
+
+    left join tariff_fees tf
+        on  cast(o.valid_from as date) >= tf.valid_from
+        and cast(o.valid_from as date) <  tf.valid_to
+        and o.consumer_category = tf.consumer_category
+
+    left join tariff_blocks tb
+        on  o.consumer_category = tb.consumer_category
+        and tt.tariff_window_type = tb.tariff_window_type
+        and tt.tariff_block_number = tb.tariff_block_number
+        and cast(o.valid_from as date) >= tb.valid_from
+        and cast(o.valid_from as date) <  tb.valid_to
 ),
 
 calculations as (
@@ -122,7 +165,8 @@ calculations as (
 cost_metrics as (
     select
         *,
-        (total_system_kwh_per_hr * tariff_value) / nullif(usd_to_mkd_rate, 0) as cost_usd_per_hr
+        ((total_system_kwh_per_hr * (tariff_value + coalesce(distribution_fee, 0))) / nullif(usd_to_mkd_rate, 0))
+        + (coalesce(access_fee, 0) / 730.0 / nullif(usd_to_mkd_rate, 0)) as cost_usd_per_hr
     from calculations
 )
 

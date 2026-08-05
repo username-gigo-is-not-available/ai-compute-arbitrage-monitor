@@ -73,6 +73,142 @@ models:
           arguments:
             expression: "valid_from < valid_to"
 
+  - name: dim_electricity_tariff_fees
+    description: "Electricity tariff fees dimension - SCD Type 2 tracking fee changes over time"
+    columns:
+      - name: skey
+        description: "Surrogate key derived from consumer_category, fee_type, and valid_from"
+        tests:
+          - not_null
+          - unique
+
+      - name: consumer_category
+        description: "Consumer category (e.g., household, business)"
+        tests:
+          - not_null
+
+      - name: fee_type
+        description: "Type of fee: distribution (per-kWh) or access (fixed monthly)"
+        tests:
+          - not_null
+          - accepted_values:
+              values: [ 'distribution', 'access' ]
+
+      - name: label
+        description: "Macedonian-language name of the fee component"
+        tests:
+          - not_null
+
+      - name: metric
+        description: "Unit of measurement for the fee"
+        tests:
+          - not_null
+
+      - name: value
+        description: "Fee value in Macedonian Denar"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: "> 0"
+
+      - name: valid_from
+        description: "Date from which this fee version is effective"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: "<= current_date"
+
+      - name: valid_to
+        description: "Date from which this fee version is superseded - null means currently active"
+
+      - name: is_latest
+        description: "True if this is the currently active version of the fee"
+        tests:
+          - not_null
+
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - consumer_category
+            - fee_type
+            - valid_from
+      - dbt_utils.expression_is_true:
+          arguments:
+            expression: "valid_from < valid_to"
+
+  - name: dim_electricity_tariff_blocks
+    description: "Electricity tariff consumption blocks dimension - SCD Type 2 tracking block boundary changes over time"
+    columns:
+      - name: skey
+        description: "Surrogate key derived from consumer_category, tariff_window_type, tariff_block_number, and valid_from"
+        tests:
+          - not_null
+          - unique
+
+      - name: consumer_category
+        description: "Consumer category (e.g., household, business)"
+        tests:
+          - not_null
+
+      - name: tariff_window_type
+        description: "Tariff window - low or high"
+        tests:
+          - not_null
+          - accepted_values:
+              values: [ 'low', 'high' ]
+
+      - name: tariff_block_number
+        description: "Consumption block number (1-4)"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: ">= 1 and tariff_block_number <= 4"
+
+      - name: lower_bound_kwh
+        description: "Lower bound of consumption in kWh for this block"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: ">= 0"
+
+      - name: upper_bound_kwh
+        description: "Upper bound of consumption in kWh for this block (null for last block)"
+        tests:
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: "> 0"
+
+      - name: valid_from
+        description: "Date from which this block definition is effective"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: "<= current_date"
+
+      - name: valid_to
+        description: "Date from which this block definition is superseded - null means currently active"
+
+      - name: is_latest
+        description: "True if this is the currently active block definition"
+        tests:
+          - not_null
+
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - consumer_category
+            - tariff_window_type
+            - tariff_block_number
+            - valid_from
+      - dbt_utils.expression_is_true:
+          arguments:
+            expression: "valid_from < valid_to"
+
   - name: dim_electricity_tariff_window_schedule
     description: "Electricity tariff window schedule dimension - SCD Type 2 on day/hour, tracking schedule changes over time"
     columns:
@@ -546,6 +682,24 @@ models:
           - accepted_values:
               values: [ 1, 2, 3, 4 ]
               quote: false
+
+      # -----------------------------------------------------------------------
+      # fees (from dim_electricity_tariff_fees)
+      # -----------------------------------------------------------------------
+      - name: distribution_fee
+        description: "Per-kWh distribution fee in MKD (from dim_electricity_tariff_fees)"
+
+      - name: access_fee
+        description: "Fixed monthly access fee in MKD (from dim_electricity_tariff_fees)"
+
+      # -----------------------------------------------------------------------
+      # block boundaries (from dim_electricity_tariff_blocks)
+      # -----------------------------------------------------------------------
+      - name: lower_bound_kwh
+        description: "Lower bound of the tariff block in kWh/month"
+
+      - name: upper_bound_kwh
+        description: "Upper bound of the tariff block in kWh/month (null for last block)"
 
       # -----------------------------------------------------------------------
       # costs (USD/hr)

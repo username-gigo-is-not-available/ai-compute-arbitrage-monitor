@@ -32,6 +32,14 @@ _Avoid_: Scheduled window, effective window, live window
 Surrogate key for a tariff tier version in `dim_electricity_tariff_tiers`. Used as a foreign key in `fct_compute_offers` and as a grain column in the marts.
 _Avoid_: Tier id, tier key
 
+**Tariff fee**:
+A charge component in the EVN electricity bill. Two types: `distribution` (per-kWh surcharge) and `access` (fixed monthly charge). Stored in `dim_electricity_tariff_fees` with `fee_type` column.
+_Avoid_: Tariff charge, fee
+
+**Tariff block**:
+A consumption boundary range (in kWh/month) that determines which per-kWh price tier applies. Stored in `dim_electricity_tariff_blocks` with `lower_bound_kwh` and `upper_bound_kwh`.
+_Avoid_: Consumption tier, usage band
+
 **Valid from / Valid to**:
 SCD Type 2 timestamps. `valid_from` is the snapshot/ingest timestamp; `valid_to` is `9999-12-31` for the current version.
 _Avoid_: Effective date, expiry, as-of

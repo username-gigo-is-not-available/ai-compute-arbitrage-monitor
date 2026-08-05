@@ -510,3 +510,139 @@ models:
         description: "Most recent ingest timestamp in this group"
         tests:
           - not_null
+
+  - name: mart_user_profitability_scenario
+    description: >
+      User-specific profitability scenario mart. Accepts consumer_category and kwh_consumed_so_far as dbt vars,
+      determines the user's current block from dim_electricity_tariff_blocks, and returns the best profitable offers
+      for that block. Materialized as a table for performant Streamlit queries.
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - offer_type
+            - offer_id
+            - valid_from
+            - tariff_tier_skey
+    columns:
+      - name: offer_type
+        description: "Offer type e.g. on_demand, reserved, bid"
+        tests:
+          - not_null
+
+      - name: offer_id
+        description: "Vast.ai offer identifier"
+        tests:
+          - not_null
+
+      - name: machine_id
+        description: "Vast.ai machine identifier"
+        tests:
+          - not_null
+
+      - name: host_id
+        description: "Vast.ai host identifier"
+        tests:
+          - not_null
+
+      - name: gpu_architecture
+        description: "GPU architecture family e.g. nvidia"
+        tests:
+          - not_null
+
+      - name: gpu_model_name
+        description: "GPU model name e.g. RTX 4090"
+        tests:
+          - not_null
+
+      - name: gpu_memory_gb
+        description: "GPU VRAM in gigabytes"
+
+      - name: tflops_per_gpu
+        description: "TFLOPS per GPU"
+
+      - name: total_system_tflops
+        description: "Total TFLOPS across all GPUs"
+
+      - name: gpu_tdp_watts
+        description: "GPU TDP per GPU in watts"
+
+      - name: gpu_bandwidth_gbytes_per_sec
+        description: "GPU memory bandwidth in GB/s"
+
+      - name: gpu_max_cuda_version_supported
+        description: "Maximum CUDA version supported"
+
+      - name: number_of_gpus
+        description: "Number of GPUs"
+
+      - name: country_code
+        description: "ISO country code of the host"
+
+      - name: verification_flag
+        description: "Vast.ai host verification status"
+
+      - name: rentable_flag
+        description: "Whether the offer is currently rentable"
+
+      - name: rented_flag
+        description: "Whether the offer is currently rented"
+
+      - name: reliability_score
+        description: "Vast.ai host reliability score"
+
+      - name: kwh_per_tflop
+        description: "Energy efficiency ratio - kWh per TFLOP"
+
+      - name: gpu_price_usd_per_hr
+        description: "Base GPU rental cost in USD/hr"
+
+      - name: revenue_usd_per_hr
+        description: "Total hourly revenue in USD"
+
+      - name: cost_usd_per_hr
+        description: "Electricity cost in USD/hr for the user's block"
+
+      - name: profit_usd_per_hr
+        description: "Profit in USD/hr for the user's block"
+
+      - name: cost_per_tflop_usd
+        description: "Electricity cost per TFLOP in USD for the user's block"
+
+      - name: profit_per_tflop_usd
+        description: "Profit per TFLOP in USD for the user's block - used for ranking"
+
+      - name: tariff_tier_skey
+        description: "Surrogate key of the tariff tier this row represents"
+        tests:
+          - not_null
+
+      - name: consumer_category
+        description: "Consumer category for this tier e.g. household, business"
+        tests:
+          - not_null
+
+      - name: tariff_window_type
+        description: "Tariff window type for this tier - low or high"
+        tests:
+          - not_null
+          - accepted_values:
+              values: [ 'low', 'high' ]
+
+      - name: tariff_block_number
+        description: "Tariff block number within the consumer category"
+
+      - name: lower_bound_kwh
+        description: "Lower bound of the user's current block in kWh"
+
+      - name: upper_bound_kwh
+        description: "Upper bound of the user's current block in kWh (null for last block)"
+
+      - name: valid_from
+        description: "Timestamp of the offer snapshot"
+        tests:
+          - not_null
+
+      - name: profitability_rank
+        description: "Rank by profit_per_tflop_usd within (offer_type, gpu_architecture, gpu_model_name, gpu_memory_gb)"
+        tests:
+          - not_null
