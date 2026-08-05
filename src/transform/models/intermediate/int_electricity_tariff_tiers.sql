@@ -13,6 +13,7 @@ transformed as (
         label,
         metric,
         value,
+        {{ extract_tariff_type('label') }} as tariff_type,
         {{ extract_tariff_window_type('tariff_tier') }} as tariff_window_type,
         {{ extract_tariff_block_number('tariff_tier') }} as tariff_block_number,
         valid_from,
