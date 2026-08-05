@@ -13,10 +13,7 @@ transformed as (
         label,
         metric,
         value,
-        case
-            when label = 'Активна ел. енергија' then 'distribution'
-            when label = 'Надоместок за пристап на електродистрибутивниот систем' then 'access'
-        end as fee_type,
+        {{ extract_fee_type('label') }} as fee_type,
         valid_from,
         ingested_at,
         processed_at
