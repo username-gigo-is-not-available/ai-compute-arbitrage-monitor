@@ -131,20 +131,20 @@ joined as (
 
     from offers o
 
-    left join exchange_rates er
+    join exchange_rates er
         on  cast(o.valid_from as date) >= er.valid_from
         and cast(o.valid_from as date) <  er.valid_to
 
-    left join tariff_tiers tt
+    join tariff_tiers tt
         on  cast(o.valid_from as date) >= tt.valid_from
         and cast(o.valid_from as date) <  tt.valid_to
 
-    left join tariff_fees tf
+    join tariff_fees tf
         on  cast(o.valid_from as date) >= tf.valid_from
         and cast(o.valid_from as date) <  tf.valid_to
         and o.consumer_category = tf.consumer_category
 
-    left join tariff_blocks tb
+    join tariff_blocks tb
         on  o.consumer_category = tb.consumer_category
         and tt.tariff_window_type = tb.tariff_window_type
         and tt.tariff_block_number = tb.tariff_block_number
