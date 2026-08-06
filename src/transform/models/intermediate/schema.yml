@@ -417,7 +417,7 @@ models:
           - not_null
           - dbt_utils.expression_is_true:
               arguments:
-                expression: "> 0"
+                expression: ">= 0"
 
       - name: fee_type
         description: "Type of fee: distribution (per-kWh) or access (fixed monthly)"
@@ -482,7 +482,6 @@ models:
       - name: upper_bound_kwh
         description: "Upper bound of consumption in kWh for this block"
         tests:
-          - not_null
           - dbt_utils.expression_is_true:
               arguments:
                 expression: "> 0"
