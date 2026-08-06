@@ -25,7 +25,9 @@ with user_block as (
 
 offers_in_block as (
     select
-        f.*
+        f.*,
+        ub.lower_bound_kwh,
+        ub.upper_bound_kwh
     from {{ ref('fct_compute_offers') }} f
     join user_block ub
         on f.tariff_block_number = ub.tariff_block_number
@@ -85,4 +87,3 @@ select
 
 from ranked
 where rn = 1
-order by profit_per_tflop_usd desc
