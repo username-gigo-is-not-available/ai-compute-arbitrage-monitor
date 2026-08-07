@@ -111,9 +111,9 @@ tariff_tiers as (
     select
         consumer_category,
         tariff_window_type,
-        tariff_value,
+        value as tariff_value,
         tariff_block_number,
-        tariff_tier_skey
+        skey as tariff_tier_skey
     from {{ ref('dim_electricity_tariff_tiers') }}
     where is_latest = true
     qualify row_number() over (
