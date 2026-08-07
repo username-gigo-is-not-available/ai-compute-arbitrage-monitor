@@ -43,3 +43,19 @@ _Avoid_: Consumption tier, usage band
 **Valid from / Valid to**:
 SCD Type 2 timestamps. `valid_from` is the snapshot/ingest timestamp; `valid_to` is `9999-12-31` for the current version.
 _Avoid_: Effective date, expiry, as-of
+
+**Host**:
+The economic actor this project models — someone who owns GPUs, places them in Macedonia at EVN electricity rates, and rents them out on Vast.ai at the global market price. The cost model is the host's electricity; the revenue is the rental price.
+_Avoid_: Renter, consumer, buyer
+
+**Market-benchmarking**:
+The practice of treating competitors' Vast.ai ask prices as a proxy for what the host can charge for a similar GPU. The marts rank market offers to answer "which GPU config is worth hosting," not to model the host's own listings.
+_Avoid_: Own-inventory, validated-demand
+
+**Electricity-only cost model**:
+The deliberate scope of the cost model — it covers only the electricity to run the GPU (TDP-based), not hardware capex, maintenance, or placement fees. The host is assumed to already own the GPU; this is not a break-even calculator.
+_Avoid_: Total-cost, ROI, break-even
+
+**Forecast**:
+A forward-looking, per-machine, tariff-window-aware projection of electricity cost and profit over a specific future time window (e.g., "my GTX 3080 over this weekend"). Distinct from market-scanning, which ranks current offers.
+_Avoid_: Scenario, projection, estimate
