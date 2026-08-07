@@ -353,6 +353,13 @@ models:
               arguments:
                 expression: "> 0"
 
+      - name: tariff_type
+        description: "Classification of the billed component derived from the label - e.g. 'energy' for active electrical energy consumption. Null for components not classified."
+        tests:
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: "is null or tariff_type = 'energy'"
+
       - name: tariff_window_type
         description: "Tariff window applicable - low or high"
         tests:
@@ -361,11 +368,11 @@ models:
               values: [ 'low', 'high' ]
 
       - name: tariff_block_number
-        description: "Household high-tariff consumption block (1-4), extracted from tariff_tier e.g. ВТ1 -> 1. Null for low tariff (НТ) and undifferentiated high tariff (business ВТ), which have no block distinction."
+        description: "Household high-tariff consumption block (1-4), extracted from tariff_tier e.g. BT1 -> 1. Null for low tariff (HT) and undifferentiated high tariff (business BT), which have no block distinction."
         tests:
-          - accepted_values:
-              values: [ 1, 2, 3, 4 ]
-              quote: false
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: "is null or tariff_block_number in (1, 2, 3, 4)"
 
       - name: valid_from
         description: "Date from which this tariff price is valid"

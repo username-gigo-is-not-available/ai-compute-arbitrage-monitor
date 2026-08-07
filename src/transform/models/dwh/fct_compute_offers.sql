@@ -71,7 +71,7 @@ tariff_tiers as (
     select
         skey as tariff_tier_skey,
         consumer_category,
-        label,
+        tariff_type,
         metric,
         value as tariff_value,
         tariff_window_type,
@@ -117,7 +117,7 @@ joined as (
         er.value as usd_to_mkd_rate,
 
         tt.consumer_category,
-        tt.label as tariff_label,
+        tt.tariff_type,
         tt.metric as tariff_metric,
         tt.tariff_value,
         tt.tariff_window_type,
@@ -142,10 +142,10 @@ joined as (
     join tariff_fees tf
         on  cast(o.valid_from as date) >= tf.valid_from
         and cast(o.valid_from as date) <  tf.valid_to
-        and o.consumer_category = tf.consumer_category
+        and tt.consumer_category = tf.consumer_category
 
-    join tariff_blocks tb
-        on  o.consumer_category = tb.consumer_category
+    left join tariff_blocks tb
+        on  tt.consumer_category = tb.consumer_category
         and tt.tariff_window_type = tb.tariff_window_type
         and tt.tariff_block_number = tb.tariff_block_number
         and cast(o.valid_from as date) >= tb.valid_from
@@ -273,7 +273,7 @@ select
     -- tariff context
     -- -------------------------------------------------------------------------
     consumer_category,
-    tariff_label,
+    tariff_type,
     tariff_metric,
     tariff_value,
     tariff_window_type,

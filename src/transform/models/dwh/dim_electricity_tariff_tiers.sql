@@ -10,6 +10,7 @@ scd as (
     select
         {{ dbt_utils.generate_surrogate_key(['consumer_category', 'tariff_window_type', 'tariff_block_number', 'valid_from']) }} as skey,
         consumer_category,
+        tariff_type,
         label,
         metric,
         value,

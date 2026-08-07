@@ -15,6 +15,13 @@ models:
         tests:
           - not_null
 
+      - name: tariff_type
+        description: "Classification of the billed component derived from the label - e.g. 'energy' for active electrical energy consumption. Null for components not classified."
+        tests:
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: "is null or tariff_type = 'energy'"
+
       - name: label
         description: "Tariff label in Macedonian"
         tests:
@@ -40,11 +47,11 @@ models:
               values: [ 'low', 'high' ]
 
       - name: tariff_block_number
-        description: "Tariff block number (1-4) or null"
+        description: "Tariff block number (1-4) or null for tiers with no block distinction"
         tests:
-          - accepted_values:
-              values: [ 1, 2, 3, 4 ]
-              quote: false
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: "is null or tariff_block_number in (1, 2, 3, 4)"
 
       - name: valid_from
         description: "Date from which this tariff version is effective"
@@ -351,6 +358,35 @@ models:
           - not_null
 
       # -----------------------------------------------------------------------
+      # grain / time
+      # -----------------------------------------------------------------------
+      - name: valid_from
+        description: "Timestamp of the offer snapshot"
+        tests:
+          - not_null
+
+      - name: valid_to
+        description: "Timestamp to which this offer snapshot is valid - 9999-12-31 means currently active"
+
+      # -----------------------------------------------------------------------
+      # offer type
+      # -----------------------------------------------------------------------
+      - name: offer_type
+        description: "Offer type e.g. on_demand, bid, reserved"
+        tests:
+          - not_null
+          - accepted_values:
+              values: [ "on_demand", "bid", "reserved" ]
+
+      # -----------------------------------------------------------------------
+      # foreign keys to dims
+      # -----------------------------------------------------------------------
+      - name: exchange_rate_skey
+        description: "Foreign key to dim_exchange_rates"
+        tests:
+          - not_null
+
+      # -----------------------------------------------------------------------
       # host context
       # -----------------------------------------------------------------------
       - name: country_code
@@ -551,6 +587,22 @@ models:
               config:
                 severity: warn
 
+      - name: network_download_cost_usd_per_gbit
+        description: "Network download cost per gigabit in USD"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: ">= 0"
+
+      - name: network_upload_cost_usd_per_gbit
+        description: "Network upload cost per gigabit in USD"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: ">= 0"
+
       # -----------------------------------------------------------------------
       # performance scores
       # -----------------------------------------------------------------------
@@ -574,6 +626,22 @@ models:
       # -----------------------------------------------------------------------
       - name: gpu_price_usd_per_hr
         description: "Base GPU rental cost per hour excluding storage and bandwidth"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: ">= 0"
+
+      - name: minimum_bid_price_usd
+        description: "Minimum bid price in USD for bid-type offers"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: ">= 0"
+
+      - name: storage_cost_usd_per_hr
+        description: "Storage cost component of the hourly price in USD"
         tests:
           - not_null
           - dbt_utils.expression_is_true:
@@ -652,10 +720,12 @@ models:
         tests:
           - not_null
 
-      - name: tariff_label
-        description: "Tariff label in Macedonian"
+      - name: tariff_type
+        description: "Classification of the billed component derived from the label - e.g. 'energy' for active electrical energy consumption. Null for components not classified."
         tests:
-          - not_null
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: "is null or tariff_type = 'energy'"
 
       - name: tariff_metric
         description: "Unit of measurement (e.g., kWh)"
@@ -677,11 +747,11 @@ models:
               values: [ 'low', 'high' ]
 
       - name: tariff_block_number
-        description: "Tariff block number (1-4) or null"
+        description: "Tariff block number (1-4) or null for tiers with no block distinction"
         tests:
-          - accepted_values:
-              values: [ 1, 2, 3, 4 ]
-              quote: false
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: "is null or tariff_block_number in (1, 2, 3, 4)"
 
       # -----------------------------------------------------------------------
       # fees (from dim_electricity_tariff_fees)

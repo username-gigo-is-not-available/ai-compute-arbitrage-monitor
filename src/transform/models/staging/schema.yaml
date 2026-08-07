@@ -337,7 +337,7 @@ models:
 
       - name: tariff_tier
         description: "Raw Macedonian tariff time code identifying the block/tier this price applies to
-           — ВТ1 through ВТ4 (high tariff, by consumption block) or НТ (low tariff)."
+           — BT1 through BT4 (high tariff, by consumption block), BT (undifferentiated high tariff) or HT (low tariff)."
         tests:
             - not_null
             - accepted_values:
