@@ -1,6 +1,6 @@
 {{
     config(
-        tags = ['electricity_tariff_schedule']
+        tags = ['electricity_tariff_window_schedule']
     )
 }}
 with calendar as (
@@ -14,13 +14,13 @@ with calendar as (
 
 source as (
     select *
-    from {{ ref('stg_electricity_tariff_schedule') }}
+    from {{ ref('stg_electricity_tariff_window_schedule') }}
 )
 
 select
     c.day_of_week,
     c.hour,
-    s.tariff_type,
+    s.tariff_window_type,
     s.valid_from,
     s.ingested_at,
     s.processed_at

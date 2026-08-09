@@ -1,9 +1,9 @@
 {{ config(
-    tags         = ['electricity_tariff_schedule'],
+    tags         = ['electricity_tariff_window_schedule'],
     materialized = 'table'
 ) }}
 with source as (
-    select * from {{ ref('int_electricity_tariff_schedule') }}
+    select * from {{ ref('int_electricity_tariff_window_schedule') }}
 ),
 
 scd as (
@@ -11,7 +11,7 @@ scd as (
         {{ dbt_utils.generate_surrogate_key(['day_of_week', 'hour', 'valid_from']) }} as skey,
         day_of_week,
         hour,
-        tariff_type,
+        tariff_window_type,
         valid_from,
         coalesce(
             {{ valid_to('valid_from', 'day_of_week, hour') }},

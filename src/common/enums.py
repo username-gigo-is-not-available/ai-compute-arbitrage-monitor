@@ -21,7 +21,9 @@ class DatasetName(StrEnum):
     COMPUTE_OFFERS = auto()
     EXCHANGE_RATES = auto()
     ELECTRICITY_TARIFF_TIERS = auto()
-    ELECTRICITY_TARIFF_SCHEDULE = auto()
+    ELECTRICITY_TARIFF_FEES = auto()
+    ELECTRICITY_TARIFF_BLOCKS = auto()
+    ELECTRICITY_TARIFF_WINDOW_SCHEDULE = auto()
 
 
 class VerificationStatusType(StrEnum):
@@ -30,7 +32,12 @@ class VerificationStatusType(StrEnum):
     DEVERIFIED = "deverified"
 
 
-class TariffType(StrEnum):
+class ConsumerCategoryType(StrEnum):
+    HOUSEHOLD = auto()
+    BUSINESS = auto()
+
+
+class TariffWindowType(StrEnum):
     HIGH = auto()
     LOW = auto()
 

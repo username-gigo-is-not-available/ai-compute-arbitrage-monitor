@@ -8,17 +8,20 @@ with source as (
 
 scd as (
     select
-        {{ dbt_utils.generate_surrogate_key(['tariff_description_mk', 'valid_from']) }} as skey,
+        {{ dbt_utils.generate_surrogate_key(['consumer_category', 'tariff_window_type', 'tariff_block_number', 'valid_from']) }} as skey,
+        consumer_category,
         tariff_type,
-        tariff_description_en,
-        tariff_description_mk,
-        price_mkd_per_kwh,
+        label,
+        metric,
+        value,
+        tariff_window_type,
+        tariff_block_number,
         valid_from,
         coalesce(
-            cast({{ valid_to('valid_from', 'tariff_description_mk') }} as date),
+            cast({{ valid_to('valid_from', 'consumer_category, tariff_window_type, tariff_block_number') }} as date),
             date '9999-12-31'
-        )                                                               as valid_to,
-        {{ is_latest('valid_from', 'tariff_description_mk') }}         as is_latest
+        )                                                                                                   as valid_to,
+        {{ is_latest('valid_from', 'consumer_category, tariff_window_type, tariff_block_number') }}         as is_latest
     from source
 )
 

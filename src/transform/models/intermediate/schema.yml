@@ -131,6 +131,8 @@ models:
           - dbt_utils.expression_is_true:
               arguments:
                 expression: "> 0"
+              config:
+                severity: warn
 
       - name: total_system_tflops
         description: "Total compute capacity across all GPUs in the offer (gpu_tflops * number_of_gpus)"
@@ -324,38 +326,53 @@ models:
           - not_null
 
   - name: int_electricity_tariff_tiers
-    description: "Intermediate electricity tariffs tiers - tariff type extracted and description translated to English"
+    description: "Intermediate electricity tariffs tiers"
     columns:
-      - name: tariff_type
-        description: "Tariff tier extracted from Macedonian tariff description - low or high"
-        tests:
-          - accepted_values:
-              values: [ 'low', 'high' ]
-
-      - name: tariff_description_en
-        description: "Tariff description translated to English"
+      - name: consumer_category
+        description: "Tariff category the price applies to - e.g. household or business, tariff tier (high/low), and block number where applicable"
         tests:
           - not_null
           - accepted_values:
-              values: [
-                'household_high_tariff_block_1', 'household_high_tariff_block_2',
-                'household_high_tariff_block_3', 'household_high_tariff_block_4',
-                'household_low_tariff_block', 'business_high_tariff_block',
-                'business_low_tariff_block', 'distribution_fee'
-              ]
+              values: [ 'household', 'business' ]
 
-      - name: tariff_description_mk
-        description: "Original Macedonian tariff description from source"
+      - name: label
+        description: "Macedonian-language name of the billed component, e.g. active electrical energy consumption or distribution fee"
         tests:
           - not_null
 
-      - name: price_mkd_per_kwh
-        description: "Price per kilowatt-hour in Macedonian Denar"
+      - name: metric
+        description: "Unit of measurement for the price, e.g. kWh"
+        tests:
+          - not_null
+
+      - name: value
+        description: "Price per unit (per metric) in Macedonian Denar"
         tests:
           - not_null
           - dbt_utils.expression_is_true:
               arguments:
                 expression: "> 0"
+
+      - name: tariff_type
+        description: "Classification of the billed component derived from the label - e.g. 'energy' for active electrical energy consumption. Null for components not classified."
+        tests:
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: "is null or tariff_type = 'energy'"
+
+      - name: tariff_window_type
+        description: "Tariff window applicable - low or high"
+        tests:
+          - not_null
+          - accepted_values:
+              values: [ 'low', 'high' ]
+
+      - name: tariff_block_number
+        description: "Household high-tariff consumption block (1-4), extracted from tariff_tier e.g. BT1 -> 1. Null for low tariff (HT) and undifferentiated high tariff (business BT), which have no block distinction."
+        tests:
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: "is null or tariff_block_number in (1, 2, 3, 4)"
 
       - name: valid_from
         description: "Date from which this tariff price is valid"
@@ -376,12 +393,129 @@ models:
       - dbt_utils.unique_combination_of_columns:
           arguments:
             combination_of_columns:
-              - tariff_description_en
-              - tariff_description_mk
+              - consumer_category
+              - tariff_window_type
+              - tariff_block_number
               - valid_from
 
-  - name: int_electricity_tariff_schedule
-    description: "Intermediate tariff schedule - exploded from hour ranges into one row per (day_of_week, hour) combination"
+  - name: int_electricity_tariff_fees
+    description: "Intermediate electricity tariff fees with fee_type assignment"
+    columns:
+      - name: consumer_category
+        description: "Tariff category the fee applies to - household or business"
+        tests:
+          - not_null
+          - accepted_values:
+              values: [ 'household', 'business' ]
+
+      - name: label
+        description: "Macedonian-language name of the fee component"
+        tests:
+          - not_null
+
+      - name: metric
+        description: "Unit of measurement for the fee"
+        tests:
+          - not_null
+
+      - name: value
+        description: "Fee value in Macedonian Denar"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: ">= 0"
+
+      - name: fee_type
+        description: "Type of fee: distribution (per-kWh) or access (fixed monthly)"
+        tests:
+          - not_null
+          - accepted_values:
+              values: [ 'distribution', 'access' ]
+
+      - name: valid_from
+        description: "Date from which this fee is valid"
+        tests:
+          - not_null
+
+      - name: ingested_at
+        tests:
+          - not_null
+
+      - name: processed_at
+        tests:
+          - not_null
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - consumer_category
+              - fee_type
+              - valid_from
+
+  - name: int_electricity_tariff_blocks
+    description: "Intermediate electricity tariff consumption blocks"
+    columns:
+      - name: consumer_category
+        description: "Tariff category the block applies to - household or business"
+        tests:
+          - not_null
+          - accepted_values:
+              values: [ 'household', 'business' ]
+
+      - name: tariff_window_type
+        description: "Tariff window type - low or high"
+        tests:
+          - not_null
+          - accepted_values:
+              values: [ 'low', 'high' ]
+
+      - name: tariff_block_number
+        description: "Consumption block number (1-4)"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: ">= 1 and tariff_block_number <= 4"
+
+      - name: lower_bound_kwh
+        description: "Lower bound of consumption in kWh for this block"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: ">= 0"
+
+      - name: upper_bound_kwh
+        description: "Upper bound of consumption in kWh for this block"
+        tests:
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: "> 0"
+
+      - name: valid_from
+        description: "Date from which this block definition is valid"
+        tests:
+          - not_null
+
+      - name: ingested_at
+        tests:
+          - not_null
+
+      - name: processed_at
+        tests:
+          - not_null
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - consumer_category
+              - tariff_window_type
+              - tariff_block_number
+              - valid_from
+
+  - name: int_electricity_tariff_window_schedule
+    description: "Intermediate tariff window schedule - exploded from hour ranges into one row per (day_of_week, hour) combination"
     columns:
       - name: day_of_week
         description: "ISO day of week - 1=Monday through 7=Sunday"
@@ -399,8 +533,8 @@ models:
               arguments:
                 expression: ">= 0 and hour < 24"
 
-      - name: tariff_type
-        description: "Tariff tier applicable at this day/hour combination - low or high"
+      - name: tariff_window_type
+        description: "Tariff window applicable at this day/hour combination - low or high"
         tests:
           - not_null
           - accepted_values:

@@ -1,9 +1,6 @@
 from pyspark.sql.types import StructType, StructField, StringType, IntegerType, FloatType, BooleanType
 
-from refine.schemas.base import META_COLUMNS_SCHEMA
-
 COMPUTE_OFFER_SCHEMA = StructType(
-    META_COLUMNS_SCHEMA +
     [
         # IDs
         StructField("offer_id", IntegerType(), nullable=False),
@@ -55,4 +52,3 @@ COMPUTE_OFFER_SCHEMA = StructType(
         StructField("rentable_flag", BooleanType(), nullable=False),
         StructField("rented_flag", BooleanType(), nullable=False),
     ])
-

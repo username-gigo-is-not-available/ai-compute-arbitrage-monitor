@@ -1,6 +1,8 @@
+from ingest.models.electricity_tariff_block import ElectricityTariffBlock
+from ingest.models.electricity_tariff_fee import ElectricityTariffFee
 from ingest.models.electricity_tariff_tier import ElectricityTariffTier
-from ingest.models.electricity_tariff_schedule import ElectricityTariffSchedule
+from ingest.models.electricity_tariff_window_schedule import ElectricityTariffWindowSchedule
 from ingest.models.exchange_rate import ExchangeRate
 from ingest.models.vast_ai_offer import VastAIOffer
 
-IngestorRecord = VastAIOffer | ExchangeRate | ElectricityTariffTier | ElectricityTariffSchedule
+IngestorRecord = VastAIOffer | ExchangeRate | ElectricityTariffTier | ElectricityTariffWindowSchedule | ElectricityTariffBlock | ElectricityTariffFee

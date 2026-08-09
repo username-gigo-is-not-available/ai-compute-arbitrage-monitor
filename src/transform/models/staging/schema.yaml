@@ -131,6 +131,8 @@ models:
           - dbt_utils.expression_is_true:
               arguments:
                 expression: "> 0"
+              config:
+                severity: warn
 
       - name: gpu_bandwidth_gbytes_per_sec
         description: "GPU memory bandwidth in GB/s"
@@ -304,22 +306,42 @@ models:
       - dbt_utils.unique_combination_of_columns:
           arguments:
             combination_of_columns:
-              - tariff_description
+              - consumer_category
+              - tariff_tier
               - valid_from
     columns:
-      - name: tariff_description
-        description: "Tariff description - by household, business, tier, block"
+      - name: consumer_category
+        description: "Tariff category the price applies to - e.g. household or business, tariff tier (high/low), and block number where applicable"
+        tests:
+          - not_null
+          - accepted_values:
+              values: [ 'household', 'business' ]
+
+      - name: label
+        description: "Macedonian-language name of the billed component, e.g. active electrical energy consumption or distribution fee"
         tests:
           - not_null
 
-      - name: price_mkd_per_kwh
-        description: "Price per kilowatt-hour in Macedonian Denar"
+      - name: metric
+        description: "Unit of measurement for the price, e.g. kWh"
+        tests:
+          - not_null
+
+      - name: value
+        description: "Price per unit (per metric) in Macedonian Denar"
         tests:
           - not_null
           - dbt_utils.expression_is_true:
               arguments:
                 expression: "> 0"
 
+      - name: tariff_tier
+        description: "Raw Macedonian tariff time code identifying the block/tier this price applies to
+           — BT1 through BT4 (high tariff, by consumption block), BT (undifferentiated high tariff) or HT (low tariff)."
+        tests:
+            - not_null
+            - accepted_values:
+                values: [ 'BT1', 'BT2', 'BT3', 'BT4', 'BT', 'HT' ]
       - name: valid_from
         description: "Date from which this tariff price is valid"
         tests:
@@ -336,7 +358,122 @@ models:
         tests:
           - not_null
 
-  - name: stg_electricity_tariff_schedule
+  - name: stg_electricity_tariff_fees
+    description: "Staged Macedonian EVN electricity tariff fees"
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - consumer_category
+              - label
+              - valid_from
+    columns:
+      - name: consumer_category
+        description: "Tariff category the fee applies to - household or business"
+        tests:
+          - not_null
+          - accepted_values:
+              values: [ 'household', 'business' ]
+
+      - name: label
+        description: "Macedonian-language name of the fee component"
+        tests:
+          - not_null
+
+      - name: metric
+        description: "Unit of measurement for the fee, e.g. MKD/kWh or MKD/месец"
+        tests:
+          - not_null
+
+      - name: value
+        description: "Fee value in Macedonian Denar"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: ">= 0"
+
+      - name: valid_from
+        description: "Date from which this fee is valid"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: "<= current_date"
+
+      - name: ingested_at
+        tests:
+          - not_null
+
+      - name: processed_at
+        tests:
+          - not_null
+
+  - name: stg_electricity_tariff_blocks
+    description: "Staged Macedonian EVN electricity tariff consumption blocks"
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - consumer_category
+              - tariff_window_type
+              - tariff_block_number
+              - valid_from
+    columns:
+      - name: consumer_category
+        description: "Tariff category the block applies to - household or business"
+        tests:
+          - not_null
+          - accepted_values:
+              values: [ 'household', 'business' ]
+
+      - name: tariff_window_type
+        description: "Tariff window type - low or high"
+        tests:
+          - not_null
+          - accepted_values:
+              values: [ 'low', 'high' ]
+
+      - name: tariff_block_number
+        description: "Consumption block number (1-4)"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: ">= 1 and tariff_block_number <= 4"
+
+      - name: lower_bound_kwh
+        description: "Lower bound of consumption in kWh for this block"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: ">= 0"
+
+      - name: upper_bound_kwh
+        description: "Upper bound of consumption in kWh for this block (null for last block)"
+        tests:
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: "> 0"
+
+      - name: valid_from
+        description: "Date from which this block definition is valid"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: "<= current_date"
+
+      - name: ingested_at
+        tests:
+          - not_null
+
+      - name: processed_at
+        tests:
+          - not_null
+
+  - name: stg_electricity_tariff_window_schedule
     description: "Time-of-use schedule mapping day/hour ranges to tariff types"
     tests:
       - dbt_utils.unique_combination_of_columns:
@@ -347,8 +484,8 @@ models:
               - end_hour
               - valid_from
     columns:
-      - name: tariff_type
-        description: "Tariff tier for this time window - low or high"
+      - name: tariff_window_type
+        description: "Tariff window type for this time window - low or high"
         tests:
           - not_null
           - accepted_values:

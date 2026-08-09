@@ -11,8 +11,11 @@ with source as (
 
 renamed as (
     select
-        cast(tariff_description as string)                             as tariff_description,
-        cast(price_mkd_per_kwh as float64)                             as price_mkd_per_kwh,
+        cast(consumer_category as string)                              as consumer_category,
+        cast(label as string)                                          as label,
+        cast(metric as string)                                         as metric,
+        cast(value as float64)                                         as value,
+        cast(tariff_tier as string)                                    as tariff_tier,
         cast(valid_from as date)                                       as valid_from,
         {{ cast_utc('ingested_at') }}                                  as ingested_at,
         {{ cast_utc('processed_at') }}                                 as processed_at
