@@ -21,3 +21,4 @@ infra/**/terraform.tfvars
 infra/**/.terraform.tfstate.lock.info
 .agents
 .cline
+.scratch
