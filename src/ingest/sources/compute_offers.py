@@ -22,6 +22,7 @@ class ComputeOffersIngestor(AsyncIngestor):
     async def load(self) -> list[VastAIOffer]:
         async with ClientSession() as session:
             offers = []
+            ingested_at: datetime = datetime.now(UTC)
             for offer_type in OfferType:
                 async with session.get(
                         self.config.url,
@@ -33,7 +34,6 @@ class ComputeOffersIngestor(AsyncIngestor):
                         return []
 
                     data: dict[str, Any] = await response.json(encoding="utf-8")
-                    ingested_at: datetime = datetime.now(UTC)
                     for row in data.get("offers", []):
                         offer = self.parse(data=row, timestamp=ingested_at, offer_type=offer_type)
                         if offer:
