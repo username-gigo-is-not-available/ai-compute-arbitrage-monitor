@@ -3,7 +3,7 @@ transform:
     dev:
       type: bigquery
       method: oauth
-      project: ai-compute-arbitrage-monitor
+      project: graphic-mission-505412-j7
       dataset: ai_compute_arbitrage_monitor_dataset
       threads: 4
       location: EU
