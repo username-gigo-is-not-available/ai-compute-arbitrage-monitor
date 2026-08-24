@@ -9,11 +9,11 @@ A Vast.ai GPU compute listing — a (host, machine) pair that can be rented. Ide
 _Avoid_: Instance, node, machine (these conflate the listing with the physical host)
 
 **Offer type**:
-The pricing modality of an offer — `on_demand`, `bid`, or `reserved`. Not part of the offer's identity; an offer has one type per snapshot.
+The pricing modality of an offer listing — `on_demand`, `bid`, or `reserved`. Part of the offer snapshot's identity: the same offer (host, machine pair) can be simultaneously listed under multiple types with different prices in a single ingest.
 _Avoid_: Pricing mode, plan
 
 **Offer snapshot**:
-A point-in-time capture of an offer's specs and pricing, keyed by `(offer_id, ingested_at)`. Each ingest produces one snapshot per offer.
+A point-in-time capture of an offer's specs and pricing, keyed by `(offer_id, ingested_at, offer_type)`. The same `offer_id` can appear under 2–3 offer types with different prices at one `ingested_at`, so each type is its own snapshot.
 _Avoid_: Record, row, version
 
 **Tariff tier**:

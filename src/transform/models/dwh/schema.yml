@@ -337,7 +337,7 @@ models:
             expression: "valid_from < valid_to"
 
   - name: fct_compute_offers
-    description: "Core fact table - one row per Vast.ai GPU offer snapshot, with electricity cost and profit metrics computed across all EVN tariff scenarios"
+    description: "Core fact table - one row per (Vast.ai GPU offer snapshot, offer_type, tariff tier), with electricity cost and profit metrics computed across all EVN tariff scenarios. Grain per ADR-008: (offer_id, valid_from, offer_type, tariff_tier_skey)."
     columns:
       # -----------------------------------------------------------------------
       # identity
@@ -816,6 +816,7 @@ models:
             combination_of_columns:
               - offer_id
               - valid_from
+              - offer_type
               - tariff_tier_skey
       - dbt_utils.expression_is_true:
           arguments:

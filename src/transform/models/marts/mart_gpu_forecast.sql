@@ -90,7 +90,11 @@ gpu_specs as (
 ),
 
 -- ---------------------------------------------------------------------------
--- 4. Market ask price per GPU model (median current offer revenue)
+-- 4. Market ask price per GPU model (median current on_demand ask revenue)
+-- ---------------------------------------------------------------------------
+-- The forecast answers "what a host should charge for this GPU". Bid listings
+-- are bottom-feeder prices a host would not advertise, so the default ask is
+-- scoped to on_demand offers only.
 -- ---------------------------------------------------------------------------
 market_revenue as (
     select
@@ -99,6 +103,7 @@ market_revenue as (
     from {{ ref('fct_compute_offers') }}
     where cast(valid_to as date) = date '9999-12-31'
       and revenue_usd_per_hr > 0
+      and offer_type = 'on_demand'
     group by gpu_model_name
 ),
 

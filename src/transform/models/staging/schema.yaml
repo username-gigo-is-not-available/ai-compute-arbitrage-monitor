@@ -9,6 +9,7 @@ models:
             combination_of_columns:
               - offer_id
               - ingested_at
+              - offer_type
     columns:
       - name: offer_id
         description: "Vast.ai offer identifier"

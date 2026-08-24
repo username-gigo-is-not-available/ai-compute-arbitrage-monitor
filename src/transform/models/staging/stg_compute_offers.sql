@@ -1,7 +1,7 @@
 {{
     config(
         materialized = 'incremental',
-        unique_key   = ['offer_id', 'ingested_at'],
+        unique_key   = ['offer_id', 'ingested_at', 'offer_type'],
         tags = ['compute_offers']
     )
 }}

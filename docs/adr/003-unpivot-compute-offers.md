@@ -2,7 +2,14 @@
 
 ## Status
 
-Accepted
+Accepted — **Amended by ADR-008**
+
+> **Note (ADR-008):** The fact-table grain documented here as
+> `(offer_id, valid_from, tariff_tier_skey)` is **superseded**. Empirical data shows the same
+> Vast.ai `offer_id` can be listed under 2–3 `offer_type`s at one `ingested_at` with different
+> prices, so `offer_type` is part of the offer snapshot identity. The current grain is
+> **`(offer_id, valid_from, offer_type, tariff_tier_skey)`** and the dbt `unique_key` is
+> `['offer_id', 'valid_from', 'offer_type', 'tariff_tier_skey']`. See ADR-008 for context.
 
 ## Context
 

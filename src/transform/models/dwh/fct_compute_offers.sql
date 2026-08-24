@@ -1,7 +1,7 @@
 {{
     config(
         materialized     = 'incremental',
-        unique_key       = ['offer_id', 'valid_from', 'tariff_tier_skey'],
+        unique_key       = ['offer_id', 'valid_from', 'offer_type', 'tariff_tier_skey'],
         on_schema_change = 'append_new_columns',
         tags = ['compute_offers'],
         partition_by     = {
@@ -28,8 +28,9 @@
                       and not exists (
                           select 1
                           from {{ ref('int_compute_offers') }} ico
-                          where ico.valid_from = '{{ latest_ts }}'
-                            and ico.offer_id = fct.offer_id
+                          where ico.valid_from  = '{{ latest_ts }}'
+                            and ico.offer_id    = fct.offer_id
+                            and ico.offer_type  = fct.offer_type
                       );
                 {% endif %}
             {% endif %}

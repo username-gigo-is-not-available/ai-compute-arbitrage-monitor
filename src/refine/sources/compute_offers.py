@@ -19,7 +19,7 @@ def strip_cpu_core_suffix(df: DataFrame) -> DataFrame:
 
 
 def deduplicate_compute_offers(df: DataFrame) -> DataFrame:
-    return deduplicate(df, columns=["offer_id", "offer_type"])
+    return deduplicate(df, columns=["offer_id", "offer_type", "ingested_at"])
 
 
 @dataclass

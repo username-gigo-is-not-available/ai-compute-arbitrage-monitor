@@ -516,7 +516,7 @@ models:
       Forward-looking forecast of electricity cost and profit per GPU model per future hour,
       aligned to the EVN tariff window schedule. Answers the host-side question: given a specific
       GPU over a future window, what is the tariff-schedule-aware electricity cost and profit?
-      Revenue defaults to the current market ask for that GPU model, overridable by an ask price.
+      Revenue defaults to the current market ask (median on_demand ask) for that GPU model, overridable by an ask price.
       Cost is electricity-only (tariff_value + distribution_fee), excluding the fixed access fee.
       One row per (gpu_model_name, forecast_hour, consumer_category).
     tests:
