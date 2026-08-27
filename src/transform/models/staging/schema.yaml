@@ -31,7 +31,7 @@ models:
         tests:
           - not_null
           - accepted_values:
-              values: [ "on_demand", "bid", "reserved" ]
+              values: "{{ offer_types() }}"
 
       - name: total_price_usd_per_hr
         description: "Total hourly price including GPU, storage and bandwidth costs (discounted_dph_total)"
@@ -436,12 +436,9 @@ models:
               values: [ 'low', 'high' ]
 
       - name: tariff_block_number
-        description: "Consumption block number (1-4)"
+        description: "Consumption block number - authority is dim_electricity_tariff_blocks (validated by assert_tariff_tiers_blocks_consistency)"
         tests:
           - not_null
-          - dbt_utils.expression_is_true:
-              arguments:
-                expression: ">= 1 and tariff_block_number <= 4"
 
       - name: lower_bound_kwh
         description: "Lower bound of consumption in kWh for this block"

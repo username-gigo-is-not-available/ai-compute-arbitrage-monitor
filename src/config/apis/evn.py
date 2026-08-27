@@ -23,6 +23,10 @@ class EVNConfig(BaseModel):
     tariff_system_url: str
     tariff_blocks_paragraph_selector: str = 'div > div > p:nth-child(5)'
     tariff_blocks_strong_selector: str = 'strong'
+    # EVN currently publishes 4 household consumption blocks (BT1-BT4). This caps how many block rows
+    # the scraper parses. The authoritative block set lives in dim_electricity_tariff_blocks (seeded
+    # from this ingestion) — the dbt test assert_tariff_tiers_blocks_consistency derives the expected
+    # set from that dimension, so this limit only needs to change if EVN's block structure grows.
     tariff_blocks_limit: int = 4
     tariff_blocks_valid_from_selector: str = 'div > div > p:nth-child(1)'
 

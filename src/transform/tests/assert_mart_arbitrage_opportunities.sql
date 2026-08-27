@@ -1,7 +1,8 @@
--- Test: mart_arbitrage_opportunities should have exactly 7 rows per (offer snapshot, offer_type) (one per active tariff tier)
--- This test verifies the offer×tier grain of the mart.
--- It counts the number of rows per (offer_id, valid_from, offer_type) and asserts that each group has exactly 7 rows.
--- If any group has a count != 7, the test will return those rows, indicating a failure.
+-- Test: mart_arbitrage_opportunities must have one row per (offer snapshot, offer_type, tariff tier)
+-- This test verifies the offer×tier grain of the mart. The expected tier count is NOT hardcoded —
+-- it is derived from dim_electricity_tariff_tiers as of each group's valid_from, so EVN tariff
+-- restructures (new blocks / new tariff sets) update the expectation automatically.
+-- If any group's count != expected, the test returns those rows.
 
 with row_counts as (
     select
@@ -13,6 +14,8 @@ with row_counts as (
     group by offer_id, valid_from, offer_type
 )
 
+-- Note: the outer row_counts.valid_from is passed QUALIFIED so the scalar subquery in the macro
+-- correlates against the outer group's valid_from instead of shadowing over the inner tiers table.
 select *
 from row_counts
-where tier_count != 7
+where tier_count != {{ expected_tariff_tier_count('row_counts.valid_from') }}
