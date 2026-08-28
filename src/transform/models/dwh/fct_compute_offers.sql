@@ -83,6 +83,11 @@ tariff_tiers as (
 ),
 
 tariff_fees as (
+    -- As-of (SCD) lookup: every fee version is retained, pivoted to one row per
+    -- (consumer_category, valid_from, valid_to) so historical offers are costed with
+    -- the fees in effect on their valid_from date. The group-by collapses the two
+    -- fee_type rows (distribution/access) into a single row per version before the
+    -- join, keeping the as-of join 1:1 (no fan-out).
     select
         consumer_category,
         max(case when fee_type = 'distribution' then value end) as distribution_fee,
@@ -90,11 +95,12 @@ tariff_fees as (
         valid_from,
         valid_to
     from {{ ref('dim_electricity_tariff_fees') }}
-    where is_latest = true
     group by consumer_category, valid_from, valid_to
 ),
 
 tariff_blocks as (
+    -- As-of (SCD) lookup: every block version is retained so the left join below
+    -- enriches each offer with the block boundaries in effect on its valid_from date.
     select
         consumer_category,
         tariff_window_type,
@@ -104,7 +110,6 @@ tariff_blocks as (
         valid_from,
         valid_to
     from {{ ref('dim_electricity_tariff_blocks') }}
-    where is_latest = true
 ),
 
 joined as (
