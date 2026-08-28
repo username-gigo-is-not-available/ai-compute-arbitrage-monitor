@@ -56,6 +56,8 @@ class Pipeline:
         name = self.__class__.__name__
         self.logger.info(f"{name} starting")
         df = self.read()
+        self.logger.info(f"{self.name} read {df.count()} records from "
+                         f"{self.storage_config.directory_path(DataStageType.BRONZE, self.dataset)}")
         self.logger.info(f"{name} read complete")
         generated_df = self.generate(df)
         if generated_df is not None:
@@ -63,6 +65,8 @@ class Pipeline:
             df = generated_df
         df = self.transform(df)
         self.logger.info(f"{name} transform complete")
+        self.logger.info(f"{self.name} wrote {df.count()} records to "
+                         f"{self.storage_config.directory_path(DataStageType.SILVER, self.dataset)}")
         result = self.save(df)
         self.logger.info(f"{name} complete")
         return result
