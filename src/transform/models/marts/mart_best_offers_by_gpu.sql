@@ -30,7 +30,10 @@ normalized_offers as (
 )
 
 select
+    -- offer
     offer_type,
+
+    -- gpu
     gpu_architecture,
     gpu_model_name,
     gpu_memory_gb,
@@ -38,18 +41,23 @@ select
     gpu_bandwidth_gbytes_per_sec,
     gpu_max_cuda_version_supported,
     tflops_per_gpu,
+
+    -- efficiency
     kwh_per_tflop,
+
+    -- host
     verification_flag,
     rentable_flag,
     rented_flag,
     reliability_score,
     country_code,
 
+    -- revenue / cost / profit (USD/hr per GPU)
     revenue_usd_per_hr / nullif(number_of_gpus, 0)                  as revenue_per_gpu_usd_per_hr,
-
     cost_usd_per_hr / nullif(number_of_gpus, 0)                     as cost_per_gpu_usd_per_hr,
     profit_usd_per_hr / nullif(number_of_gpus, 0)                   as profit_per_gpu_usd_per_hr,
 
+    -- per TFLOP (USD)
     cost_per_tflop_usd,
     profit_per_tflop_usd,
 
@@ -59,6 +67,7 @@ select
     tariff_window_type,
     tariff_block_number,
 
+    -- time
     valid_from
 from normalized_offers
 where rn = 1

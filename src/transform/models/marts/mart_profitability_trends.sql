@@ -37,9 +37,12 @@ with joined as (
 )
 
 select
+    -- time bucket
     timestamp_trunc(valid_from, hour)                             as hour_bucket,
     mod(extract(dayofweek from valid_from) + 5, 7) + 1           as day_of_week,
     extract(hour from valid_from)                                 as hour_of_day,
+
+    -- offer / gpu
     offer_type,
     gpu_architecture,
     gpu_model_name,
@@ -50,12 +53,15 @@ select
     number_of_gpus,
     count(*)                                                      as offer_count,
 
+    -- revenue (USD/hr)
     avg(revenue_usd_per_hr)                                       as avg_revenue_usd_per_hr,
 
+    -- profitability (USD/hr)
     avg(profit_usd_per_hr)                                        as avg_profit_usd_per_hr,
     min(profit_usd_per_hr)                                        as min_profit_usd_per_hr,
     max(profit_usd_per_hr)                                        as max_profit_usd_per_hr,
 
+    -- profitability per TFLOP (USD)
     avg(profit_per_tflop_usd)                                     as avg_profit_per_tflop_usd,
     min(profit_per_tflop_usd)                                     as min_profit_per_tflop_usd,
     max(profit_per_tflop_usd)                                     as max_profit_per_tflop_usd,

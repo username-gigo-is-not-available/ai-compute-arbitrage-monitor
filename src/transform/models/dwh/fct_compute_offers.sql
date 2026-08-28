@@ -83,11 +83,6 @@ tariff_tiers as (
 ),
 
 tariff_fees as (
-    -- As-of (SCD) lookup: every fee version is retained, pivoted to one row per
-    -- (consumer_category, valid_from, valid_to) so historical offers are costed with
-    -- the fees in effect on their valid_from date. The group-by collapses the two
-    -- fee_type rows (distribution/access) into a single row per version before the
-    -- join, keeping the as-of join 1:1 (no fan-out).
     select
         consumer_category,
         max(case when fee_type = 'distribution' then value end) as distribution_fee,
@@ -99,8 +94,6 @@ tariff_fees as (
 ),
 
 tariff_blocks as (
-    -- As-of (SCD) lookup: every block version is retained so the left join below
-    -- enriches each offer with the block boundaries in effect on its valid_from date.
     select
         consumer_category,
         tariff_window_type,
@@ -177,9 +170,7 @@ cost_metrics as (
 )
 
 select
-    -- -------------------------------------------------------------------------
     -- identity / grain
-    -- -------------------------------------------------------------------------
     offer_id,
     machine_id,
     host_id,
@@ -187,29 +178,21 @@ select
     valid_to,
     processed_at,
 
-    -- -------------------------------------------------------------------------
     -- offer type
-    -- -------------------------------------------------------------------------
     offer_type,
 
-    -- -------------------------------------------------------------------------
-    -- foreign keys to dims (skeys)
-    -- -------------------------------------------------------------------------
+    -- dim skeys
     exchange_rate_skey,
     tariff_tier_skey,
 
-    -- -------------------------------------------------------------------------
     -- host context
-    -- -------------------------------------------------------------------------
     country_code,
     verification_flag,
     rentable_flag,
     rented_flag,
     reliability_score,
 
-    -- -------------------------------------------------------------------------
     -- gpu specs
-    -- -------------------------------------------------------------------------
     gpu_architecture,
     gpu_model_name,
     number_of_gpus,
@@ -219,65 +202,47 @@ select
     gpu_max_cuda_version_supported,
     gpu_bandwidth_gbytes_per_sec,
 
-    -- -------------------------------------------------------------------------
     -- cpu specs
-    -- -------------------------------------------------------------------------
     cpu_architecture,
     cpu_model_name,
     number_of_cpu_cores,
     cpu_clock_speed_ghz,
 
-    -- -------------------------------------------------------------------------
     -- system specs
-    -- -------------------------------------------------------------------------
     ram_gb,
     disk_model_name,
     disk_space_gb,
     disk_bandwidth_gbytes_per_sec,
 
-    -- -------------------------------------------------------------------------
     -- pcie
-    -- -------------------------------------------------------------------------
     pcie_generation,
     pcie_bandwidth_gbytes_per_sec,
 
-    -- -------------------------------------------------------------------------
     -- network
-    -- -------------------------------------------------------------------------
     network_download_mbits_per_sec,
     network_upload_mbits_per_sec,
     network_download_cost_usd_per_gbit,
     network_upload_cost_usd_per_gbit,
 
-    -- -------------------------------------------------------------------------
     -- performance scores
-    -- -------------------------------------------------------------------------
     deep_learning_score,
     deep_learning_score_per_usd,
 
-    -- -------------------------------------------------------------------------
     -- pricing
-    -- -------------------------------------------------------------------------
     gpu_price_usd_per_hr,
     minimum_bid_price_usd,
     storage_cost_usd_per_hr,
     revenue_usd_per_hr,
 
-    -- -------------------------------------------------------------------------
     -- derived power / compute
-    -- -------------------------------------------------------------------------
     total_system_kwh_per_hr,
     total_system_tflops,
     kwh_per_tflop,
 
-    -- -------------------------------------------------------------------------
-    -- rates context (locked at valid_from)
-    -- -------------------------------------------------------------------------
+    -- rates (locked at valid_from)
     usd_to_mkd_rate,
 
-    -- -------------------------------------------------------------------------
     -- tariff context
-    -- -------------------------------------------------------------------------
     consumer_category,
     tariff_type,
     tariff_metric,
@@ -285,24 +250,16 @@ select
     tariff_window_type,
     tariff_block_number,
 
-    -- -------------------------------------------------------------------------
     -- costs (USD/hr)
-    -- -------------------------------------------------------------------------
     cost_usd_per_hr,
 
-    -- -------------------------------------------------------------------------
     -- profits (USD/hr)
-    -- -------------------------------------------------------------------------
     revenue_usd_per_hr - cost_usd_per_hr as profit_usd_per_hr,
 
-    -- -------------------------------------------------------------------------
     -- cost per TFLOP (USD)
-    -- -------------------------------------------------------------------------
     cost_usd_per_hr / nullif(total_system_tflops, 0) as cost_per_tflop_usd,
 
-    -- -------------------------------------------------------------------------
     -- profit per TFLOP (USD)
-    -- -------------------------------------------------------------------------
     (revenue_usd_per_hr - cost_usd_per_hr) / nullif(total_system_tflops, 0) as profit_per_tflop_usd
 
 from cost_metrics
