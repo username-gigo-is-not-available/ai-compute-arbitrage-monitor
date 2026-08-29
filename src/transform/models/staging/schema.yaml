@@ -31,7 +31,8 @@ models:
         tests:
           - not_null
           - accepted_values:
-              values: "{{ offer_types() }}"
+              arguments:
+                values: "{{ offer_types() }}"
 
       - name: total_price_usd_per_hr
         description: "Total hourly price including GPU, storage and bandwidth costs (discounted_dph_total)"
@@ -279,7 +280,8 @@ models:
         tests:
           - not_null
           - accepted_values:
-              values: [ 'verified', 'unverified', 'deverified' ]
+              arguments:
+                values: [ 'verified', 'unverified', 'deverified' ]
 
       - name: rentable_flag
         description: "Whether the offer is currently rentable"
@@ -316,7 +318,8 @@ models:
         tests:
           - not_null
           - accepted_values:
-              values: [ 'household', 'business' ]
+              arguments:
+                values: [ 'household', 'business' ]
 
       - name: label
         description: "Macedonian-language name of the billed component, e.g. active electrical energy consumption or distribution fee"
@@ -342,7 +345,8 @@ models:
         tests:
             - not_null
             - accepted_values:
-                values: [ 'BT1', 'BT2', 'BT3', 'BT4', 'BT', 'HT' ]
+                arguments:
+                  values: [ 'BT1', 'BT2', 'BT3', 'BT4', 'BT', 'HT' ]
       - name: valid_from
         description: "Date from which this tariff price is valid"
         tests:
@@ -374,7 +378,8 @@ models:
         tests:
           - not_null
           - accepted_values:
-              values: [ 'household', 'business' ]
+              arguments:
+                values: [ 'household', 'business' ]
 
       - name: label
         description: "Macedonian-language name of the fee component"
@@ -426,14 +431,16 @@ models:
         tests:
           - not_null
           - accepted_values:
-              values: [ 'household', 'business' ]
+              arguments:
+                values: [ 'household', 'business' ]
 
       - name: tariff_window_type
         description: "Tariff window type - low or high"
         tests:
           - not_null
           - accepted_values:
-              values: [ 'low', 'high' ]
+              arguments:
+                values: [ 'low', 'high' ]
 
       - name: tariff_block_number
         description: "Consumption block number - authority is dim_electricity_tariff_blocks (validated by assert_tariff_tiers_blocks_consistency)"
@@ -487,7 +494,8 @@ models:
         tests:
           - not_null
           - accepted_values:
-              values: [ 'low', 'high' ]
+              arguments:
+                values: [ 'low', 'high' ]
 
       - name: day_of_week
         description: "ISO day of week - 1=Monday through 7=Sunday"
@@ -544,14 +552,16 @@ models:
         tests:
           - not_null
           - accepted_values:
-              values: [ 'USD' ]
+              arguments:
+                values: [ 'USD' ]
 
       - name: to_currency
         description: "Target currency"
         tests:
           - not_null
           - accepted_values:
-              values: [ 'MKD' ]
+              arguments:
+                values: [ 'MKD' ]
 
       - name: value
         tests:

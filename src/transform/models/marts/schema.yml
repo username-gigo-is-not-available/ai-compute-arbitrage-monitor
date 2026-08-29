@@ -8,11 +8,12 @@ models:
       One row per (offer, tariff tier). Partitioned rank per (offer_type, tariff_tier_skey).
     tests:
       - dbt_utils.unique_combination_of_columns:
-          combination_of_columns:
-            - offer_type
-            - offer_id
-            - valid_from
-            - tariff_tier_skey
+          arguments:
+            combination_of_columns:
+              - offer_type
+              - offer_id
+              - valid_from
+              - tariff_tier_skey
     columns:
       - name: arbitrage_rank
         description: "Rank by profit_per_tflop_usd descending within (offer_type, tariff_tier_skey) - rank 1 is the best opportunity for that tier"
@@ -163,7 +164,8 @@ models:
         tests:
           - not_null
           - accepted_values:
-              values: [ 'low', 'high' ]
+              arguments:
+                values: [ 'low', 'high' ]
 
       - name: tariff_block_number
         description: "Tariff block number within the consumer category (1-4 for household high, null for low/business)"
@@ -194,12 +196,13 @@ models:
       One row per (offer_type, gpu_architecture, gpu_model_name, gpu_memory_gb, tariff_tier_skey).
     tests:
       - dbt_utils.unique_combination_of_columns:
-          combination_of_columns:
-            - offer_type
-            - gpu_architecture
-            - gpu_model_name
-            - gpu_memory_gb
-            - tariff_tier_skey
+          arguments:
+            combination_of_columns:
+              - offer_type
+              - gpu_architecture
+              - gpu_model_name
+              - gpu_memory_gb
+              - tariff_tier_skey
     columns:
       - name: offer_type
         description: "Offer type e.g. on_demand, reserved, bid"
@@ -285,7 +288,8 @@ models:
         tests:
           - not_null
           - accepted_values:
-              values: [ 'low', 'high' ]
+              arguments:
+                values: [ 'low', 'high' ]
 
       - name: tariff_block_number
         description: "Tariff block number within the consumer category"
@@ -306,20 +310,21 @@ models:
       consumer_category, tariff_block_number, tariff_tier_skey).
     tests:
       - dbt_utils.unique_combination_of_columns:
-          combination_of_columns:
-            - hour_bucket
-            - offer_type
-            - gpu_architecture
-            - gpu_model_name
-            - gpu_memory_gb
-            - gpu_tdp_watts
-            - gpu_bandwidth_gbytes_per_sec
-            - gpu_max_cuda_version_supported
-            - number_of_gpus
-            - tariff_tier_skey
-            - consumer_category
-            - scheduled_tariff_window_type
-            - tariff_block_number
+          arguments:
+            combination_of_columns:
+              - hour_bucket
+              - offer_type
+              - gpu_architecture
+              - gpu_model_name
+              - gpu_memory_gb
+              - gpu_tdp_watts
+              - gpu_bandwidth_gbytes_per_sec
+              - gpu_max_cuda_version_supported
+              - number_of_gpus
+              - tariff_tier_skey
+              - consumer_category
+              - scheduled_tariff_window_type
+              - tariff_block_number
     columns:
       - name: hour_bucket
         description: "Timestamp truncated to the hour"
@@ -402,7 +407,8 @@ models:
         tests:
           - not_null
           - accepted_values:
-              values: [ 'low', 'high' ]
+              arguments:
+                values: [ 'low', 'high' ]
 
       - name: tariff_block_number
         description: "Tariff block number within the consumer category"
@@ -416,13 +422,14 @@ models:
       tflops_per_gpu, gpu_memory_gb, tariff_tier_skey).
     tests:
       - dbt_utils.unique_combination_of_columns:
-          combination_of_columns:
-            - offer_type
-            - gpu_architecture
-            - gpu_model_name
-            - gpu_memory_gb
-            - tflops_per_gpu
-            - tariff_tier_skey
+          arguments:
+            combination_of_columns:
+              - offer_type
+              - gpu_architecture
+              - gpu_model_name
+              - gpu_memory_gb
+              - tflops_per_gpu
+              - tariff_tier_skey
     columns:
       - name: offer_type
         description: "Offer type e.g. on_demand, reserved, bid"
@@ -501,7 +508,8 @@ models:
         tests:
           - not_null
           - accepted_values:
-              values: [ 'low', 'high' ]
+              arguments:
+                values: [ 'low', 'high' ]
 
       - name: tariff_block_number
         description: "Tariff block number within the consumer category"
@@ -521,10 +529,11 @@ models:
       One row per (gpu_model_name, forecast_hour, consumer_category).
     tests:
       - dbt_utils.unique_combination_of_columns:
-          combination_of_columns:
-            - gpu_model_name
-            - forecast_hour
-            - consumer_category
+          arguments:
+            combination_of_columns:
+              - gpu_model_name
+              - forecast_hour
+              - consumer_category
     columns:
       - name: forecast_hour
         description: "The forecast hour (timestamp)"
@@ -549,7 +558,8 @@ models:
         tests:
           - not_null
           - accepted_values:
-              values: [ 'low', 'high' ]
+              arguments:
+                values: [ 'low', 'high' ]
       - name: gpu_model_name
         description: "GPU model name"
         tests:
@@ -631,7 +641,8 @@ models:
         tests:
           - not_null
           - accepted_values:
-              values: [ 'household', 'business' ]
+              arguments:
+                values: [ 'household', 'business' ]
       - name: tariff_block_number
         description: "Tariff block number of the applied tier"
       - name: tariff_value

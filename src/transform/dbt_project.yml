@@ -22,7 +22,11 @@ clean-targets:         # directories to be removed by `dbt clean`
   - "target"
   - "dbt_packages"
 
-
+# Behavior-change flags, owned explicitly in version control per dbt docs:
+# https://docs.getdbt.com/reference/global-configs/behavior-changes
+# Generic-test kwargs must be nested under the `arguments:` key (dbt >= 1.10.5).
+flags:
+  require_generic_test_arguments_property: true
 
 models:
   transform:
