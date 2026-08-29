@@ -24,14 +24,7 @@
                     update {{ this }} as fct
                     set valid_to = '{{ latest_ts }}'
                     where valid_to = timestamp '9999-12-31'
-                      and valid_from < '{{ latest_ts }}'
-                      and not exists (
-                          select 1
-                          from {{ ref('int_compute_offers') }} ico
-                          where ico.valid_from  = '{{ latest_ts }}'
-                            and ico.offer_id    = fct.offer_id
-                            and ico.offer_type  = fct.offer_type
-                      );
+                      and valid_from < '{{ latest_ts }}';
                 {% endif %}
             {% endif %}
     """

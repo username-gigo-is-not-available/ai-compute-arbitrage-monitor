@@ -37,6 +37,8 @@ duplicate rows; that spot-check is contradicted by the accumulated history above
 - **`fct_compute_offers.unique_key`** → `(offer_id, valid_from, offer_type, tariff_tier_skey)`.
 - **SCD close-out post-hook** correlates on `(offer_id, offer_type)`, so each offer_type's history
   expires independently when that modality drops out of the latest scrape.
+  _Amended by ADR-012_: as of ADR-012 the post-hook closes every open row older than the newest
+  snapshot — on supersession by a still-listed offer's new snapshot, not only on modality departure.
 - **`int_compute_offers`** passes `offer_type` through unchanged.
 
 ## Consequences

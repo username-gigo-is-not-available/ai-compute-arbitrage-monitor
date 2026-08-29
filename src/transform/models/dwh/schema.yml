@@ -44,7 +44,8 @@ models:
         description: "Tariff window - low or high"
         tests:
           - accepted_values:
-              values: [ 'low', 'high' ]
+              arguments:
+                values: [ 'low', 'high' ]
 
       - name: tariff_block_number
         description: "Tariff block number or null for tiers with no block distinction. Authority set is dim_electricity_tariff_blocks (cross-checked by assert_tariff_tiers_blocks_consistency)."
@@ -68,14 +69,28 @@ models:
 
     tests:
       - dbt_utils.unique_combination_of_columns:
-          combination_of_columns:
-            - consumer_category
-            - tariff_window_type
-            - tariff_block_number
-            - valid_from
+          arguments:
+            combination_of_columns:
+              - consumer_category
+              - tariff_window_type
+              - tariff_block_number
+              - valid_from
       - dbt_utils.expression_is_true:
           arguments:
             expression: "valid_from < valid_to"
+      - assert_scd2_double_active:
+          arguments:
+            natural_key_columns:
+              - consumer_category
+              - tariff_window_type
+              - tariff_block_number
+            active_value: "date '9999-12-31'"
+      - assert_scd2_no_overlapping_ranges:
+          arguments:
+            natural_key_columns:
+              - consumer_category
+              - tariff_window_type
+              - tariff_block_number
 
   - name: dim_electricity_tariff_fees
     description: "Electricity tariff fees dimension - SCD Type 2 tracking fee changes over time"
@@ -96,7 +111,8 @@ models:
         tests:
           - not_null
           - accepted_values:
-              values: [ 'distribution', 'access' ]
+              arguments:
+                values: [ 'distribution', 'access' ]
 
       - name: label
         description: "Macedonian-language name of the fee component"
@@ -134,13 +150,25 @@ models:
 
     tests:
       - dbt_utils.unique_combination_of_columns:
-          combination_of_columns:
-            - consumer_category
-            - fee_type
-            - valid_from
+          arguments:
+            combination_of_columns:
+              - consumer_category
+              - fee_type
+              - valid_from
       - dbt_utils.expression_is_true:
           arguments:
             expression: "valid_from < valid_to"
+      - assert_scd2_double_active:
+          arguments:
+            natural_key_columns:
+              - consumer_category
+              - fee_type
+            active_value: "date '9999-12-31'"
+      - assert_scd2_no_overlapping_ranges:
+          arguments:
+            natural_key_columns:
+              - consumer_category
+              - fee_type
 
   - name: dim_electricity_tariff_blocks
     description: "Electricity tariff consumption blocks dimension - SCD Type 2 tracking block boundary changes over time"
@@ -161,7 +189,8 @@ models:
         tests:
           - not_null
           - accepted_values:
-              values: [ 'low', 'high' ]
+              arguments:
+                values: [ 'low', 'high' ]
 
       - name: tariff_block_number
         description: "Consumption block number - authority set is this dimension (asserted by assert_tariff_tiers_blocks_consistency)"
@@ -201,14 +230,28 @@ models:
 
     tests:
       - dbt_utils.unique_combination_of_columns:
-          combination_of_columns:
-            - consumer_category
-            - tariff_window_type
-            - tariff_block_number
-            - valid_from
+          arguments:
+            combination_of_columns:
+              - consumer_category
+              - tariff_window_type
+              - tariff_block_number
+              - valid_from
       - dbt_utils.expression_is_true:
           arguments:
             expression: "valid_from < valid_to"
+      - assert_scd2_double_active:
+          arguments:
+            natural_key_columns:
+              - consumer_category
+              - tariff_window_type
+              - tariff_block_number
+            active_value: "date '9999-12-31'"
+      - assert_scd2_no_overlapping_ranges:
+          arguments:
+            natural_key_columns:
+              - consumer_category
+              - tariff_window_type
+              - tariff_block_number
 
   - name: dim_electricity_tariff_window_schedule
     description: "Electricity tariff window schedule dimension - SCD Type 2 on day/hour, tracking schedule changes over time"
@@ -240,7 +283,8 @@ models:
         tests:
           - not_null
           - accepted_values:
-              values: [ 'low', 'high' ]
+              arguments:
+                values: [ 'low', 'high' ]
 
       - name: valid_from
         description: "Date from which this schedule assignment is effective"
@@ -257,13 +301,25 @@ models:
 
     tests:
       - dbt_utils.unique_combination_of_columns:
-          combination_of_columns:
-            - day_of_week
-            - hour
-            - valid_from
+          arguments:
+            combination_of_columns:
+              - day_of_week
+              - hour
+              - valid_from
       - dbt_utils.expression_is_true:
           arguments:
             expression: "valid_from < valid_to"
+      - assert_scd2_double_active:
+          arguments:
+            natural_key_columns:
+              - day_of_week
+              - hour
+            active_value: "date '9999-12-31'"
+      - assert_scd2_no_overlapping_ranges:
+          arguments:
+            natural_key_columns:
+              - day_of_week
+              - hour
 
   - name: dim_exchange_rates
     description: "USD/MKD exchange rate dimension - SCD Type 2 on currency pair, one row per daily rate snapshot"
@@ -279,14 +335,16 @@ models:
         tests:
           - not_null
           - accepted_values:
-              values: [ 'USD' ]
+              arguments:
+                values: [ 'USD' ]
 
       - name: to_currency
         description: "Target currency"
         tests:
           - not_null
           - accepted_values:
-              values: [ 'MKD' ]
+              arguments:
+                values: [ 'MKD' ]
 
       - name: value
         description: "USD to MKD exchange rate for this snapshot"
@@ -322,13 +380,25 @@ models:
 
     tests:
       - dbt_utils.unique_combination_of_columns:
-          combination_of_columns:
-            - from_currency
-            - to_currency
-            - valid_from
+          arguments:
+            combination_of_columns:
+              - from_currency
+              - to_currency
+              - valid_from
       - dbt_utils.expression_is_true:
           arguments:
             expression: "valid_from < valid_to"
+      - assert_scd2_double_active:
+          arguments:
+            natural_key_columns:
+              - from_currency
+              - to_currency
+            active_value: "date '9999-12-31'"
+      - assert_scd2_no_overlapping_ranges:
+          arguments:
+            natural_key_columns:
+              - from_currency
+              - to_currency
 
   - name: fct_compute_offers
     description: "Core fact table - one row per (Vast.ai GPU offer snapshot, offer_type, tariff tier), with electricity cost and profit metrics computed across all EVN tariff scenarios. Grain per ADR-008: (offer_id, valid_from, offer_type, tariff_tier_skey)."
@@ -370,7 +440,8 @@ models:
         tests:
           - not_null
           - accepted_values:
-              values: "{{ offer_types() }}"
+              arguments:
+                values: "{{ offer_types() }}"
 
       # -----------------------------------------------------------------------
       # foreign keys to dims
@@ -400,7 +471,8 @@ models:
         tests:
           - not_null
           - accepted_values:
-              values: [ 'verified', 'unverified', 'deverified' ]
+              arguments:
+                values: [ 'verified', 'unverified', 'deverified' ]
 
       - name: rentable_flag
         description: "Whether the offer is currently rentable"
@@ -738,7 +810,8 @@ models:
         description: "Tariff window - low or high"
         tests:
           - accepted_values:
-              values: [ 'low', 'high' ]
+              arguments:
+                values: [ 'low', 'high' ]
 
       - name: tariff_block_number
         description: "Tariff block number or null for tiers with no block distinction. Authority set is dim_electricity_tariff_blocks (cross-checked by assert_tariff_tiers_blocks_consistency)."
@@ -812,3 +885,16 @@ models:
       - dbt_utils.expression_is_true:
           arguments:
             expression: "valid_from < valid_to"
+      - assert_scd2_double_active:
+          arguments:
+            natural_key_columns:
+              - offer_id
+              - offer_type
+              - tariff_tier_skey
+            active_value: "timestamp '9999-12-31'"
+      - assert_scd2_no_overlapping_ranges:
+          arguments:
+            natural_key_columns:
+              - offer_id
+              - offer_type
+              - tariff_tier_skey

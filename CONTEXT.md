@@ -44,6 +44,13 @@ _Avoid_: Consumption tier, usage band
 SCD Type 2 timestamps. `valid_from` is the snapshot/ingest timestamp; `valid_to` is `9999-12-31` for the current version.
 _Avoid_: Effective date, expiry, as-of
 
+**Validity range**:
+A version's half-open interval `[valid_from, valid_to)` — it covers `valid_from <= t < valid_to`. Adjacent
+versions never overlap and the boundary instant belongs to exactly one version. The SCD Type 2 integrity
+invariant is contiguity per natural key: at most one active version (no double active) and no overlapping
+ranges, enforced by the `assert_scd2_double_active` and `assert_scd2_no_overlapping_ranges` tests.
+_Avoid_: Closed interval, active period, effective window
+
 **Host**:
 The economic actor this project models — someone who owns GPUs, places them in Macedonia at EVN electricity rates, and rents them out on Vast.ai at the global market price. The cost model is the host's electricity; the revenue is the rental price.
 _Avoid_: Renter, consumer, buyer
