@@ -45,7 +45,7 @@ x-airflow-common: &airflow-common
     - ../../src:/opt/airflow/src
 
     # GCP Credentials
-    - ${GCP_APPLICATION_CREDENTIALS_PATH}:/home/airflow/.config/gcloud:ro
+    - ${GOOGLE_APPLICATION_CREDENTIALS}:/home/airflow/.config/gcloud:ro
 
   depends_on:
     postgres:

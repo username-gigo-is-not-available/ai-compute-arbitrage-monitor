@@ -77,7 +77,8 @@ cp .env.example .env
 #          POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB,
 #          AIRFLOW_USER, AIRFLOW_PASSWORD, AIRFLOW_EMAIL,
 #          AIRFLOW_FERNET_KEY, AIRFLOW_SECRET_KEY, AIRFLOW_JWT_SECRET,
-#          GCP_APPLICATION_CREDENTIALS_PATH, GCP_PROJECT_ID
+#          GOOGLE_APPLICATION_CREDENTIALS, GCP_PROJECT_ID,
+#          BQ_DATASET_NAME, GCS_BUCKET_NAME, BQ_LOCATION
 ```
 
 ### 3. Generate Keys and Secrets
@@ -160,7 +161,7 @@ print(secrets.token_hex(32))
 gcloud auth application-default login
 ```
 1. Create a new project and paste the project id in the `GCP_PROJECT_ID` environment variable
-2. Update the `GCP_APPLICATION_CREDENTIALS_PATH` environment variable with the path to your Google Cloud credentials.
+2. Update the `GOOGLE_APPLICATION_CREDENTIALS` environment variable with the path to your Google Cloud credentials.
 
 ##### Documentation and Resources
 [How Application Default Credentials Work](https://docs.cloud.google.com/docs/authentication/application-default-credentials)
@@ -180,7 +181,7 @@ terraform apply
 
 ```bash
 cd src/transform
-# Fill in project-id, dataset, location 
+# project-id, dataset, location and bucket come from GCP_PROJECT_ID, BQ_DATASET_NAME, BQ_LOCATION, GCS_BUCKET_NAME in .env
 dbt debug # make sure connection works
 dbt deps # install dependencies
 ```

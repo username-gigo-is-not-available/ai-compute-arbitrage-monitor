@@ -45,7 +45,7 @@ class ConfigLoader:
     def get_cluster(self) -> GCPClusterConfig:
         gcp_config: dict[str, Any] = self._raw["gcp"]
         return GCPClusterConfig(
-            project_id=gcp_config["project_id"],
+            project_id=os.environ["GCP_PROJECT_ID"],
             region_name=gcp_config["region_name"],
             image_tag=gcp_config["dataproc"]["image_tag"],
             runtime_packages=gcp_config["dataproc"]["runtime_packages"],
@@ -58,7 +58,7 @@ class ConfigLoader:
 
     def get_storage(self) -> GCPStorageConfig:
         return GCPStorageConfig(
-            bucket_name=self._raw["gcp"]["gcs"]["bucket_name"]
+            bucket_name=os.environ["GCS_BUCKET_NAME"]
         )
 
     def get_dbt(self) -> DbtConfig:
@@ -73,7 +73,7 @@ class ConfigLoader:
     def get_cloud_run(self) -> CloudRunConfig:
         gcp_config: dict[str, Any] = self._raw["gcp"]
         return CloudRunConfig(
-            project_id=gcp_config["project_id"],
+            project_id=os.environ["GCP_PROJECT_ID"],
             region_name=gcp_config["region_name"],
             job_name=gcp_config["cloud_run"]["job_name"],
         )

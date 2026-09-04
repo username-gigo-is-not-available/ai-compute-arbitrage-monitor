@@ -16,6 +16,7 @@ env:
   REGION_NAME: ${{ vars.GCP_REGION_NAME }}
   SERVICE_ACCOUNT_EMAIL: ${{ secrets.GCP_SERVICE_ACCOUNT_EMAIL }}
   IDENTITY_PROVIDER_NAME: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER_NAME }}
+  GCS_BUCKET_NAME: ${{ vars.GCP_BUCKET_NAME }}
 
 jobs:
   sync:
@@ -36,7 +37,7 @@ jobs:
           python-version: "3.12"
 
       - name: Install dependencies
-        run: pip install pyyaml
+        run: pip install pyyaml python-dotenv
 
       - name: Authenticate to GCP
         uses: google-github-actions/auth@v2

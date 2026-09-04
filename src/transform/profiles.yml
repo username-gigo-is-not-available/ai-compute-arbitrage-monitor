@@ -3,9 +3,9 @@ transform:
     dev:
       type: bigquery
       method: oauth
-      project: graphic-mission-505412-j7
-      dataset: ai_compute_arbitrage_monitor_dataset
+      project: "{{ env_var('GCP_PROJECT_ID') }}"
+      dataset: "{{ env_var('BQ_DATASET_NAME') }}"
       threads: 4
-      location: EU
+      location: "{{ env_var('BQ_LOCATION', 'EU') }}"
       priority: interactive
   target: dev

@@ -3,7 +3,11 @@ import subprocess
 import sys
 from pathlib import Path
 
+from dotenv import load_dotenv
 import yaml
+
+
+load_dotenv()
 
 
 def load_settings() -> dict:
@@ -37,7 +41,7 @@ def main() -> None:
         print(f"ERROR: could not load settings — {e}", file=sys.stderr)
         sys.exit(1)
 
-    bucket: str = cfg["gcp"]["gcs"]["bucket_name"]
+    bucket: str = os.environ["GCS_BUCKET_NAME"]
     packages: list[str] = cfg["gcp"]["dataproc"]["runtime_packages"]
 
     if not packages:
