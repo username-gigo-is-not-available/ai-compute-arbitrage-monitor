@@ -77,7 +77,7 @@ cp .env.example .env
 #          POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB,
 #          AIRFLOW_USER, AIRFLOW_PASSWORD, AIRFLOW_EMAIL,
 #          AIRFLOW_FERNET_KEY, AIRFLOW_SECRET_KEY, AIRFLOW_JWT_SECRET,
-#          GOOGLE_APPLICATION_CREDENTIALS, GCP_PROJECT_ID,
+#          GCP_APPLICATION_CREDENTIALS_PATH, GCP_PROJECT_ID,
 #          BQ_DATASET_NAME, GCS_BUCKET_NAME, BQ_LOCATION
 ```
 
@@ -161,7 +161,7 @@ print(secrets.token_hex(32))
 gcloud auth application-default login
 ```
 1. Create a new project and paste the project id in the `GCP_PROJECT_ID` environment variable
-2. Update the `GOOGLE_APPLICATION_CREDENTIALS` environment variable with the path to your Google Cloud credentials.
+2. Update the `GCP_APPLICATION_CREDENTIALS_PATH` environment variable with the path to your gcloud config directory (the one containing `application_default_credentials.json`).
 
 ##### Documentation and Resources
 [How Application Default Credentials Work](https://docs.cloud.google.com/docs/authentication/application-default-credentials)

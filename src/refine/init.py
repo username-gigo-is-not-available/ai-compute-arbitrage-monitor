@@ -1,5 +1,6 @@
 import json
 import os
+from pathlib import Path
 
 from pyspark.sql import SparkSession
 
@@ -12,7 +13,11 @@ def initialize_spark() -> SparkSession:
     execution_type = ConfigLoader().get_execution_type()
 
     if execution_type == ExecutionType.LOCAL:
-        creds_path = os.environ["GOOGLE_APPLICATION_CREDENTIALS"]
+        creds_root = os.environ.get("GCP_APPLICATION_CREDENTIALS_PATH")
+        if creds_root:
+            creds_path = Path(creds_root) / "application_default_credentials.json"
+        else:
+            creds_path = Path(os.environ["GOOGLE_APPLICATION_CREDENTIALS"])
         with open(creds_path) as f:
             creds = json.load(f)
         builder = (

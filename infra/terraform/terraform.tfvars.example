@@ -1,8 +1,8 @@
 # shared.tfvars
 
-project_id              = "ai-compute-arbitrage-monitor"
+project_id              = "graphic-mission-505412-j7"
 bq_dataset_name         = "ai_compute_arbitrage_monitor_dataset"
-gcs_bucket_name         = "ai-compute-arbitrage-monitor-lake"
+gcs_bucket_name         = "ai-compute-arbitrage-monitor-bucket"
 
 # gcp.tfvars
 vpc_name                = "ai-compute-arbitrage-monitor-vpc"

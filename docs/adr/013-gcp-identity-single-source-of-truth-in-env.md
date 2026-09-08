@@ -59,7 +59,8 @@ from the environment or the failure is loud. `.env` is git-ignored, so only
   runs, and the CI workflows `dataproc-sync-jobs.yml` /
   `cloud-composer-sync-dags.yml` inject it via the `GCP_BUCKET_NAME` GitHub var
   (along with `pip install python-dotenv`).
-- **Known follow-up** (out of scope here): the stale `ai-compute-arbitrage-monitor`
-  name in `infra/terraform/terraform.tfvars.example` and the dataproc
-  resource-name strings in `settings.yaml` should be reconciled to
-  `graphic-mission-505412-j7`.
+- **Known follow-up**: the stale `ai-compute-arbitrage-monitor` name in
+  `infra/terraform/terraform.tfvars.example` was reconciled to
+  `graphic-mission-505412-j7`. The dataproc resource-name strings in
+  `settings.yaml` (`image_tag`, `subnetwork_name`, `service_account_email`)
+  still carry the old name and remain a follow-up.
