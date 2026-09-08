@@ -12,6 +12,14 @@ hitting GCS. They verify that each script:
   * builds the correct gs:// destinations,
   * issues the expected ``gcloud storage cp`` command.
 
+The ``purge_data`` helper additionally verifies that the purge script:
+
+  * emits progress/errors through ``logging`` (never ``print``),
+  * fails loudly (KeyError) when a GCP identity env var is unset,
+  * exits non-zero when settings.yaml is missing and when the confirmation
+    prompt hits EOF/declines, without issuing any gcloud/bq command,
+  * issues the expected ``gcloud storage rm`` / ``bq rm`` commands per stage.
+
 Run directly (no deps added, no GCP touched)::
 
     uv run python tests/test_deploy_scripts.py
@@ -23,8 +31,11 @@ Run under pytest (optional, once the dev-extra is installed)::
 
 from __future__ import annotations
 
+import builtins
 import importlib.util
+import logging
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -37,8 +48,9 @@ SCRIPTS_DIR = REPO_ROOT / "scripts"
 SETTINGS_PATH = str(REPO_ROOT / "config" / "settings.yaml")
 EXPECTED_BUCKET = "ai-compute-arbitrage-monitor-bucket"
 EXPECTED_PROJECT = "graphic-mission-505412-j7"
+EXPECTED_DATASET = "ai_compute_arbitrage_monitor_dataset"
 
-_ENV_KEYS = ("SETTINGS_PATH", "GCS_BUCKET_NAME", "GCP_PROJECT_ID")
+_ENV_KEYS = ("SETTINGS_PATH", "GCS_BUCKET_NAME", "GCP_PROJECT_ID", "BQ_DATASET_NAME")
 _ENV_SAVED = {k: os.environ.get(k) for k in _ENV_KEYS}
 
 
@@ -50,13 +62,17 @@ def _restore_env() -> None:
             os.environ[k] = _ENV_SAVED[k]
 
 
-def _set_env(bucket: str | None = EXPECTED_BUCKET) -> None:
+def _set_env(bucket: str | None = EXPECTED_BUCKET, dataset: str | None = EXPECTED_DATASET) -> None:
     os.environ["SETTINGS_PATH"] = SETTINGS_PATH
     os.environ["GCP_PROJECT_ID"] = EXPECTED_PROJECT
     if bucket is None:
         os.environ.pop("GCS_BUCKET_NAME", None)
     else:
         os.environ["GCS_BUCKET_NAME"] = bucket
+    if dataset is None:
+        os.environ.pop("BQ_DATASET_NAME", None)
+    else:
+        os.environ["BQ_DATASET_NAME"] = dataset
 
 
 @contextmanager
@@ -207,6 +223,254 @@ def test_gcs_cp_issues_expected_gcloud_command() -> None:
     ]
 
 
+def _run_purge(
+    argv: list[str],
+    confirm: str | None = None,
+    fail: bool = False,
+) -> tuple[list[list[str]], int | None]:
+    """Run purge_data.main() with a stubbed subprocess.run.
+
+    Returns ``(calls, exit_code)``: ``calls`` is the list of commands issued
+    (empty when ``fail`` is True), ``exit_code`` is the SystemExit code if the
+    run exited, else None. ``confirm`` feeds the interactive prompt; pass None
+    to append ``--confirm`` instead.
+    """
+    script = _load_script("purge_data")
+    calls: list[list[str]] = []
+    real_run = subprocess.run
+
+    def fake_run(cmd, **kwargs):
+        if fail:
+            raise subprocess.CalledProcessError(returncode=1, cmd=cmd)
+        calls.append(list(cmd))
+        return None
+
+    argv = [*argv, "--confirm"] if confirm is None else argv
+    exit_code: int | None = None
+    try:
+        _set_env()
+        with _chdir(REPO_ROOT), _patched(subprocess, run=fake_run), _patched(
+            sys, argv=["purge_data.py", *argv]
+        ), _patched(shutil, which=lambda _name: None):
+            try:
+                if confirm is None:
+                    script.main()
+                else:
+                    with _patched(builtins, input=lambda _prompt: confirm):
+                        script.main()
+            except SystemExit as e:
+                exit_code = e.code if isinstance(e.code, int) else 1
+    finally:
+        _restore_env()
+        subprocess.run = real_run
+    return calls, exit_code
+
+
+def test_purge_no_flags_exits_nonzero_and_purges_nothing() -> None:
+    """No stage flag -> argparse usage error, exit 2, no gcloud/bq command issued."""
+    calls, exit_code = _run_purge([])
+    assert exit_code == 2, exit_code
+    assert calls == [], calls
+
+def test_purge_conflicting_flags_exits_nonzero_and_purges_nothing() -> None:
+    """Two stage flags together -> argparse usage error, exit 2, no gcloud/bq command issued."""
+    calls, exit_code = _run_purge(["--bronze", "--silver"])
+    assert exit_code == 2, exit_code
+    assert calls == [], calls
+
+def test_purge_bronze_confirm_issues_expected_rm_command() -> None:
+    """--bronze --confirm -> exactly `gcloud storage rm -r gs://<bucket>/bronze/**`."""
+    calls, exit_code = _run_purge(["--bronze"])
+    assert calls == [
+        ["gcloud", "storage", "rm", "-r", f"gs://{EXPECTED_BUCKET}/bronze/**"]
+    ], calls
+    assert exit_code is None, exit_code
+
+def test_purge_bucket_with_trailing_slash_is_stripped() -> None:
+    """GCS_BUCKET_NAME with a trailing slash -> no double slash in the gs:// target."""
+    script = _load_script("purge_data")
+    calls: list[list[str]] = []
+    real_run = subprocess.run
+
+    def fake_run(cmd, **kwargs):
+        calls.append(list(cmd))
+        return None
+
+    try:
+        _set_env(bucket=f"{EXPECTED_BUCKET}/")
+        with _chdir(REPO_ROOT), _patched(subprocess, run=fake_run), _patched(
+            shutil, which=lambda _name: None
+        ), _patched(
+            sys, argv=["purge_data.py", "--bronze", "--confirm"]
+        ):
+            script.main()
+    finally:
+        _restore_env()
+        subprocess.run = real_run
+    assert calls == [
+        ["gcloud", "storage", "rm", "-r", f"gs://{EXPECTED_BUCKET}/bronze/**"]
+    ], calls
+
+def test_purge_gold_confirm_issues_expected_bq_command() -> None:
+    """--gold --confirm -> exactly `bq rm -r -f -d <project>:<dataset>`."""
+    calls, exit_code = _run_purge(["--gold"])
+    assert calls == [
+        ["bq", "rm", "-r", "-f", "-d", f"{EXPECTED_PROJECT}:{EXPECTED_DATASET}"]
+    ], calls
+    assert exit_code is None, exit_code
+
+
+def test_purge_all_confirm_issues_expected_commands_in_order() -> None:
+    """--all --confirm -> bronze, then silver, then gold dataset drop."""
+    calls, exit_code = _run_purge(["--all"])
+    assert calls == [
+        ["gcloud", "storage", "rm", "-r", f"gs://{EXPECTED_BUCKET}/bronze/**"],
+        ["gcloud", "storage", "rm", "-r", f"gs://{EXPECTED_BUCKET}/silver/**"],
+        ["bq", "rm", "-r", "-f", "-d", f"{EXPECTED_PROJECT}:{EXPECTED_DATASET}"],
+    ], calls
+    assert exit_code is None, exit_code
+
+
+def test_purge_declined_prompt_exits_nonzero_and_purges_nothing() -> None:
+    """No --confirm + 'no' answer -> exit 1, zero gcloud/bq commands issued."""
+    calls, exit_code = _run_purge(["--bronze"], confirm="no")
+    assert exit_code == 1, exit_code
+    assert calls == [], calls
+
+
+def test_purge_confirmed_interactively_executes() -> None:
+    """No --confirm + 'yes' answer -> proceeds with the delete."""
+    calls, exit_code = _run_purge(["--silver"], confirm="yes")
+    assert exit_code is None, exit_code
+    assert calls == [
+        ["gcloud", "storage", "rm", "-r", f"gs://{EXPECTED_BUCKET}/silver/**"]
+    ], calls
+
+
+def test_purge_subprocess_failure_exits_nonzero() -> None:
+    """gcloud failure -> the script exits 1 (the harness stubs subprocess)."""
+    calls, exit_code = _run_purge(["--bronze"], fail=True)
+    assert exit_code == 1, exit_code
+    assert calls == [], calls
+
+
+def test_purge_uses_logging_not_print() -> None:
+    """Progress and errors go through the logging module, never print()."""
+    script = _load_script("purge_data")
+    calls: list[list[str]] = []
+    records: list[tuple[str, str]] = []
+    real_run = subprocess.run
+
+    def fake_run(cmd, **kwargs):
+        calls.append(list(cmd))
+        return None
+
+    def capture_info(msg, *args, **kwargs):
+        records.append(("INFO", msg % args if args else msg))
+
+    def capture_error(msg, *args, **kwargs):
+        records.append(("ERROR", msg % args if args else msg))
+
+    try:
+        _set_env()
+        with _chdir(REPO_ROOT), _patched(subprocess, run=fake_run), _patched(
+            shutil, which=lambda _name: None
+        ), _patched(
+            sys, argv=["purge_data.py", "--bronze", "--confirm"]
+        ), _patched(logging, info=capture_info, error=capture_error):
+            script.main()
+    finally:
+        _restore_env()
+        subprocess.run = real_run
+    assert calls == [
+        ["gcloud", "storage", "rm", "-r", f"gs://{EXPECTED_BUCKET}/bronze/**"]
+    ], calls
+    assert any(level == "INFO" and "bronze" in msg for level, msg in records), records
+    assert any(level == "INFO" and "Purge complete" in msg for level, msg in records), records
+    assert not any(level not in ("INFO", "ERROR") for level, _msg in records), records
+
+
+def test_purge_missing_project_env_raises_keyerror() -> None:
+    """GCP_PROJECT_ID unset -> KeyError naming the var (no silent degrade)."""
+    script = _load_script("purge_data")
+    try:
+        _set_env()
+        os.environ.pop("GCP_PROJECT_ID", None)
+        with _chdir(REPO_ROOT), _patched(
+            sys, argv=["purge_data.py", "--bronze", "--confirm"]
+        ):
+            script.main()
+        raise AssertionError("expected KeyError('GCP_PROJECT_ID')")
+    except KeyError as e:
+        assert e.args == ("GCP_PROJECT_ID",), e.args
+    finally:
+        _restore_env()
+
+def test_purge_missing_dataset_env_raises_keyerror() -> None:
+    """BQ_DATASET_NAME unset -> KeyError naming the var (no silent degrade)."""
+    script = _load_script("purge_data")
+    try:
+        _set_env()
+        os.environ.pop("BQ_DATASET_NAME", None)
+        with _chdir(REPO_ROOT), _patched(
+            sys, argv=["purge_data.py", "--gold", "--confirm"]
+        ):
+            script.main()
+        raise AssertionError("expected KeyError('BQ_DATASET_NAME')")
+    except KeyError as e:
+        assert e.args == ("BQ_DATASET_NAME",), e.args
+    finally:
+        _restore_env()
+
+def test_purge_missing_settings_exits_nonzero() -> None:
+    """SETTINGS_PATH points at a missing settings.yaml -> exit 1, no commands."""
+    script = _load_script("purge_data")
+    try:
+        _set_env()
+        with tempfile.TemporaryDirectory() as tmp, _chdir(Path(tmp)), _patched(
+            sys, argv=["purge_data.py", "--bronze", "--confirm"]
+        ):
+            os.environ["SETTINGS_PATH"] = str(Path(tmp) / "no-such-settings.yaml")
+            try:
+                script.main()
+            except SystemExit as e:
+                assert e.code == 1, e.code
+            else:
+                raise AssertionError("expected SystemExit(1) for missing settings")
+    finally:
+        _restore_env()
+
+
+def test_purge_prompt_eof_exits_nonzero_and_purges_nothing() -> None:
+    """No --confirm + stdin EOF -> exit 1, zero gcloud/bq commands issued."""
+    script = _load_script("purge_data")
+    calls: list[list[str]] = []
+    real_run = subprocess.run
+
+    def fake_run(cmd, **kwargs):
+        calls.append(list(cmd))
+        return None
+
+    def raise_eof(_prompt):
+        raise EOFError
+
+    try:
+        _set_env()
+        with _chdir(REPO_ROOT), _patched(subprocess, run=fake_run), _patched(
+            sys, argv=["purge_data.py", "--bronze"]
+        ), _patched(builtins, input=raise_eof):
+            try:
+                script.main()
+            except SystemExit as e:
+                assert e.code == 1, e.code
+            else:
+                raise AssertionError("expected SystemExit(1) on prompt EOF")
+    finally:
+        _restore_env()
+        subprocess.run = real_run
+    assert calls == [], calls
+
+
 # ---------------------------------------------------------------------------
 # Standalone runner (also collectable by pytest: the test_* functions above)
 # ---------------------------------------------------------------------------
@@ -217,6 +481,20 @@ _TESTS = [
     test_missing_bucket_env_raises_keyerror,
     test_missing_package_dir_exits_nonzero,
     test_gcs_cp_issues_expected_gcloud_command,
+    test_purge_no_flags_exits_nonzero_and_purges_nothing,
+    test_purge_conflicting_flags_exits_nonzero_and_purges_nothing,
+    test_purge_bronze_confirm_issues_expected_rm_command,
+    test_purge_bucket_with_trailing_slash_is_stripped,
+    test_purge_gold_confirm_issues_expected_bq_command,
+    test_purge_all_confirm_issues_expected_commands_in_order,
+    test_purge_declined_prompt_exits_nonzero_and_purges_nothing,
+    test_purge_confirmed_interactively_executes,
+    test_purge_subprocess_failure_exits_nonzero,
+    test_purge_uses_logging_not_print,
+    test_purge_missing_project_env_raises_keyerror,
+    test_purge_missing_dataset_env_raises_keyerror,
+    test_purge_missing_settings_exits_nonzero,
+    test_purge_prompt_eof_exits_nonzero_and_purges_nothing,
 ]
 
 

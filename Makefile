@@ -44,6 +44,12 @@ help:
 	@echo "  make dbt-run           Run all dbt models"
 	@echo "  make dbt-test          Run all dbt tests"
 	@echo "  make dbt-docs          Generate and serve dbt docs"
+	@echo ""
+	@echo "Data purge (local dev reset - destructive!)"
+	@echo "  make purge-bronze      Purge Bronze GCS objects"
+	@echo "  make purge-silver      Purge Silver GCS objects"
+	@echo "  make purge-gold        Drop and recreate the BigQuery dataset"
+	@echo "  make purge-all         Purge bronze + silver + gold"
 	@echo "============================================================================================================="
 
 # ── Terraform — Shared ────────────────────────────────────────────────────────
@@ -144,3 +150,23 @@ dbt-test:
 .PHONY: dbt-docs
 dbt-docs:
 	$(DBT) dbt docs generate && dbt docs serve
+
+# ── Data purge ──────────────────────────────────────────────────────────────
+
+PURGE := uv run python scripts/purge_data.py
+
+.PHONY: purge-bronze
+purge-bronze:
+	$(PURGE) --bronze --confirm
+
+.PHONY: purge-silver
+purge-silver:
+	$(PURGE) --silver --confirm
+
+.PHONY: purge-gold
+purge-gold:
+	$(PURGE) --gold --confirm
+
+.PHONY: purge-all
+purge-all:
+	$(PURGE) --all --confirm
