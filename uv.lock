@@ -2653,6 +2653,7 @@ dependencies = [
     { name = "python-dotenv" },
     { name = "pyyaml" },
     { name = "requests" },
+    { name = "tenacity" },
     { name = "vastai-sdk" },
     { name = "zstandard" },
 ]
@@ -2696,6 +2697,7 @@ requires-dist = [
     { name = "pyyaml", specifier = ">=6.0" },
     { name = "requests", specifier = ">=2.33.0" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.0.290" },
+    { name = "tenacity", specifier = ">=9.1.4" },
     { name = "vastai-sdk", specifier = ">=1.0.8" },
     { name = "zstandard", specifier = ">=0.25.0" },
 ]

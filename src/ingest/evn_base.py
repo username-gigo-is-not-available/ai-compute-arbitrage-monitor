@@ -16,7 +16,14 @@ class EVNBaseIngestor(SyncIngestor, ABC):
 
     def fetch_soup(self, url: str) -> BeautifulSoup | None:
         timeout_seconds: int = self.http_config.timeout_seconds
-        response = requests.get(url, timeout=timeout_seconds, verify=certifi.where())
+
+        response = self.fetch_sync(
+            requests.RequestException,
+            requests.get,
+            url,
+            timeout=timeout_seconds,
+            verify=certifi.where(),
+        )
         status: int = response.status_code
         if status != HTTPStatus.OK:
             self.logger.error(f"EVN tariff fetch returned HTTP status: {status}.")

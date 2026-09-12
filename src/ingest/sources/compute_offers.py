@@ -5,39 +5,47 @@ from datetime import datetime, UTC
 from http import HTTPStatus
 from typing import Any
 
-from aiohttp import ClientSession
+from aiohttp import ClientError, ClientSession, ClientTimeout
 from pydantic import ValidationError
 
 from common.classes import Dataset
-from config.loader import ConfigLoader
+from common.enums import OfferType, DatasetType, DatasetName
 from config.apis.vast_ai import VastAIConfig
+from config.http import HttpConfig
+from config.loader import ConfigLoader
 from config.storage import GCPStorageConfig
 from ingest.base import AsyncIngestor
-from common.enums import OfferType, DatasetType, DatasetName
 from ingest.models.vast_ai_offer import VastAIOffer
 
 @dataclass
 class ComputeOffersIngestor(AsyncIngestor):
+    http_config: HttpConfig
 
     async def load(self) -> list[VastAIOffer]:
         async with ClientSession() as session:
             offers = []
             ingested_at: datetime = datetime.now(UTC)
             for offer_type in OfferType:
-                async with session.get(
-                        self.config.url,
-                        headers=self.config.header,
-                        params=self.config.params(offer_type=offer_type)
-                ) as response:
-                    if response.status != HTTPStatus.OK:
-                        self.logger.error(f"Vast.AI API returned HTTP {response.status}")
-                        return []
 
+                response = await self.fetch_async(
+                    (ClientError, asyncio.TimeoutError),
+                    session.get,
+                    self.config.url,
+                    headers=self.config.header,
+                    params=self.config.params(offer_type=offer_type),
+                    timeout=ClientTimeout(total=self.http_config.timeout_seconds),
+                )
+                if response.status != HTTPStatus.OK:
+                    self.logger.error(f"Vast.AI API returned HTTP {response.status}")
+                    return []
+                try:
                     data: dict[str, Any] = await response.json(encoding="utf-8")
                     for row in data.get("offers", []):
                         offer = self.parse(data=row, timestamp=ingested_at, offer_type=offer_type)
                         if offer:
                             offers.append(offer)
+                finally:
+                    response.close()
 
             return offers
 
@@ -99,7 +107,12 @@ async def main():
     if not vast_ai_config.enabled:
         return
 
-    compute_offers_ingestor: ComputeOffersIngestor = ComputeOffersIngestor(dataset=compute_offers, config=vast_ai_config, storage_config=storage_config)
+    compute_offers_ingestor: ComputeOffersIngestor = ComputeOffersIngestor(
+        dataset=compute_offers,
+        config=vast_ai_config,
+        storage_config=storage_config,
+        http_config=loader.get_http(),
+    )
     logging.info(f"Starting source {compute_offers_ingestor.name}...")
     await compute_offers_ingestor.run()
 

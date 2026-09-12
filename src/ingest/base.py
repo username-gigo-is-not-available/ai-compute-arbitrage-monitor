@@ -1,10 +1,19 @@
 import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Any
+from http import HTTPStatus
+from typing import Any, cast
 
 import pyarrow as pa
 import pyarrow.parquet as pq
+from tenacity import (
+    before_sleep_log,
+    retry,
+    retry_if_exception_type,
+    retry_if_result,
+    stop_after_attempt,
+    wait_fixed,
+)
 
 from common.classes import Dataset
 from common.enums import DataStageType
@@ -52,6 +61,25 @@ class SyncIngestor(Ingestor):
     def load(self) -> list[IngestorRecord]:
         raise NotImplementedError
 
+    def retry_sync(self, exc_type):
+        return retry(
+            stop=stop_after_attempt(self.http_config.retry_count),
+            wait=wait_fixed(self.http_config.retry_delay_seconds),
+            retry=retry_if_exception_type(exc_type)
+            | retry_if_result(lambda resp: resp.status_code != HTTPStatus.OK),
+            retry_error_callback=lambda retry_state: retry_state.outcome.result(),
+            before_sleep=before_sleep_log(cast(Any, self.logger), logging.WARNING),
+        )
+
+    def fetch_sync(self, exc_type, http_call_fn, *args, **kwargs):
+        @self.retry_sync(exc_type)
+        def fetch():
+            resp = http_call_fn(*args, **kwargs)
+            if resp.status_code != HTTPStatus.OK:
+                resp.close()
+            return resp
+        return fetch()
+
     def run(self) -> None:
         self.logger.info(f"Starting load for {self.name}...")
         self._handle_result(self.load())
@@ -63,6 +91,25 @@ class AsyncIngestor(Ingestor):
     @abstractmethod
     async def load(self) -> list[IngestorRecord]:
         raise NotImplementedError
+
+    def retry_async(self, exc_type):
+        return retry(
+            stop=stop_after_attempt(self.http_config.retry_count),
+            wait=wait_fixed(self.http_config.retry_delay_seconds),
+            retry=retry_if_exception_type(exc_type)
+            | retry_if_result(lambda resp: resp.status != HTTPStatus.OK),
+            retry_error_callback=lambda retry_state: retry_state.outcome.result(),
+            before_sleep=before_sleep_log(cast(Any, self.logger), logging.WARNING),
+        )
+
+    async def fetch_async(self, exc_type, http_call_fn, *args, **kwargs):
+        @self.retry_async(exc_type)
+        async def fetch():
+            resp = await http_call_fn(*args, **kwargs)
+            if resp.status != HTTPStatus.OK:
+                resp.close()
+            return resp
+        return await fetch()
 
     async def run(self) -> None:
         self.logger.info(f"Starting load for {self.name}...")

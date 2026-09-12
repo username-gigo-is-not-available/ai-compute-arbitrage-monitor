@@ -7,7 +7,7 @@ from http import HTTPStatus
 from typing import Any
 
 import certifi
-from aiohttp import ClientSession, ClientTimeout
+from aiohttp import ClientError, ClientSession, ClientTimeout
 
 from common.classes import Dataset
 from common.enums import DatasetType, DatasetName
@@ -35,13 +35,23 @@ class ExchangeRateIngestor(AsyncIngestor):
         timeout_seconds: int = self.http_config.timeout_seconds
 
         async with ClientSession() as session:
-            async with session.get(url, ssl=self.ssl_context, timeout=ClientTimeout(total=timeout_seconds)) as response:
-                status: int = response.status
-                if status != HTTPStatus.OK:
-                    self.logger.error(f"Exchange Rate API poll returned HTTP status: {status}.")
-                    return []
+
+            response = await self.fetch_async(
+                (ClientError, asyncio.TimeoutError),
+                session.get,
+                url,
+                ssl=self.ssl_context,
+                timeout=ClientTimeout(total=timeout_seconds),
+            )
+            status: int = response.status
+            if status != HTTPStatus.OK:
+                self.logger.error(f"Exchange Rate API poll returned HTTP status: {status}.")
+                return []
+            try:
                 data: dict[str, Any] = await response.json(encoding="utf-8")
                 return [self.parse(data=data)]
+            finally:
+                response.close()
 
     def parse(self, **kwargs) -> ExchangeRate | None:
         from_currency: str = self.config.from_currency
