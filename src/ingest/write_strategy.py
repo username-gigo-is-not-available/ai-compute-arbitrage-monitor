@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 
 import pyarrow as pa
+from pyiceberg.expressions import In
 from pyiceberg.partitioning import PartitionField, PartitionSpec
 from pyiceberg.transforms import HourTransform, IdentityTransform
 
@@ -38,4 +39,5 @@ class OverwriteByValidFrom(BronzeWriteStrategy):
         )
 
     def write(self, table, arrow_table: pa.Table) -> None:
-        table.overwrite(arrow_table)
+        valid_from_values = set(arrow_table.column("valid_from_text").to_pylist())
+        table.overwrite(arrow_table, overwrite_filter=In("valid_from_text", valid_from_values))
