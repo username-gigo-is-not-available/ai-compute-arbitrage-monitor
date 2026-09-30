@@ -15,7 +15,7 @@ from config.dbt import DbtConfig
 from config.execution import CloudRunConfig
 from config.http import HttpConfig
 from config.lakehouse import GCPLakehouseConfig
-from config.storage import GCPStorageConfig
+from config.bucket import GCSBucketConfig
 
 load_dotenv()
 
@@ -24,7 +24,7 @@ class ConfigLoader:
     def __init__(self, config_path: Path = Path(os.getenv("SETTINGS_PATH", "settings.yaml"))):
         self._raw = self._load_yaml(config_path)
         self._setup_logging()
-        self._paths = self.get_storage()
+
 
     def get_execution_type(self) -> ExecutionType:
         execution_type: ExecutionType = ExecutionType(self._raw.get("execution_type", "local"))
@@ -57,8 +57,8 @@ class ConfigLoader:
     def get_http(self) -> HttpConfig:
         return HttpConfig(**self._raw["http"])
 
-    def get_storage(self) -> GCPStorageConfig:
-        return GCPStorageConfig(
+    def get_bucket(self) -> GCSBucketConfig:
+        return GCSBucketConfig(
             bucket_name=os.environ["GCS_BUCKET_NAME"]
         )
 
