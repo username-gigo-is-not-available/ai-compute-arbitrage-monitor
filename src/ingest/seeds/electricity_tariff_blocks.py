@@ -11,7 +11,7 @@ from config.loader import ConfigLoader
 from ingest.evn_base import EVNBaseIngestor
 from ingest.models.electricity_tariff_block import ElectricityTariffBlock
 from ingest.schemas.electricity_tariff_blocks import ELECTRICITY_TARIFF_BLOCKS_BRONZE_SCHEMA
-from ingest.write_strategy import FullOverwrite
+from ingest.write_strategy import OverwriteByValidFrom
 
 
 @dataclass
@@ -72,7 +72,7 @@ def main():
         config=evn_config,
         lakehouse_config=loader.get_lakehouse(),
         bronze_schema=ELECTRICITY_TARIFF_BLOCKS_BRONZE_SCHEMA,
-        write_strategy=FullOverwrite(),
+        write_strategy=OverwriteByValidFrom(),
         http_config=loader.get_http(),
     )
     logging.info(f"Starting seed {electricity_tariff_blocks_ingestor.name}...")

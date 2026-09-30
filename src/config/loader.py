@@ -72,11 +72,12 @@ class ConfigLoader:
         )
 
     def get_lakehouse(self) -> GCPLakehouseConfig:
-        big_lake = self._raw["gcp"]["big_lake"]
+        catalog_id = self._raw["gcp"]["big_lake"]["catalog_id"]
+        project_id = os.environ["GCP_PROJECT_ID"]
         return GCPLakehouseConfig(
-            catalog_id=big_lake["catalog_id"],
-            project_id=os.environ["GCP_PROJECT_ID"],
-            warehouse=big_lake["warehouse"],
+            catalog_id=catalog_id,
+            project_id=project_id,
+            warehouse=f"bl://projects/{project_id}/catalogs/{catalog_id}",
         )
 
     def get_cloud_run(self) -> CloudRunConfig:

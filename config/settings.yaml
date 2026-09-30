@@ -39,7 +39,6 @@ gcp:
     runtime_packages: ["common", "config", "ingest", "serializers"]
   big_lake:
     catalog_id: "ai_compute_arbitrage_monitor_catalog"
-    warehouse: "bl://projects/graphic-mission-505412-j7/catalogs/ai_compute_arbitrage_monitor_catalog"
 
 dbt:
   local:

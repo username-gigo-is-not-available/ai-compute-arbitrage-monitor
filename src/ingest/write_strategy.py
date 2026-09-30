@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 
 import pyarrow as pa
 from pyiceberg.partitioning import PartitionField, PartitionSpec
-from pyiceberg.transforms import HourTransform
+from pyiceberg.transforms import HourTransform, IdentityTransform
 
 
 class BronzeWriteStrategy(ABC):
@@ -28,11 +28,14 @@ class AppendByHour(BronzeWriteStrategy):
         table.append(arrow_table)
 
 
-class FullOverwrite(BronzeWriteStrategy):
-    """Seeds: full table overwrite, unpartitioned."""
+class OverwriteByValidFrom(BronzeWriteStrategy):
+    """Seeds: overwrite by valid_from partition; re-scraping same date replaces, new date appends a new partition."""
 
     def partition_spec(self, schema):
-        return PartitionSpec()
+        field_id = schema.find_field("valid_from_text").field_id
+        return PartitionSpec(
+            PartitionField(source_id=field_id, field_id=1000, transform=IdentityTransform(), name="valid_from_text")
+        )
 
     def write(self, table, arrow_table: pa.Table) -> None:
         table.overwrite(arrow_table)
