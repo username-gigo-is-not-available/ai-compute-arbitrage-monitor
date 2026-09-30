@@ -11,16 +11,15 @@ from pydantic import ValidationError
 from common.classes import Dataset
 from common.enums import OfferType, DatasetType, DatasetName
 from config.apis.vast_ai import VastAIConfig
-from config.http import HttpConfig
 from config.loader import ConfigLoader
 from config.storage import GCPStorageConfig
 from ingest.base import AsyncIngestor
 from ingest.models.vast_ai_offer import VastAIOffer
-from ingest.schemas.compute_offers import COMPUTE_OFFERS_SCHEMA
+from ingest.schemas.compute_offers import COMPUTE_OFFERS_BRONZE_SCHEMA
+from ingest.write_strategy import AppendByHour
 
 @dataclass
 class ComputeOffersIngestor(AsyncIngestor):
-    http_config: HttpConfig
 
     async def load(self) -> list[VastAIOffer]:
         async with ClientSession() as session:
@@ -113,7 +112,8 @@ async def main():
         config=vast_ai_config,
         storage_config=storage_config,
         lakehouse_config=loader.get_lakehouse(),
-        bronze_schema=COMPUTE_OFFERS_SCHEMA,
+        bronze_schema=COMPUTE_OFFERS_BRONZE_SCHEMA,
+        write_strategy=AppendByHour(),
         http_config=loader.get_http(),
     )
     logging.info(f"Starting source {compute_offers_ingestor.name}...")

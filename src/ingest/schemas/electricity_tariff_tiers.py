@@ -1,7 +1,7 @@
 from pyiceberg.schema import Schema
 from pyiceberg.types import NestedField, StringType, TimestamptzType
 
-ELECTRICITY_TARIFF_TIERS_SCHEMA = Schema(
+ELECTRICITY_TARIFF_TIERS_BRONZE_SCHEMA = Schema(
     NestedField(field_id=1, name="consumer_category", field_type=StringType(), required=True),
     NestedField(field_id=2, name="label", field_type=StringType(), required=True),
     NestedField(field_id=3, name="metric", field_type=StringType(), required=True),

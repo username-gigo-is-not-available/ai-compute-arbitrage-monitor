@@ -8,6 +8,7 @@ from common.enums import DatasetName, DatasetType
 from config.apis.evn import EVNConfig
 from config.loader import ConfigLoader
 from config.storage import GCPStorageConfig
+from refine.write_strategy import PartitionedOverwrite
 from refine.assets.cleaning import trim_whitespace, empty_to_null
 from refine.assets.extraction import extract_pattern, extract_valid_from_date
 from refine.assets.patterns import KWH_BOUNDS_PATTERN, TARIFF_BLOCK_NUMBER_PATTERN
@@ -68,6 +69,7 @@ def run():
         config=evn_config,
         storage_config=storage_config,
         lakehouse_config=loader.get_lakehouse(),
+        silver_strategy=PartitionedOverwrite(),
     )
     electricity_tariff_blocks_pipeline.run()
 

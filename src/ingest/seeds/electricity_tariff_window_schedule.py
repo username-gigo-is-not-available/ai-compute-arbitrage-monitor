@@ -5,17 +5,16 @@ from datetime import datetime, UTC
 from common.classes import Dataset
 from common.enums import DatasetType, DatasetName
 from config.apis.evn import EVNConfig
-from config.http import HttpConfig
 from config.loader import ConfigLoader
 from config.storage import GCPStorageConfig
 from ingest.evn_base import EVNBaseIngestor
 from ingest.models.electricity_tariff_window_schedule import ElectricityTariffWindowSchedule
-from ingest.schemas.electricity_tariff_window_schedule import ELECTRICITY_TARIFF_WINDOW_SCHEDULE_SCHEMA
+from ingest.schemas.electricity_tariff_window_schedule import ELECTRICITY_TARIFF_WINDOW_SCHEDULE_BRONZE_SCHEMA
+from ingest.write_strategy import FullOverwrite
 
 
 @dataclass
 class ElectricityTariffWindowScheduleIngestor(EVNBaseIngestor):
-    http_config: HttpConfig
 
     def load(self) -> list[ElectricityTariffWindowSchedule]:
         parser = self.fetch_soup(self.config.tariff_tiers_url)
@@ -63,7 +62,8 @@ def main():
         config=evn_config,
         storage_config=storage_config,
         lakehouse_config=loader.get_lakehouse(),
-        bronze_schema=ELECTRICITY_TARIFF_WINDOW_SCHEDULE_SCHEMA,
+        bronze_schema=ELECTRICITY_TARIFF_WINDOW_SCHEDULE_BRONZE_SCHEMA,
+        write_strategy=FullOverwrite(),
         http_config=loader.get_http(),
     )
     logging.info(f"Starting seed {electricity_tariff_window_schedule_ingestor.name}...")

@@ -6,13 +6,11 @@ import certifi
 import requests
 from bs4 import BeautifulSoup
 
-from config.http import HttpConfig
 from ingest.base import SyncIngestor
 
 
 @dataclass
 class EVNBaseIngestor(SyncIngestor, ABC):
-    http_config: HttpConfig
 
     def fetch_soup(self, url: str) -> BeautifulSoup | None:
         timeout_seconds: int = self.http_config.timeout_seconds

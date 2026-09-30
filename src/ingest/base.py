@@ -1,7 +1,6 @@
 import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from enum import Enum
 from http import HTTPStatus
 from typing import Any, cast
 
@@ -17,11 +16,13 @@ from tenacity import (
 )
 
 from common.classes import Dataset
-from common.enums import DataStageType, DatasetType
+from common.enums import DataStageType
 from common.types import DatasetConfig
+from config.http import HttpConfig
 from config.lakehouse import GCPLakehouseConfig
 from config.storage import GCPStorageConfig
 from ingest.models.types import IngestorRecord
+from ingest.write_strategy import BronzeWriteStrategy
 
 
 @dataclass
@@ -31,6 +32,7 @@ class Ingestor(ABC):
     storage_config: GCPStorageConfig
     lakehouse_config: GCPLakehouseConfig
     bronze_schema: Schema
+    write_strategy: BronzeWriteStrategy
     name: str = field(init=False)
     logger: logging.Logger = field(init=False)
 
@@ -56,7 +58,7 @@ class Ingestor(ABC):
             catalog.create_table(
                 table_id,
                 schema=self.bronze_schema,
-                partition_spec=self.lakehouse_config.partition_spec(self.dataset.dataset_type, self.bronze_schema),
+                partition_spec=self.write_strategy.partition_spec(self.bronze_schema),
             )
 
     def _handle_result(self, data: list[IngestorRecord]) -> None:
@@ -67,19 +69,16 @@ class Ingestor(ABC):
             self.logger.warning(f"{self.name} returned no data, skipping store.")
 
     def store(self, data: list[IngestorRecord]) -> None:
-        rows = [{k: v.value if isinstance(v, Enum) else v for k, v in r.model_dump().items()} for r in data]
-        arrow_table = pa.Table.from_pylist(rows)
+        arrow_table = pa.Table.from_pylist([r.to_row() for r in data])
         catalog = self.lakehouse_config.open_catalog()
         table = catalog.load_table(self.lakehouse_config.table_id(DataStageType.BRONZE, self.dataset))
-        if self.dataset.dataset_type == DatasetType.SOURCES:
-            table.append(arrow_table)
-        else:
-            table.overwrite(arrow_table)
+        self.write_strategy.write(table, arrow_table)
         self.logger.info(f"Written {len(arrow_table)} {self.name} records to Bronze")
 
 
 @dataclass
 class SyncIngestor(Ingestor):
+    http_config: HttpConfig
 
     @abstractmethod
     def load(self) -> list[IngestorRecord]:
@@ -112,6 +111,7 @@ class SyncIngestor(Ingestor):
 
 @dataclass
 class AsyncIngestor(Ingestor):
+    http_config: HttpConfig
 
     @abstractmethod
     async def load(self) -> list[IngestorRecord]:

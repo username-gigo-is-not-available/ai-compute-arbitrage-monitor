@@ -44,6 +44,7 @@ from config.apis.vast_ai import VastAIConfig
 from config.http import HttpConfig
 from config.lakehouse import GCPLakehouseConfig
 from config.storage import GCPStorageConfig
+from ingest.write_strategy import AppendByHour, FullOverwrite
 from pyiceberg.schema import Schema
 from pyiceberg.types import NestedField, StringType
 from ingest.evn_base import EVNBaseIngestor
@@ -172,6 +173,7 @@ def _evn(retry_count: int) -> _EVNTestIngestor:
         storage_config=_storage(),
         lakehouse_config=_lakehouse(),
         bronze_schema=_DUMMY_BRONZE_SCHEMA,
+        write_strategy=FullOverwrite(),
         http_config=_http(retry_count=retry_count),
     )
 
@@ -274,6 +276,7 @@ def _exchange(retry_count: int) -> ExchangeRateIngestor:
         storage_config=_storage(),
         lakehouse_config=_lakehouse(),
         bronze_schema=_DUMMY_BRONZE_SCHEMA,
+        write_strategy=AppendByHour(),
         http_config=_http(retry_count=retry_count),
     )
 
@@ -348,6 +351,7 @@ def _compute(retry_count: int) -> ComputeOffersIngestor:
         storage_config=_storage(),
         lakehouse_config=_lakehouse(),
         bronze_schema=_DUMMY_BRONZE_SCHEMA,
+        write_strategy=AppendByHour(),
         http_config=_http(retry_count=retry_count),
     )
 

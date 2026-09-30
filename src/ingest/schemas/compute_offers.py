@@ -1,7 +1,7 @@
 from pyiceberg.schema import Schema
 from pyiceberg.types import BooleanType, DoubleType, LongType, NestedField, StringType, TimestamptzType
 
-COMPUTE_OFFERS_SCHEMA = Schema(
+COMPUTE_OFFERS_BRONZE_SCHEMA = Schema(
     NestedField(field_id=1, name="offer_id", field_type=LongType(), required=True),
     NestedField(field_id=2, name="machine_id", field_type=LongType(), required=True),
     NestedField(field_id=3, name="host_id", field_type=LongType(), required=True),

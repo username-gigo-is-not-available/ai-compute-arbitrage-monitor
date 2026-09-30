@@ -7,6 +7,7 @@ from common.enums import DataStageType, DatasetType, DatasetName
 from config.loader import ConfigLoader
 from config.apis.vast_ai import VastAIConfig
 from config.storage import GCPStorageConfig
+from refine.write_strategy import IncrementalAppend
 from refine.assets.filtering import deduplicate
 from refine.init import initialize_spark
 from refine.base import Pipeline
@@ -49,6 +50,7 @@ def run():
         config=vast_ai_config,
         storage_config=storage_config,
         lakehouse_config=loader.get_lakehouse(),
+        silver_strategy=IncrementalAppend(),
     )
     compute_offers_pipeline.run()
 

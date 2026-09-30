@@ -8,6 +8,7 @@ from common.enums import DataStageType, DatasetName, DatasetType
 from config.loader import ConfigLoader
 from config.apis.exchange_rate import ExchangeRateConfig
 from config.storage import GCPStorageConfig
+from refine.write_strategy import IncrementalAppend
 from refine.assets.filtering import deduplicate
 from refine.init import initialize_spark
 from refine.assets.cleaning import trim_whitespace, empty_to_null
@@ -44,6 +45,7 @@ def run():
         config=exchange_rate_config,
         storage_config=storage_config,
         lakehouse_config=loader.get_lakehouse(),
+        silver_strategy=IncrementalAppend(),
     )
     exchange_rate_pipeline.run()
 

@@ -3,7 +3,7 @@ from typing import ClassVar
 from pydantic import BaseModel
 
 from common.classes import Dataset
-from common.enums import DataStageType, DatasetType, ExecutionType
+from common.enums import DataStageType, ExecutionType
 
 
 class GCPLakehouseConfig(BaseModel):
@@ -47,17 +47,6 @@ class GCPLakehouseConfig(BaseModel):
             "token": creds.token,
             "py-io-impl": "pyiceberg.io.pyarrow.PyArrowFileIO",
         })
-
-    def partition_spec(self, dataset_type: DatasetType, schema):
-        from pyiceberg.partitioning import PartitionField, PartitionSpec
-        from pyiceberg.transforms import HourTransform
-
-        if dataset_type == DatasetType.SOURCES:
-            field_id = schema.find_field("ingested_at").field_id
-            return PartitionSpec(
-                PartitionField(source_id=field_id, field_id=1000, transform=HourTransform(), name="ingested_at_hour")
-            )
-        return PartitionSpec()
 
     def configure_spark(self, builder, execution_type: ExecutionType):
         c = self.spark_alias

@@ -3,18 +3,17 @@ from dataclasses import dataclass, field
 from typing import Callable
 
 from pyspark.sql import DataFrame, SparkSession
-from pyspark.sql.functions import col, max as spark_max
 from pyspark.sql.types import StructType
-from pyspark.sql.utils import AnalysisException
 
 from common.classes import Dataset
-from common.enums import DataStageType, DatasetType
+from common.enums import DataStageType
 from common.types import DatasetConfig
 from config.lakehouse import GCPLakehouseConfig
 from config.storage import GCPStorageConfig
 from refine.assets.casting import cast_to_schema
 from refine.assets.extraction import add_processed_at_column
 from refine.schemas.base import META_COLUMNS_SCHEMA
+from refine.write_strategy import SilverWriteStrategy
 
 
 @dataclass
@@ -25,6 +24,7 @@ class Pipeline:
     config: DatasetConfig
     storage_config: GCPStorageConfig
     lakehouse_config: GCPLakehouseConfig
+    silver_strategy: SilverWriteStrategy
     transform_steps: list[Callable[[DataFrame], DataFrame]] = field(default_factory=list)
     logger: logging.Logger = field(init=False)
 
@@ -36,40 +36,13 @@ class Pipeline:
         bronze = self.lakehouse_config.spark_table(DataStageType.BRONZE, self.dataset)
         self.logger.info(f"Reading from {bronze}")
         df = self.session.table(bronze)
-
-        if self.dataset.dataset_type == DatasetType.SOURCES:
-            silver = self.lakehouse_config.spark_table(DataStageType.SILVER, self.dataset)
-            watermark = self._watermark(silver)
-            if watermark is not None:
-                df = df.filter(col("ingested_at") > watermark)
-                self.logger.info(f"Watermark filter applied: ingested_at > {watermark}")
-
-        return df
-
-    def _watermark(self, silver_table: str):
-        try:
-            row = self.session.table(silver_table).agg(spark_max("ingested_at")).collect()[0]
-            return row[0]
-        except AnalysisException:
-            return None
+        silver = self.lakehouse_config.spark_table(DataStageType.SILVER, self.dataset)
+        return self.silver_strategy.read_filter(df, self.session, silver)
 
     def save(self, df: DataFrame) -> DataFrame:
         silver = self.lakehouse_config.spark_table(DataStageType.SILVER, self.dataset)
         self.logger.info(f"Writing to {silver}")
-
-        try:
-            if self.dataset.dataset_type == DatasetType.SOURCES:
-                df.writeTo(silver).append()
-            else:
-                df.writeTo(silver).overwritePartitions()
-        except AnalysisException:
-            # Table does not exist yet — create with the correct partition layout
-            from pyspark.sql.functions import hours as spark_hours
-            if self.dataset.dataset_type == DatasetType.SOURCES:
-                df.writeTo(silver).using("iceberg").partitionedBy(spark_hours("ingested_at")).create()
-            else:
-                df.writeTo(silver).using("iceberg").partitionedBy("valid_from").create()
-
+        self.silver_strategy.write(df, silver)
         self.logger.info("Write complete")
         return df
 
