@@ -65,11 +65,11 @@ Two facts shaped the fix:
 - The Aug 24 – Sep 8 2026 Gold history is **knowingly lost**: Iceberg Silver
   starts at the first Iceberg snapshot and the legacy Parquet was not
   backfilled (test data). The legacy Parquet still exists in GCS; its
-  retirement is tracked in the issue "Retire legacy Parquet paths in GCS".
+  retirement is tracked in #31.
 - The catalog id now lives in three places: `infra/terraform/shared/terraform.tfvars`
   (owner), `config/settings.yaml`, `sources.yaml`.
 - Correction to ADR-016: the catalog id is `ai_compute_arbitrage_monitor_catalog`
   (underscores), not `ai-compute-arbitrage-monitor-catalog`.
 - `BQ_LOCATION` must now be set wherever dbt runs. The local path gets it
   from `.env`; the (undeployed) Cloud Run job sets no env vars at all —
-  tracked in the issue "Cloud Run dbt job passes no env vars".
+  tracked in #30.
