@@ -26,7 +26,7 @@ TDP × number of GPUs × applicable Macedonian tariff rate**, converted to USD a
 ![Architecture Diagram](docs/gpu_arbitrage_architecture.png)
 
 **Data flow per source DAG:**
-`ingest → zip_src → [upload_src, upload_config, upload_entrypoint] → refine (Dataproc) → register_external_tables → dbt run → dbt test → publish Asset`
+`ingest → zip_src → [upload_src, upload_config, upload_entrypoint] → refine (Dataproc) → dbt run → dbt test → publish Asset`
 
 The marts DAG fires automatically (`AssetAny`) when any upstream source completes successfully.
 

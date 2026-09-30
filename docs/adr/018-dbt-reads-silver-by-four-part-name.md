@@ -68,6 +68,10 @@ Two facts shaped the fix:
   retirement is tracked in #31.
 - The catalog id now lives in three places: `infra/terraform/shared/terraform.tfvars`
   (owner), `config/settings.yaml`, `sources.yaml`.
+- Amends ADR-013: `profiles.yml` now reads `env_var('BQ_LOCATION')` with no
+  `'EU'` default, and `sources.yaml` no longer reads `GCS_BUCKET_NAME` (there
+  are no external-table `location`s left). ADR-013's single-source-of-truth
+  rule for identity values still holds.
 - Correction to ADR-016: the catalog id is `ai_compute_arbitrage_monitor_catalog`
   (underscores), not `ai-compute-arbitrage-monitor-catalog`.
 - `BQ_LOCATION` must now be set wherever dbt runs. The local path gets it
