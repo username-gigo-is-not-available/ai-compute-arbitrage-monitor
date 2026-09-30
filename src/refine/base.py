@@ -2,6 +2,7 @@ import logging
 from dataclasses import dataclass, field
 from typing import Callable
 
+from pyiceberg.exceptions import NamespaceAlreadyExistsError
 from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql.types import StructType
 
@@ -29,6 +30,15 @@ class Pipeline:
     def __post_init__(self):
         self.name = self.__class__.__name__
         self.logger = logging.getLogger(self.name)
+        self._ensure_silver_namespace()
+
+    def _ensure_silver_namespace(self) -> None:
+        ns = self.lakehouse_config.namespace(DataStageType.SILVER, self.dataset)
+        catalog = self.lakehouse_config.open_catalog()
+        try:
+            catalog.create_namespace(ns)
+        except NamespaceAlreadyExistsError:
+            pass
 
     def read(self) -> DataFrame:
         bronze = self.lakehouse_config.spark_table(DataStageType.BRONZE, self.dataset)

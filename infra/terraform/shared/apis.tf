@@ -4,6 +4,7 @@ locals {
     bigquery        = "bigquery.googleapis.com"
     iam             = "iam.googleapis.com"
     resourcemanager = "cloudresourcemanager.googleapis.com"
+    biglake         = "biglake.googleapis.com"
   }
 }
 

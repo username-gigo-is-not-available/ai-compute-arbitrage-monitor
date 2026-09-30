@@ -3,6 +3,7 @@ from dataclasses import field, dataclass
 from typing import Callable
 
 from pyspark.sql import DataFrame, SparkSession
+from pyspark.sql import functions as F
 
 from common.classes import Dataset
 from common.enums import DatasetType, DatasetName, TariffWindowType
@@ -29,11 +30,6 @@ def extract_low_tariff_window_hours(text: str) -> set[int]:
     return low_hours
 
 
-def get_tariff_window_type(day: int, hour: int, low_hours: set[int]) -> TariffWindowType:
-    if day == 7 or hour in low_hours:
-        return TariffWindowType.LOW
-    return TariffWindowType.HIGH
-
 
 @dataclass
 class ElectricityTariffWindowSchedulePipeline(Pipeline):
@@ -52,19 +48,19 @@ class ElectricityTariffWindowSchedulePipeline(Pipeline):
         weekday_text, _ = parts
         low_hours = extract_low_tariff_window_hours(weekday_text)
 
-        rows = [
-            {
-                "tariff_window_type": get_tariff_window_type(day, h, low_hours).value,
-                "day_of_week": day,
-                "start_hour": h,
-                "end_hour": h + 1,
-                "valid_from": valid_from,
-                "ingested_at": ingested_at
-            }
-            for day in range(1, 8)
-            for h in range(24)
-        ]
-        return self.session.createDataFrame(rows)
+        days = self.session.range(1, 8).withColumnRenamed("id", "day_of_week")
+        hours = self.session.range(0, 24).withColumnRenamed("id", "start_hour")
+        return (
+            days.crossJoin(hours)
+            .withColumn("end_hour", F.col("start_hour") + 1)
+            .withColumn("tariff_window_type", F.when(
+                (F.col("day_of_week") == 7) | F.col("start_hour").isin(list(low_hours)),
+                TariffWindowType.LOW.value,
+            ).otherwise(TariffWindowType.HIGH.value))
+            .withColumn("valid_from", F.lit(valid_from))
+            .withColumn("ingested_at", F.lit(ingested_at))
+            .select("tariff_window_type", "day_of_week", "start_hour", "end_hour", "valid_from", "ingested_at")
+        )
 
 
 def run():

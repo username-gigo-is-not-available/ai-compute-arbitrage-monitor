@@ -5,8 +5,15 @@ from common.enums import ExecutionType
 from config.lakehouse import GCPLakehouseConfig
 
 
+_ICEBERG_VERSION = "1.11.0"
+_ICEBERG_PACKAGES = (
+    f"org.apache.iceberg:iceberg-spark-runtime-4.1_2.13:{_ICEBERG_VERSION},"
+    f"org.apache.iceberg:iceberg-gcp-bundle:{_ICEBERG_VERSION}"
+)
+
+
 def configure_spark(builder, lakehouse: GCPLakehouseConfig, execution_type: ExecutionType):
-    c = lakehouse.spark_alias
+    c = lakehouse.catalog_id
     builder = (
         builder
         .config(f"spark.sql.catalog.{c}", "org.apache.iceberg.spark.SparkCatalog")
@@ -19,6 +26,7 @@ def configure_spark(builder, lakehouse: GCPLakehouseConfig, execution_type: Exec
         creds.refresh(GcpRequest())
         builder = (
             builder
+            .config("spark.jars.packages", _ICEBERG_PACKAGES)
             .config(f"spark.sql.catalog.{c}.token", creds.token)
             .config("spark.driver.memory", "4g")
         )
