@@ -77,7 +77,7 @@ with Diagram(
                     spark = Spark("PySpark\nClean · Cast · Dedup")
                 fw - Edge(style="invis") - spark
 
-    silver = GCS("Silver\ncleaned parquet\nGCS")
+    silver = GCS("Silver\nIceberg\nLakehouse catalog")
 
     airflow >> Edge() >> spark
     bronze >> Edge() >> spark
@@ -86,17 +86,14 @@ with Diagram(
 
     # ── Col 5: Per-source pipeline DAG — dbt ──────────────────────────
     with Cluster("Per-source Pipeline DAG (x4)\nBashOperator — dbt + BigQuery"):
-        dbt_ext_tbl = Dbt("dbt run-operation\n stage_external_sources")
         dbt_stg = Dbt("dbt run\n stg_*")
         dbt_int = Dbt("dbt run\nint_*")
         dbt_wh = Dbt("dbt run\nfct_* · dim_*")
         dbt_test = Dbt("dbt test\n→ publish Asset")
-        dbt_ext_tbl >> dbt_stg >> dbt_int >> dbt_wh >> dbt_test
-        dbt_ext_tbl >> Edge() >> bq
+        dbt_stg >> dbt_int >> dbt_wh >> dbt_test
 
     airflow >> Edge() >> dbt_stg
-    airflow >> Edge() >> dbt_ext_tbl
-    silver >> Edge() >> dbt_ext_tbl
+    silver >> Edge(label="four-part name") >> dbt_stg
     dbt_wh >> Edge() >> bq
     bq >> Edge(reverse=True) >> dbt_stg
 

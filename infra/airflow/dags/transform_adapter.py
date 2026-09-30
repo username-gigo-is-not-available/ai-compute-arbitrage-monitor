@@ -27,6 +27,3 @@ class DbtAdapter:
 
     def test(self, tag: str) -> str:
         return f"{self.dbt_bin_directory_path} test{self.base_flags()} --select {tag}"
-
-    def run_operation(self, operation_name: str, tag: str) -> str:
-        return f"{self.dbt_bin_directory_path} run-operation {operation_name}{self.base_flags()} --args 'select: {tag}'"

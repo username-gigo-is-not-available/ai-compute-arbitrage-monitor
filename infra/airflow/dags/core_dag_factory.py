@@ -49,16 +49,11 @@ class DagFactory:
 
             t_refine = self.refine_strategy.build_operator(self.pipeline_config)
 
-            t_ext_table = self.transform_strategy.build_run_operation_operator(
-                operation_name="stage_external_sources",
-                tag=config.external_table_selector,
-            )
-
             t_dbt_run = self.transform_strategy.build_run_operator(tag=config.dbt_tag)
 
             t_dbt_test = self.transform_strategy.build_test_operator(tag=config.dbt_tag)
             t_dbt_test.outlets = [Asset(f"ai-compute-arbitrage-monitor/{config.dataset_name}")]
 
-            t_ingest >> t_refine >> t_ext_table >> t_dbt_run >> t_dbt_test
+            t_ingest >> t_refine >> t_dbt_run >> t_dbt_test
 
         return dag

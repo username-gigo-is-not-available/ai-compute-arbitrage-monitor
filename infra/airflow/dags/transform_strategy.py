@@ -22,12 +22,6 @@ class TransformStrategy(ABC):
     def build_test_operator(self, tag: str, task_id: str = "test") -> BaseOperator:
         raise NotImplementedError
 
-    @abstractmethod
-    def build_run_operation_operator(
-        self, operation_name: str, tag: str, task_id: str = "register_external_tables"
-    ) -> BaseOperator:
-        raise NotImplementedError
-
     @staticmethod
     def build_strategy(config: ConfigLoader) -> "TransformStrategy":
         execution_type = config.get_execution_type()
@@ -50,14 +44,6 @@ class LocalTransformStrategy(TransformStrategy):
 
     def build_test_operator(self, tag: str, task_id: str = "test") -> BaseOperator:
         return BashOperator(task_id=task_id, bash_command=self.dbt_adapter.test(tag))
-
-    def build_run_operation_operator(
-        self, operation_name: str, tag: str, task_id: str = "register_external_tables"
-    ) -> BaseOperator:
-        return BashOperator(
-            task_id=task_id,
-            bash_command=self.dbt_adapter.run_operation(operation_name, tag),
-        )
 
 
 class CloudRunTransformStrategy(TransformStrategy):
@@ -87,10 +73,3 @@ class CloudRunTransformStrategy(TransformStrategy):
 
     def build_test_operator(self, tag: str, task_id: str = "test") -> BaseOperator:
         return self.build_operator(["test", *self.dbt_adapter.base_args, "--select", tag], task_id)
-
-    def build_run_operation_operator(self, operation_name: str, tag: str,
-                                     task_id: str = "register_external_tables") -> BaseOperator:
-        return self.build_operator(
-            ["run-operation", operation_name, *self.dbt_adapter.base_args, "--args", f"select: {tag}"],
-            task_id
-        )

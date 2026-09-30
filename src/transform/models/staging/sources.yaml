@@ -1,54 +1,27 @@
 version: 2
 
+# Silver lives as Iceberg tables in the BigLake Lakehouse catalog. BigQuery reads
+# them live by four-part name (project.catalog.namespace.table); `database`
+# absorbs the catalog. See ADR-018.
+
 sources:
   - name: sources
-    description: "Data sources stored as Parquet in GCS, exposed as External Tables in BQ"
-    schema: source
+    description: "Silver sources: Iceberg tables in the Lakehouse catalog"
+    database: "{{ target.project }}.ai_compute_arbitrage_monitor_catalog"
+    schema: silver_sources
     tables:
       - name: compute_offers
         description: "Vast.ai GPU compute offers"
-        external:
-          location: "gs://{{ env_var('GCS_BUCKET_NAME') }}/silver/sources/compute_offers/*.parquet"
-          options:
-            format: parquet
-          autodetect: true
 
       - name: exchange_rates
         description: "USD/MKD exchange rate"
-        external:
-          location: "gs://{{ env_var('GCS_BUCKET_NAME') }}/silver/sources/exchange_rates/*.parquet"
-          options:
-            format: parquet
-          autodetect: true
 
   - name: seeds
-    description: "Data seeds stored as Parquet in GCS, exposed as External Tables in BQ"
-    schema: seed
+    description: "Silver seeds: Iceberg tables in the Lakehouse catalog"
+    database: "{{ target.project }}.ai_compute_arbitrage_monitor_catalog"
+    schema: silver_seeds
     tables:
       - name: electricity_tariff_tiers
-        external:
-          location: "gs://{{ env_var('GCS_BUCKET_NAME') }}/silver/seeds/electricity_tariff_tiers/*.parquet"
-          options:
-            format: parquet
-          autodetect: true
-
       - name: electricity_tariff_blocks
-        external:
-          location: "gs://{{ env_var('GCS_BUCKET_NAME') }}/silver/seeds/electricity_tariff_blocks/*.parquet"
-          options:
-            format: parquet
-          autodetect: true
-
       - name: electricity_tariff_fees
-        external:
-          location: "gs://{{ env_var('GCS_BUCKET_NAME') }}/silver/seeds/electricity_tariff_fees/*.parquet"
-          options:
-            format: parquet
-          autodetect: true
-
       - name: electricity_tariff_window_schedule
-        external:
-          location: "gs://{{ env_var('GCS_BUCKET_NAME') }}/silver/seeds/electricity_tariff_window_schedule/*.parquet"
-          options:
-            format: parquet
-          autodetect: true

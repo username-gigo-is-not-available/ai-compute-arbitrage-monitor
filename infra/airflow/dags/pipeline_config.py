@@ -24,10 +24,6 @@ class PipelineConfig:
         return f"tag:{self.dataset_name}"
 
     @property
-    def external_table_selector(self) -> str:
-        return f"{self.dataset_type}.{self.dataset_name}"
-
-    @property
     def ingest_module(self) -> str:
         return f"{self.ingest_module_base}.{self.dataset_type}.{self.dataset_name}"
 
