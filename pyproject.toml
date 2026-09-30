@@ -27,6 +27,7 @@ dependencies = [
     "google-cloud-dataproc>=5.27.0",
     "dbt-bigquery>=1.11.1",
     "diagrams>=0.25.1",
+    "pyiceberg>=0.12.0",
 ]
 
 

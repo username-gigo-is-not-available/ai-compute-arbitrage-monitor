@@ -14,6 +14,7 @@ from config.cluster import GCPClusterConfig
 from config.dbt import DbtConfig
 from config.execution import CloudRunConfig
 from config.http import HttpConfig
+from config.lakehouse import GCPLakehouseConfig
 from config.storage import GCPStorageConfig
 
 load_dotenv()
@@ -68,6 +69,14 @@ class ConfigLoader:
             project_directory_path=dbt_config["project_directory_path"],
             profiles_directory_path=dbt_config["profiles_directory_path"],
             target_directory_path=dbt_config["target_directory_path"],
+        )
+
+    def get_lakehouse(self) -> GCPLakehouseConfig:
+        big_lake = self._raw["gcp"]["big_lake"]
+        return GCPLakehouseConfig(
+            catalog_id=big_lake["catalog_id"],
+            project_id=os.environ["GCP_PROJECT_ID"],
+            warehouse=big_lake["warehouse"],
         )
 
     def get_cloud_run(self) -> CloudRunConfig:

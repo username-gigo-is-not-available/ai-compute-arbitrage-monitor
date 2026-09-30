@@ -5,7 +5,8 @@ from http import HTTPStatus
 from typing import Any, cast
 
 import pyarrow as pa
-import pyarrow.parquet as pq
+from pyiceberg.exceptions import NamespaceAlreadyExistsError
+from pyiceberg.io.pyarrow import pyarrow_to_schema
 from tenacity import (
     before_sleep_log,
     retry,
@@ -16,8 +17,9 @@ from tenacity import (
 )
 
 from common.classes import Dataset
-from common.enums import DataStageType
+from common.enums import DataStageType, DatasetType
 from common.types import DatasetConfig
+from config.loader import ConfigLoader
 from config.storage import GCPStorageConfig
 from ingest.models.types import IngestorRecord
 from serializers.json_serializer import JsonSerializer
@@ -47,11 +49,33 @@ class Ingestor(ABC):
             self.logger.warning(f"{self.name} returned no data, skipping store.")
 
     def store(self, data: list[IngestorRecord]) -> None:
-        output_path = self.storage_config.directory_path(DataStageType.BRONZE, self.dataset)
-        records: list[dict[str, Any]] = JsonSerializer.serialize_batch(data)
-        table = pa.Table.from_pylist(records)
-        pq.write_to_dataset(table, root_path=output_path)
-        self.logger.info(f"Written {len(table)} {self.name} records to {output_path}")
+        arrow_table = pa.Table.from_pylist(JsonSerializer.serialize_batch(data))
+        config = ConfigLoader().get_lakehouse()
+        catalog = config.open_catalog()
+        namespace = config.namespace(DataStageType.BRONZE, self.dataset)
+        table_id = config.table_id(DataStageType.BRONZE, self.dataset)
+
+        try:
+            catalog.create_namespace(namespace)
+        except NamespaceAlreadyExistsError:
+            pass
+
+        if catalog.table_exists(table_id):
+            iceberg_table = catalog.load_table(table_id)
+        else:
+            schema = pyarrow_to_schema(arrow_table.schema)
+            iceberg_table = catalog.create_table(
+                table_id,
+                schema=schema,
+                partition_spec=config.partition_spec(self.dataset.dataset_type, schema),
+            )
+
+        if self.dataset.dataset_type == DatasetType.SOURCES:
+            iceberg_table.append(arrow_table)
+        else:
+            iceberg_table.overwrite(arrow_table)
+
+        self.logger.info(f"Written {len(arrow_table)} {self.name} records to {namespace}.{table_id[1]}")
 
 
 @dataclass
