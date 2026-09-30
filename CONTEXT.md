@@ -41,7 +41,12 @@ A consumption boundary range (in kWh/month) that determines which per-kWh price 
 _Avoid_: Consumption tier, usage band
 
 **Valid from / Valid to**:
-SCD Type 2 timestamps. `valid_from` is the snapshot/ingest timestamp; `valid_to` is `9999-12-31` for the current version.
+SCD Type 2 validity endpoints. Provenance is per-entity: for the four EVN tariff
+tables `valid_from` is a date parsed from the source text during refine
+(`refine/assets/extraction.py:extract_valid_from_date`, `dd.mm.yyyy` →
+`to_date`); it is not the snapshot or ingest timestamp. `valid_to` is
+`9999-12-31` for the current version. Validity ranges are half-open
+`[valid_from, valid_to)` per the **Validity range** entry.
 _Avoid_: Effective date, expiry, as-of
 
 **Validity range**:
