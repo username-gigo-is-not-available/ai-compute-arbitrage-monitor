@@ -54,7 +54,7 @@ class TestSparkTable(unittest.TestCase):
         ds = Dataset(dataset_name=DatasetName.COMPUTE_OFFERS, dataset_type=DatasetType.SOURCES)
         self.assertEqual(
             cfg.spark_table(DataStageType.BRONZE, ds),
-            "lake.bronze_sources.compute_offers",
+            "ai_compute_arbitrage_monitor_catalog.bronze_sources.compute_offers",
         )
 
     def test_seed(self):
@@ -62,7 +62,7 @@ class TestSparkTable(unittest.TestCase):
         ds = Dataset(dataset_name=DatasetName.ELECTRICITY_TARIFF_TIERS, dataset_type=DatasetType.SEEDS)
         self.assertEqual(
             cfg.spark_table(DataStageType.SILVER, ds),
-            "lake.silver_seeds.electricity_tariff_tiers",
+            "ai_compute_arbitrage_monitor_catalog.silver_seeds.electricity_tariff_tiers",
         )
 
 

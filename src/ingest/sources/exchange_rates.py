@@ -17,6 +17,7 @@ from config.loader import ConfigLoader
 from config.storage import GCPStorageConfig
 from ingest.base import AsyncIngestor
 from ingest.models.exchange_rate import ExchangeRate
+from ingest.schemas.exchange_rates import EXCHANGE_RATES_SCHEMA
 
 
 @dataclass
@@ -83,6 +84,7 @@ async def main():
         config=exchange_rate_config,
         storage_config=storage_config,
         lakehouse_config=loader.get_lakehouse(),
+        bronze_schema=EXCHANGE_RATES_SCHEMA,
         http_config=loader.get_http(),
     )
     logging.info(f"Starting source {exchange_rate_ingestor.name}...")

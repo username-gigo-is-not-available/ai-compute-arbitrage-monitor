@@ -1,10 +1,12 @@
 import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
+from enum import Enum
 from http import HTTPStatus
 from typing import Any, cast
 
 import pyarrow as pa
+from pyiceberg.schema import Schema
 from tenacity import (
     before_sleep_log,
     retry,
@@ -15,12 +17,11 @@ from tenacity import (
 )
 
 from common.classes import Dataset
-from common.enums import DataStageType
+from common.enums import DataStageType, DatasetType
 from common.types import DatasetConfig
 from config.lakehouse import GCPLakehouseConfig
 from config.storage import GCPStorageConfig
 from ingest.models.types import IngestorRecord
-from serializers.json_serializer import JsonSerializer
 
 
 @dataclass
@@ -29,6 +30,7 @@ class Ingestor(ABC):
     config: DatasetConfig
     storage_config: GCPStorageConfig
     lakehouse_config: GCPLakehouseConfig
+    bronze_schema: Schema
     name: str = field(init=False)
     logger: logging.Logger = field(init=False)
 
@@ -40,6 +42,23 @@ class Ingestor(ABC):
     def parse(self, **kwargs) -> IngestorRecord | None:
         raise NotImplementedError
 
+    def init(self) -> None:
+        from pyiceberg.exceptions import NamespaceAlreadyExistsError
+
+        catalog = self.lakehouse_config.open_catalog()
+        namespace = self.lakehouse_config.namespace(DataStageType.BRONZE, self.dataset)
+        table_id = self.lakehouse_config.table_id(DataStageType.BRONZE, self.dataset)
+        try:
+            catalog.create_namespace(namespace)
+        except NamespaceAlreadyExistsError:
+            pass
+        if not catalog.table_exists(table_id):
+            catalog.create_table(
+                table_id,
+                schema=self.bronze_schema,
+                partition_spec=self.lakehouse_config.partition_spec(self.dataset.dataset_type, self.bronze_schema),
+            )
+
     def _handle_result(self, data: list[IngestorRecord]) -> None:
         if data:
             self.logger.info(f"{self.name} fetched {len(data)} records")
@@ -48,9 +67,14 @@ class Ingestor(ABC):
             self.logger.warning(f"{self.name} returned no data, skipping store.")
 
     def store(self, data: list[IngestorRecord]) -> None:
-        arrow_table = pa.Table.from_pylist(JsonSerializer.serialize_batch(data))
+        rows = [{k: v.value if isinstance(v, Enum) else v for k, v in r.model_dump().items()} for r in data]
+        arrow_table = pa.Table.from_pylist(rows)
         catalog = self.lakehouse_config.open_catalog()
-        self.lakehouse_config.write(catalog, arrow_table, DataStageType.BRONZE, self.dataset)
+        table = catalog.load_table(self.lakehouse_config.table_id(DataStageType.BRONZE, self.dataset))
+        if self.dataset.dataset_type == DatasetType.SOURCES:
+            table.append(arrow_table)
+        else:
+            table.overwrite(arrow_table)
         self.logger.info(f"Written {len(arrow_table)} {self.name} records to Bronze")
 
 
@@ -82,6 +106,7 @@ class SyncIngestor(Ingestor):
 
     def run(self) -> None:
         self.logger.info(f"Starting load for {self.name}...")
+        self.init()
         self._handle_result(self.load())
 
 
@@ -113,4 +138,5 @@ class AsyncIngestor(Ingestor):
 
     async def run(self) -> None:
         self.logger.info(f"Starting load for {self.name}...")
+        self.init()
         self._handle_result(data=await self.load())

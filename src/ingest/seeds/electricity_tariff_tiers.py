@@ -12,6 +12,7 @@ from config.loader import ConfigLoader
 from config.storage import GCPStorageConfig
 from ingest.evn_base import EVNBaseIngestor
 from ingest.models.electricity_tariff_tier import ElectricityTariffTier
+from ingest.schemas.electricity_tariff_tiers import ELECTRICITY_TARIFF_TIERS_SCHEMA
 
 
 @dataclass(frozen=True)
@@ -106,6 +107,7 @@ def main():
         config=evn_config,
         storage_config=storage_config,
         lakehouse_config=loader.get_lakehouse(),
+        bronze_schema=ELECTRICITY_TARIFF_TIERS_SCHEMA,
         http_config=loader.get_http(),
     )
     logging.info(f"Starting seed {electricity_tariff_tiers_ingestor.name}...")

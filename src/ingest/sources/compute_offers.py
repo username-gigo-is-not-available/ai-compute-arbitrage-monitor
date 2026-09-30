@@ -16,6 +16,7 @@ from config.loader import ConfigLoader
 from config.storage import GCPStorageConfig
 from ingest.base import AsyncIngestor
 from ingest.models.vast_ai_offer import VastAIOffer
+from ingest.schemas.compute_offers import COMPUTE_OFFERS_SCHEMA
 
 @dataclass
 class ComputeOffersIngestor(AsyncIngestor):
@@ -112,6 +113,7 @@ async def main():
         config=vast_ai_config,
         storage_config=storage_config,
         lakehouse_config=loader.get_lakehouse(),
+        bronze_schema=COMPUTE_OFFERS_SCHEMA,
         http_config=loader.get_http(),
     )
     logging.info(f"Starting source {compute_offers_ingestor.name}...")

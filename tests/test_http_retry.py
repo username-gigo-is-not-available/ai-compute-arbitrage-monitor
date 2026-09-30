@@ -44,6 +44,8 @@ from config.apis.vast_ai import VastAIConfig
 from config.http import HttpConfig
 from config.lakehouse import GCPLakehouseConfig
 from config.storage import GCPStorageConfig
+from pyiceberg.schema import Schema
+from pyiceberg.types import NestedField, StringType
 from ingest.evn_base import EVNBaseIngestor
 from ingest.sources.compute_offers import ComputeOffersIngestor
 from ingest.sources.exchange_rates import ExchangeRateIngestor
@@ -92,6 +94,9 @@ def _http(retry_count: int = HTTP_RETRY_COUNT, retry_delay_seconds: int = HTTP_R
 
 def _storage() -> GCPStorageConfig:
     return GCPStorageConfig(bucket_name="test-bucket")
+
+
+_DUMMY_BRONZE_SCHEMA = Schema(NestedField(field_id=1, name="id", field_type=StringType(), required=False))
 
 
 def _lakehouse() -> GCPLakehouseConfig:
@@ -166,6 +171,7 @@ def _evn(retry_count: int) -> _EVNTestIngestor:
         config=EVNConfig(enabled=True, tariff_tiers_url="https://evn.test/", tariff_system_url="https://evn.test/"),
         storage_config=_storage(),
         lakehouse_config=_lakehouse(),
+        bronze_schema=_DUMMY_BRONZE_SCHEMA,
         http_config=_http(retry_count=retry_count),
     )
 
@@ -263,11 +269,11 @@ def _exchange(retry_count: int) -> ExchangeRateIngestor:
             base_url="https://exchangerate.test/",
             from_currency="USD",
             to_currency="MKD",
-
             api_key="test-key",
         ),
         storage_config=_storage(),
         lakehouse_config=_lakehouse(),
+        bronze_schema=_DUMMY_BRONZE_SCHEMA,
         http_config=_http(retry_count=retry_count),
     )
 
@@ -341,6 +347,7 @@ def _compute(retry_count: int) -> ComputeOffersIngestor:
         config=VastAIConfig(enabled=True, base_url="https://console.vast.test/api/v0", limit=10),
         storage_config=_storage(),
         lakehouse_config=_lakehouse(),
+        bronze_schema=_DUMMY_BRONZE_SCHEMA,
         http_config=_http(retry_count=retry_count),
     )
 
