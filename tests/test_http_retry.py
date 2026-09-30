@@ -43,7 +43,6 @@ from config.apis.exchange_rate import ExchangeRateConfig
 from config.apis.vast_ai import VastAIConfig
 from config.http import HttpConfig
 from config.lakehouse import GCPLakehouseConfig
-from config.storage import GCPStorageConfig
 from ingest.write_strategy import AppendByHour, FullOverwrite
 from pyiceberg.schema import Schema
 from pyiceberg.types import NestedField, StringType
@@ -91,10 +90,6 @@ def _http(retry_count: int = HTTP_RETRY_COUNT, retry_delay_seconds: int = HTTP_R
         retry_count=retry_count,
         retry_delay_seconds=retry_delay_seconds,
     )
-
-
-def _storage() -> GCPStorageConfig:
-    return GCPStorageConfig(bucket_name="test-bucket")
 
 
 _DUMMY_BRONZE_SCHEMA = Schema(NestedField(field_id=1, name="id", field_type=StringType(), required=False))
@@ -170,7 +165,6 @@ def _evn(retry_count: int) -> _EVNTestIngestor:
     return _EVNTestIngestor(
         dataset=Dataset(dataset_name=DatasetName.ELECTRICITY_TARIFF_TIERS, dataset_type=DatasetType.SEEDS),
         config=EVNConfig(enabled=True, tariff_tiers_url="https://evn.test/", tariff_system_url="https://evn.test/"),
-        storage_config=_storage(),
         lakehouse_config=_lakehouse(),
         bronze_schema=_DUMMY_BRONZE_SCHEMA,
         write_strategy=FullOverwrite(),
@@ -273,7 +267,6 @@ def _exchange(retry_count: int) -> ExchangeRateIngestor:
             to_currency="MKD",
             api_key="test-key",
         ),
-        storage_config=_storage(),
         lakehouse_config=_lakehouse(),
         bronze_schema=_DUMMY_BRONZE_SCHEMA,
         write_strategy=AppendByHour(),
@@ -348,7 +341,6 @@ def _compute(retry_count: int) -> ComputeOffersIngestor:
     return ComputeOffersIngestor(
         dataset=Dataset(dataset_name=DatasetName.COMPUTE_OFFERS, dataset_type=DatasetType.SOURCES),
         config=VastAIConfig(enabled=True, base_url="https://console.vast.test/api/v0", limit=10),
-        storage_config=_storage(),
         lakehouse_config=_lakehouse(),
         bronze_schema=_DUMMY_BRONZE_SCHEMA,
         write_strategy=AppendByHour(),

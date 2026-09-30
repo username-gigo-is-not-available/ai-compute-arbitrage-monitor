@@ -8,7 +8,6 @@ from common.classes import Dataset
 from common.enums import DatasetName, DatasetType, ConsumerCategoryType, TariffWindowType
 from config.apis.evn import EVNConfig
 from config.loader import ConfigLoader
-from config.storage import GCPStorageConfig
 from ingest.evn_base import EVNBaseIngestor
 from ingest.models.electricity_tariff_block import ElectricityTariffBlock
 from ingest.schemas.electricity_tariff_blocks import ELECTRICITY_TARIFF_BLOCKS_BRONZE_SCHEMA
@@ -63,7 +62,6 @@ class ElectricityTariffBlocksIngestor(EVNBaseIngestor):
 def main():
     loader: ConfigLoader = ConfigLoader()
     evn_config: EVNConfig = loader.get_evn()
-    storage_config: GCPStorageConfig = loader.get_storage()
     electricity_tariff_blocks: Dataset = Dataset(dataset_name=DatasetName.ELECTRICITY_TARIFF_BLOCKS,
                                                  dataset_type=DatasetType.SEEDS)
     if not evn_config.enabled:
@@ -72,7 +70,6 @@ def main():
     electricity_tariff_blocks_ingestor = ElectricityTariffBlocksIngestor(
         dataset=electricity_tariff_blocks,
         config=evn_config,
-        storage_config=storage_config,
         lakehouse_config=loader.get_lakehouse(),
         bronze_schema=ELECTRICITY_TARIFF_BLOCKS_BRONZE_SCHEMA,
         write_strategy=FullOverwrite(),

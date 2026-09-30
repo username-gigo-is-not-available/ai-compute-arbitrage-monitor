@@ -12,7 +12,6 @@ from common.classes import Dataset
 from common.enums import OfferType, DatasetType, DatasetName
 from config.apis.vast_ai import VastAIConfig
 from config.loader import ConfigLoader
-from config.storage import GCPStorageConfig
 from ingest.base import AsyncIngestor
 from ingest.models.vast_ai_offer import VastAIOffer
 from ingest.schemas.compute_offers import COMPUTE_OFFERS_BRONZE_SCHEMA
@@ -102,7 +101,6 @@ class ComputeOffersIngestor(AsyncIngestor):
 async def main():
     loader: ConfigLoader = ConfigLoader()
     vast_ai_config: VastAIConfig = loader.get_vast_ai()
-    storage_config: GCPStorageConfig = loader.get_storage()
     compute_offers: Dataset = Dataset(dataset_name=DatasetName.COMPUTE_OFFERS, dataset_type=DatasetType.SOURCES)
     if not vast_ai_config.enabled:
         return
@@ -110,7 +108,6 @@ async def main():
     compute_offers_ingestor: ComputeOffersIngestor = ComputeOffersIngestor(
         dataset=compute_offers,
         config=vast_ai_config,
-        storage_config=storage_config,
         lakehouse_config=loader.get_lakehouse(),
         bronze_schema=COMPUTE_OFFERS_BRONZE_SCHEMA,
         write_strategy=AppendByHour(),

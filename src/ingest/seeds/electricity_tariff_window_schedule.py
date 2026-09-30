@@ -6,7 +6,6 @@ from common.classes import Dataset
 from common.enums import DatasetType, DatasetName
 from config.apis.evn import EVNConfig
 from config.loader import ConfigLoader
-from config.storage import GCPStorageConfig
 from ingest.evn_base import EVNBaseIngestor
 from ingest.models.electricity_tariff_window_schedule import ElectricityTariffWindowSchedule
 from ingest.schemas.electricity_tariff_window_schedule import ELECTRICITY_TARIFF_WINDOW_SCHEDULE_BRONZE_SCHEMA
@@ -52,7 +51,6 @@ class ElectricityTariffWindowScheduleIngestor(EVNBaseIngestor):
 def main():
     loader: ConfigLoader = ConfigLoader()
     evn_config: EVNConfig = loader.get_evn()
-    storage_config: GCPStorageConfig = loader.get_storage()
     electricity_tariff_window_schedule_dataset: Dataset = Dataset(dataset_name=DatasetName.ELECTRICITY_TARIFF_WINDOW_SCHEDULE, dataset_type=DatasetType.SEEDS)
     if not evn_config.enabled:
         return
@@ -60,7 +58,6 @@ def main():
     electricity_tariff_window_schedule_ingestor = ElectricityTariffWindowScheduleIngestor(
         dataset=electricity_tariff_window_schedule_dataset,
         config=evn_config,
-        storage_config=storage_config,
         lakehouse_config=loader.get_lakehouse(),
         bronze_schema=ELECTRICITY_TARIFF_WINDOW_SCHEDULE_BRONZE_SCHEMA,
         write_strategy=FullOverwrite(),

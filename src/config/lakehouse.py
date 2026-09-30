@@ -35,7 +35,8 @@ class GCPLakehouseConfig(BaseModel):
         return (self.namespace(stage, dataset), dataset.dataset_name.value)
 
     def spark_table(self, stage: DataStageType, dataset: Dataset) -> str:
-        return f"{self.spark_alias}.{self.namespace(stage, dataset)}.{dataset.dataset_name.value}"
+        ns, tbl = self.table_id(stage, dataset)
+        return f"{self.spark_alias}.{ns}.{tbl}"
 
     def open_catalog(self):
         # pyiceberg REST client has no Google ADC integration; pass a fresh Bearer token explicitly

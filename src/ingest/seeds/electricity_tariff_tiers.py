@@ -8,7 +8,6 @@ from common.classes import Dataset
 from common.enums import DatasetName, DatasetType, ConsumerCategoryType
 from config.apis.evn import EVNConfig
 from config.loader import ConfigLoader
-from config.storage import GCPStorageConfig
 from ingest.evn_base import EVNBaseIngestor
 from ingest.models.electricity_tariff_tier import ElectricityTariffTier
 from ingest.schemas.electricity_tariff_tiers import ELECTRICITY_TARIFF_TIERS_BRONZE_SCHEMA
@@ -95,7 +94,6 @@ class ElectricityTariffTiersIngestor(EVNBaseIngestor):
 def main():
     loader: ConfigLoader = ConfigLoader()
     evn_config: EVNConfig = loader.get_evn()
-    storage_config: GCPStorageConfig = loader.get_storage()
     electricity_tariff_tiers: Dataset = Dataset(dataset_name=DatasetName.ELECTRICITY_TARIFF_TIERS,
                                                 dataset_type=DatasetType.SEEDS)
     if not evn_config.enabled:
@@ -104,7 +102,6 @@ def main():
     electricity_tariff_tiers_ingestor = ElectricityTariffTiersIngestor(
         dataset=electricity_tariff_tiers,
         config=evn_config,
-        storage_config=storage_config,
         lakehouse_config=loader.get_lakehouse(),
         bronze_schema=ELECTRICITY_TARIFF_TIERS_BRONZE_SCHEMA,
         write_strategy=FullOverwrite(),

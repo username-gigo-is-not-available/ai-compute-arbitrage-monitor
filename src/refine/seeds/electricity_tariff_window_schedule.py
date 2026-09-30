@@ -8,7 +8,6 @@ from common.classes import Dataset
 from common.enums import DatasetType, DatasetName, TariffWindowType
 from config.apis.evn import EVNConfig
 from config.loader import ConfigLoader
-from config.storage import GCPStorageConfig
 from refine.write_strategy import PartitionedOverwrite
 from refine.assets.cleaning import trim_whitespace, empty_to_null
 from refine.assets.extraction import extract_valid_from_date
@@ -72,7 +71,6 @@ def run():
     session: SparkSession = initialize_spark()
     loader: ConfigLoader = ConfigLoader()
     evn_config: EVNConfig = loader.get_evn()
-    storage_config: GCPStorageConfig = loader.get_storage()
     electricity_tariff_window_schedule: Dataset = Dataset(dataset_name=DatasetName.ELECTRICITY_TARIFF_WINDOW_SCHEDULE,
                                                    dataset_type=DatasetType.SEEDS)
     if not evn_config.enabled:
@@ -83,7 +81,6 @@ def run():
         schema=ELECTRICITY_TARIFF_WINDOW_SCHEDULE_SCHEMA,
         dataset=electricity_tariff_window_schedule,
         config=evn_config,
-        storage_config=storage_config,
         lakehouse_config=loader.get_lakehouse(),
         silver_strategy=PartitionedOverwrite(),
     )

@@ -9,7 +9,6 @@ from common.classes import Dataset
 from common.enums import DataStageType
 from common.types import DatasetConfig
 from config.lakehouse import GCPLakehouseConfig
-from config.storage import GCPStorageConfig
 from refine.assets.casting import cast_to_schema
 from refine.assets.extraction import add_processed_at_column
 from refine.schemas.base import META_COLUMNS_SCHEMA
@@ -22,7 +21,6 @@ class Pipeline:
     schema: StructType
     dataset: Dataset
     config: DatasetConfig
-    storage_config: GCPStorageConfig
     lakehouse_config: GCPLakehouseConfig
     silver_strategy: SilverWriteStrategy
     transform_steps: list[Callable[[DataFrame], DataFrame]] = field(default_factory=list)
@@ -62,7 +60,6 @@ class Pipeline:
         name = self.__class__.__name__
         self.logger.info(f"{name} starting")
         df = self.read()
-        self.logger.info(f"{name} read {df.count()} records")
         generated_df = self.generate(df)
         if generated_df is not None:
             self.logger.info(f"{name} generation complete")

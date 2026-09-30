@@ -21,7 +21,6 @@ from common.enums import DataStageType
 from common.types import DatasetConfig
 from config.http import HttpConfig
 from config.lakehouse import GCPLakehouseConfig
-from config.storage import GCPStorageConfig
 from ingest.models.types import IngestorRecord
 from ingest.write_strategy import BronzeWriteStrategy
 
@@ -30,12 +29,12 @@ from ingest.write_strategy import BronzeWriteStrategy
 class Ingestor(ABC):
     dataset: Dataset
     config: DatasetConfig
-    storage_config: GCPStorageConfig
     lakehouse_config: GCPLakehouseConfig
     bronze_schema: Schema
     write_strategy: BronzeWriteStrategy
     name: str = field(init=False)
     logger: logging.Logger = field(init=False)
+    _catalog: Any = field(init=False, default=None)
 
     def __post_init__(self):
         self.name = self.__class__.__name__
@@ -46,15 +45,15 @@ class Ingestor(ABC):
         raise NotImplementedError
 
     def init(self) -> None:
-        catalog = self.lakehouse_config.open_catalog()
+        self._catalog = self.lakehouse_config.open_catalog()
         namespace = self.lakehouse_config.namespace(DataStageType.BRONZE, self.dataset)
         table_id = self.lakehouse_config.table_id(DataStageType.BRONZE, self.dataset)
         try:
-            catalog.create_namespace(namespace)
+            self._catalog.create_namespace(namespace)
         except NamespaceAlreadyExistsError:
             pass
-        if not catalog.table_exists(table_id):
-            catalog.create_table(
+        if not self._catalog.table_exists(table_id):
+            self._catalog.create_table(
                 table_id,
                 schema=self.bronze_schema,
                 partition_spec=self.write_strategy.partition_spec(self.bronze_schema),
@@ -68,8 +67,8 @@ class Ingestor(ABC):
             self.logger.warning(f"{self.name} returned no data, skipping store.")
 
     def store(self, data: list[IngestorRecord]) -> None:
+        catalog = self._catalog or self.lakehouse_config.open_catalog()
         arrow_table = pa.Table.from_pylist([r.to_row() for r in data])
-        catalog = self.lakehouse_config.open_catalog()
         table = catalog.load_table(self.lakehouse_config.table_id(DataStageType.BRONZE, self.dataset))
         self.write_strategy.write(table, arrow_table)
         self.logger.info(f"Written {len(arrow_table)} {self.name} records to Bronze")

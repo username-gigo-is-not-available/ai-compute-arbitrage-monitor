@@ -13,7 +13,6 @@ from common.classes import Dataset
 from common.enums import DatasetType, DatasetName
 from config.apis.exchange_rate import ExchangeRateConfig
 from config.loader import ConfigLoader
-from config.storage import GCPStorageConfig
 from ingest.base import AsyncIngestor
 from ingest.models.exchange_rate import ExchangeRate
 from ingest.schemas.exchange_rates import EXCHANGE_RATES_BRONZE_SCHEMA
@@ -73,7 +72,6 @@ class ExchangeRateIngestor(AsyncIngestor):
 async def main():
     loader: ConfigLoader = ConfigLoader()
     exchange_rate_config: ExchangeRateConfig = loader.get_exchange_rate()
-    storage_config: GCPStorageConfig = loader.get_storage()
     exchange_rates: Dataset = Dataset(dataset_name=DatasetName.EXCHANGE_RATES, dataset_type=DatasetType.SOURCES)
     if not exchange_rate_config.enabled:
         return
@@ -81,7 +79,6 @@ async def main():
     exchange_rate_ingestor = ExchangeRateIngestor(
         dataset=exchange_rates,
         config=exchange_rate_config,
-        storage_config=storage_config,
         lakehouse_config=loader.get_lakehouse(),
         bronze_schema=EXCHANGE_RATES_BRONZE_SCHEMA,
         write_strategy=AppendByHour(),
