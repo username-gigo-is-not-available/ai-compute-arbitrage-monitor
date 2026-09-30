@@ -5,8 +5,6 @@ from http import HTTPStatus
 from typing import Any, cast
 
 import pyarrow as pa
-from pyiceberg.exceptions import NamespaceAlreadyExistsError
-from pyiceberg.io.pyarrow import pyarrow_to_schema
 from tenacity import (
     before_sleep_log,
     retry,
@@ -17,9 +15,9 @@ from tenacity import (
 )
 
 from common.classes import Dataset
-from common.enums import DataStageType, DatasetType
+from common.enums import DataStageType
 from common.types import DatasetConfig
-from config.loader import ConfigLoader
+from config.lakehouse import GCPLakehouseConfig
 from config.storage import GCPStorageConfig
 from ingest.models.types import IngestorRecord
 from serializers.json_serializer import JsonSerializer
@@ -30,6 +28,7 @@ class Ingestor(ABC):
     dataset: Dataset
     config: DatasetConfig
     storage_config: GCPStorageConfig
+    lakehouse_config: GCPLakehouseConfig
     name: str = field(init=False)
     logger: logging.Logger = field(init=False)
 
@@ -50,32 +49,9 @@ class Ingestor(ABC):
 
     def store(self, data: list[IngestorRecord]) -> None:
         arrow_table = pa.Table.from_pylist(JsonSerializer.serialize_batch(data))
-        config = ConfigLoader().get_lakehouse()
-        catalog = config.open_catalog()
-        namespace = config.namespace(DataStageType.BRONZE, self.dataset)
-        table_id = config.table_id(DataStageType.BRONZE, self.dataset)
-
-        try:
-            catalog.create_namespace(namespace)
-        except NamespaceAlreadyExistsError:
-            pass
-
-        if catalog.table_exists(table_id):
-            iceberg_table = catalog.load_table(table_id)
-        else:
-            schema = pyarrow_to_schema(arrow_table.schema)
-            iceberg_table = catalog.create_table(
-                table_id,
-                schema=schema,
-                partition_spec=config.partition_spec(self.dataset.dataset_type, schema),
-            )
-
-        if self.dataset.dataset_type == DatasetType.SOURCES:
-            iceberg_table.append(arrow_table)
-        else:
-            iceberg_table.overwrite(arrow_table)
-
-        self.logger.info(f"Written {len(arrow_table)} {self.name} records to {namespace}.{table_id[1]}")
+        catalog = self.lakehouse_config.open_catalog()
+        self.lakehouse_config.write(catalog, arrow_table, DataStageType.BRONZE, self.dataset)
+        self.logger.info(f"Written {len(arrow_table)} {self.name} records to Bronze")
 
 
 @dataclass

@@ -11,7 +11,7 @@ import unittest
 
 from common.classes import Dataset
 from common.enums import DatasetName, DatasetType, DataStageType
-from config.lakehouse import GCPLakehouseConfig, SPARK_CATALOG_ALIAS
+from config.lakehouse import GCPLakehouseConfig
 
 
 def _config() -> GCPLakehouseConfig:
@@ -54,7 +54,7 @@ class TestSparkTable(unittest.TestCase):
         ds = Dataset(dataset_name=DatasetName.COMPUTE_OFFERS, dataset_type=DatasetType.SOURCES)
         self.assertEqual(
             cfg.spark_table(DataStageType.BRONZE, ds),
-            f"{SPARK_CATALOG_ALIAS}.bronze_sources.compute_offers",
+            "lake.bronze_sources.compute_offers",
         )
 
     def test_seed(self):
@@ -62,7 +62,7 @@ class TestSparkTable(unittest.TestCase):
         ds = Dataset(dataset_name=DatasetName.ELECTRICITY_TARIFF_TIERS, dataset_type=DatasetType.SEEDS)
         self.assertEqual(
             cfg.spark_table(DataStageType.SILVER, ds),
-            f"{SPARK_CATALOG_ALIAS}.silver_seeds.electricity_tariff_tiers",
+            "lake.silver_seeds.electricity_tariff_tiers",
         )
 
 

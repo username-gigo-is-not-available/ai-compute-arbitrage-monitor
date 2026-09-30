@@ -10,7 +10,7 @@ from pyspark.sql.utils import AnalysisException
 from common.classes import Dataset
 from common.enums import DataStageType, DatasetType
 from common.types import DatasetConfig
-from config.loader import ConfigLoader
+from config.lakehouse import GCPLakehouseConfig
 from config.storage import GCPStorageConfig
 from refine.assets.casting import cast_to_schema
 from refine.assets.extraction import add_processed_at_column
@@ -24,6 +24,7 @@ class Pipeline:
     dataset: Dataset
     config: DatasetConfig
     storage_config: GCPStorageConfig
+    lakehouse_config: GCPLakehouseConfig
     transform_steps: list[Callable[[DataFrame], DataFrame]] = field(default_factory=list)
     logger: logging.Logger = field(init=False)
 
@@ -32,13 +33,12 @@ class Pipeline:
         self.logger = logging.getLogger(self.name)
 
     def read(self) -> DataFrame:
-        config = ConfigLoader().get_lakehouse()
-        bronze = config.spark_table(DataStageType.BRONZE, self.dataset)
+        bronze = self.lakehouse_config.spark_table(DataStageType.BRONZE, self.dataset)
         self.logger.info(f"Reading from {bronze}")
         df = self.session.table(bronze)
 
         if self.dataset.dataset_type == DatasetType.SOURCES:
-            silver = config.spark_table(DataStageType.SILVER, self.dataset)
+            silver = self.lakehouse_config.spark_table(DataStageType.SILVER, self.dataset)
             watermark = self._watermark(silver)
             if watermark is not None:
                 df = df.filter(col("ingested_at") > watermark)
@@ -54,8 +54,7 @@ class Pipeline:
             return None
 
     def save(self, df: DataFrame) -> DataFrame:
-        config = ConfigLoader().get_lakehouse()
-        silver = config.spark_table(DataStageType.SILVER, self.dataset)
+        silver = self.lakehouse_config.spark_table(DataStageType.SILVER, self.dataset)
         self.logger.info(f"Writing to {silver}")
 
         try:

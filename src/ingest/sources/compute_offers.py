@@ -111,6 +111,7 @@ async def main():
         dataset=compute_offers,
         config=vast_ai_config,
         storage_config=storage_config,
+        lakehouse_config=loader.get_lakehouse(),
         http_config=loader.get_http(),
     )
     logging.info(f"Starting source {compute_offers_ingestor.name}...")

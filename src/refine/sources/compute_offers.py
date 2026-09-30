@@ -47,7 +47,8 @@ def run():
         schema=COMPUTE_OFFER_SCHEMA,
         dataset=compute_offers,
         config=vast_ai_config,
-        storage_config=storage_config
+        storage_config=storage_config,
+        lakehouse_config=loader.get_lakehouse(),
     )
     compute_offers_pipeline.run()
 

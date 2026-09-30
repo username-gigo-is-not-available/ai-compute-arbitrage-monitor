@@ -73,6 +73,7 @@ def main():
         dataset=electricity_tariff_blocks,
         config=evn_config,
         storage_config=storage_config,
+        lakehouse_config=loader.get_lakehouse(),
         http_config=loader.get_http(),
     )
     logging.info(f"Starting seed {electricity_tariff_blocks_ingestor.name}...")

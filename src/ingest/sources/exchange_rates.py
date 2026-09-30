@@ -82,6 +82,7 @@ async def main():
         dataset=exchange_rates,
         config=exchange_rate_config,
         storage_config=storage_config,
+        lakehouse_config=loader.get_lakehouse(),
         http_config=loader.get_http(),
     )
     logging.info(f"Starting source {exchange_rate_ingestor.name}...")

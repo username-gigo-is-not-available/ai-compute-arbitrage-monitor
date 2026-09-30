@@ -42,7 +42,8 @@ def run():
         schema=EXCHANGE_RATE_SCHEMA,
         dataset=exchange_rates,
         config=exchange_rate_config,
-        storage_config=storage_config
+        storage_config=storage_config,
+        lakehouse_config=loader.get_lakehouse(),
     )
     exchange_rate_pipeline.run()
 

@@ -67,6 +67,7 @@ def run():
         dataset=electricity_tariff_blocks,
         config=evn_config,
         storage_config=storage_config,
+        lakehouse_config=loader.get_lakehouse(),
     )
     electricity_tariff_blocks_pipeline.run()
 

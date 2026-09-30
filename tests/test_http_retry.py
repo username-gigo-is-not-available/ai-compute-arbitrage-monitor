@@ -42,6 +42,7 @@ from config.apis.evn import EVNConfig
 from config.apis.exchange_rate import ExchangeRateConfig
 from config.apis.vast_ai import VastAIConfig
 from config.http import HttpConfig
+from config.lakehouse import GCPLakehouseConfig
 from config.storage import GCPStorageConfig
 from ingest.evn_base import EVNBaseIngestor
 from ingest.sources.compute_offers import ComputeOffersIngestor
@@ -91,6 +92,10 @@ def _http(retry_count: int = HTTP_RETRY_COUNT, retry_delay_seconds: int = HTTP_R
 
 def _storage() -> GCPStorageConfig:
     return GCPStorageConfig(bucket_name="test-bucket")
+
+
+def _lakehouse() -> GCPLakehouseConfig:
+    return GCPLakehouseConfig(catalog_id="test", project_id="test", warehouse="gs://test")
 
 
 class FakeResponse:
@@ -160,6 +165,7 @@ def _evn(retry_count: int) -> _EVNTestIngestor:
         dataset=Dataset(dataset_name=DatasetName.ELECTRICITY_TARIFF_TIERS, dataset_type=DatasetType.SEEDS),
         config=EVNConfig(enabled=True, tariff_tiers_url="https://evn.test/", tariff_system_url="https://evn.test/"),
         storage_config=_storage(),
+        lakehouse_config=_lakehouse(),
         http_config=_http(retry_count=retry_count),
     )
 
@@ -257,9 +263,11 @@ def _exchange(retry_count: int) -> ExchangeRateIngestor:
             base_url="https://exchangerate.test/",
             from_currency="USD",
             to_currency="MKD",
+
             api_key="test-key",
         ),
         storage_config=_storage(),
+        lakehouse_config=_lakehouse(),
         http_config=_http(retry_count=retry_count),
     )
 
@@ -332,6 +340,7 @@ def _compute(retry_count: int) -> ComputeOffersIngestor:
         dataset=Dataset(dataset_name=DatasetName.COMPUTE_OFFERS, dataset_type=DatasetType.SOURCES),
         config=VastAIConfig(enabled=True, base_url="https://console.vast.test/api/v0", limit=10),
         storage_config=_storage(),
+        lakehouse_config=_lakehouse(),
         http_config=_http(retry_count=retry_count),
     )
 
