@@ -15,6 +15,7 @@ resource "google_project_iam_member" "dataproc_roles" {
     "roles/bigquery.dataEditor",
     "roles/bigquery.jobUser",
     "roles/artifactregistry.reader",
+    "roles/biglake.editor",
   ])
 
   project = var.project_id
@@ -36,6 +37,8 @@ resource "google_project_iam_member" "dbt_roles" {
     "roles/bigquery.dataEditor",
     "roles/bigquery.jobUser",
     "roles/storage.objectViewer",
+    # 0D: read from the Lakehouse Iceberg REST catalog via dbt
+    "roles/biglake.editor",
   ])
 
   project = var.project_id
@@ -61,7 +64,10 @@ resource "google_project_iam_member" "composer_roles" {
     "roles/bigquery.dataEditor",
     "roles/bigquery.jobUser",
     "roles/dataproc.editor",
-    "roles/run.developer"
+    "roles/run.developer",
+    # 0D: Composer submits Dataproc batches that touch the Lakehouse
+    # Iceberg REST catalog; needed if the SA itself reads catalog metadata.
+    "roles/biglake.editor",
   ])
 
   project = var.project_id
