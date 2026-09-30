@@ -6,7 +6,7 @@ from pydantic import BaseModel
 from pyiceberg.catalog import load_catalog
 
 from common.classes import Dataset
-from common.enums import DataStageType, ExecutionType
+from common.enums import DataStageType
 
 
 class GCPLakehouseConfig(BaseModel):
@@ -20,7 +20,7 @@ class GCPLakehouseConfig(BaseModel):
     def spark_alias(self) -> str:
         return self.catalog_id.replace("-", "_")
 
-    def _catalog_props(self) -> dict:
+    def catalog_props(self) -> dict:
         return {
             "type": "rest",
             "uri": self.REST_ENDPOINT,
@@ -43,31 +43,8 @@ class GCPLakehouseConfig(BaseModel):
         creds, _ = gcp_default(scopes=["https://www.googleapis.com/auth/cloud-platform"])
         creds.refresh(GcpRequest())
         return load_catalog(self.catalog_id, **{
-            **self._catalog_props(),
+            **self.catalog_props(),
             "token": creds.token,
             "py-io-impl": "pyiceberg.io.pyarrow.PyArrowFileIO",
         })
 
-    def configure_spark(self, builder, execution_type: ExecutionType):
-        c = self.spark_alias
-        builder = (
-            builder
-            .config(f"spark.sql.catalog.{c}", "org.apache.iceberg.spark.SparkCatalog")
-            .config(f"spark.sql.catalog.{c}.io-impl", "org.apache.iceberg.gcp.gcs.GCSFileIO")
-        )
-        for key, value in self._catalog_props().items():
-            builder = builder.config(f"spark.sql.catalog.{c}.{key}", value)
-        if execution_type == ExecutionType.LOCAL:
-            creds, _ = gcp_default(scopes=["https://www.googleapis.com/auth/cloud-platform"])
-            creds.refresh(GcpRequest())
-            builder = (
-                builder
-                .config(f"spark.sql.catalog.{c}.token", creds.token)
-                .config("spark.driver.memory", "4g")
-            )
-        elif execution_type == ExecutionType.GCP:
-            builder = builder.config(
-                f"spark.sql.catalog.{c}.rest.auth.type",
-                "org.apache.iceberg.gcp.auth.GoogleAuthManager",
-            )
-        return builder
