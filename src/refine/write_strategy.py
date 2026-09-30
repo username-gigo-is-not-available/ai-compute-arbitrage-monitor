@@ -1,6 +1,8 @@
 from abc import ABC, abstractmethod
 
 from pyspark.sql import DataFrame, SparkSession
+from pyspark.sql.functions import col, hours as spark_hours, max as spark_max
+from pyspark.sql.utils import AnalysisException
 
 
 class SilverWriteStrategy(ABC):
@@ -17,9 +19,6 @@ class IncrementalAppend(SilverWriteStrategy):
     """Sources: watermark-filtered read, append partitioned by hour(ingested_at)."""
 
     def read_filter(self, df: DataFrame, session: SparkSession, silver_table: str) -> DataFrame:
-        from pyspark.sql.functions import col, max as spark_max
-        from pyspark.sql.utils import AnalysisException
-
         try:
             row = session.table(silver_table).agg(spark_max("ingested_at")).collect()[0]
             watermark = row[0]
@@ -30,9 +29,6 @@ class IncrementalAppend(SilverWriteStrategy):
         return df
 
     def write(self, df: DataFrame, silver_table: str) -> None:
-        from pyspark.sql.functions import hours as spark_hours
-        from pyspark.sql.utils import AnalysisException
-
         try:
             df.writeTo(silver_table).append()
         except AnalysisException:
@@ -46,8 +42,6 @@ class PartitionedOverwrite(SilverWriteStrategy):
         return df
 
     def write(self, df: DataFrame, silver_table: str) -> None:
-        from pyspark.sql.utils import AnalysisException
-
         try:
             df.writeTo(silver_table).overwritePartitions()
         except AnalysisException:

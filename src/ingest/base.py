@@ -5,6 +5,7 @@ from http import HTTPStatus
 from typing import Any, cast
 
 import pyarrow as pa
+from pyiceberg.exceptions import NamespaceAlreadyExistsError
 from pyiceberg.schema import Schema
 from tenacity import (
     before_sleep_log,
@@ -45,8 +46,6 @@ class Ingestor(ABC):
         raise NotImplementedError
 
     def init(self) -> None:
-        from pyiceberg.exceptions import NamespaceAlreadyExistsError
-
         catalog = self.lakehouse_config.open_catalog()
         namespace = self.lakehouse_config.namespace(DataStageType.BRONZE, self.dataset)
         table_id = self.lakehouse_config.table_id(DataStageType.BRONZE, self.dataset)

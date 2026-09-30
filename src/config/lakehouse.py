@@ -1,6 +1,9 @@
 from typing import ClassVar
 
+from google.auth import default as gcp_default
+from google.auth.transport.requests import Request as GcpRequest
 from pydantic import BaseModel
+from pyiceberg.catalog import load_catalog
 
 from common.classes import Dataset
 from common.enums import DataStageType, ExecutionType
@@ -36,10 +39,6 @@ class GCPLakehouseConfig(BaseModel):
 
     def open_catalog(self):
         # pyiceberg REST client has no Google ADC integration; pass a fresh Bearer token explicitly
-        from google.auth import default as gcp_default
-        from google.auth.transport.requests import Request as GcpRequest
-        from pyiceberg.catalog import load_catalog
-
         creds, _ = gcp_default(scopes=["https://www.googleapis.com/auth/cloud-platform"])
         creds.refresh(GcpRequest())
         return load_catalog(self.catalog_id, **{
@@ -58,9 +57,6 @@ class GCPLakehouseConfig(BaseModel):
         for key, value in self._catalog_props().items():
             builder = builder.config(f"spark.sql.catalog.{c}.{key}", value)
         if execution_type == ExecutionType.LOCAL:
-            from google.auth import default as gcp_default
-            from google.auth.transport.requests import Request as GcpRequest
-
             creds, _ = gcp_default(scopes=["https://www.googleapis.com/auth/cloud-platform"])
             creds.refresh(GcpRequest())
             builder = (
