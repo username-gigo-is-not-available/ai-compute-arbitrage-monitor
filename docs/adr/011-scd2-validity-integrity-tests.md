@@ -2,7 +2,13 @@
 
 ## Status
 
-Accepted
+Accepted. _Correction (#34, 2026-10-01)_: the Decision below says the dims
+derive `valid_to = next valid_from - 1 day` and that this matches the half-open
+joins. It did not: `- 1 day` is a closed interval, and combined with the
+`>= valid_from and < valid_to` joins it left a one-day gap before every new
+version (inner joins in `fct_compute_offers` dropped offers on that day). The
+`valid_to` macro now returns `next valid_from` with no subtraction, so the dims
+are half-open like everything that reads them.
 
 ## Context
 

@@ -5,7 +5,7 @@ from http import HTTPStatus
 from typing import Any, cast
 
 import pyarrow as pa
-import pyarrow.parquet as pq
+from pyiceberg.catalog import Catalog
 from tenacity import (
     before_sleep_log,
     retry,
@@ -18,18 +18,21 @@ from tenacity import (
 from common.classes import Dataset
 from common.enums import DataStageType
 from common.types import DatasetConfig
-from config.storage import GCPStorageConfig
+from config.http import HttpConfig
+from config.lakehouse import GCPLakehouseConfig
 from ingest.models.types import IngestorRecord
-from serializers.json_serializer import JsonSerializer
+from ingest.write_strategy import BronzeTable
 
 
 @dataclass
 class Ingestor(ABC):
     dataset: Dataset
     config: DatasetConfig
-    storage_config: GCPStorageConfig
+    lakehouse_config: GCPLakehouseConfig
+    bronze_table: BronzeTable
     name: str = field(init=False)
     logger: logging.Logger = field(init=False)
+    _catalog: Catalog | None = field(init=False, default=None)
 
     def __post_init__(self):
         self.name = self.__class__.__name__
@@ -39,6 +42,16 @@ class Ingestor(ABC):
     def parse(self, **kwargs) -> IngestorRecord | None:
         raise NotImplementedError
 
+    def ensure_bronze_table(self) -> None:
+        self._catalog = self.lakehouse_config.open_catalog()
+        self.lakehouse_config.ensure_table(
+            self._catalog,
+            DataStageType.BRONZE,
+            self.dataset,
+            schema=self.bronze_table.schema,
+            partition_spec=self.bronze_table.partition_spec(),
+        )
+
     def _handle_result(self, data: list[IngestorRecord]) -> None:
         if data:
             self.logger.info(f"{self.name} fetched {len(data)} records")
@@ -47,15 +60,16 @@ class Ingestor(ABC):
             self.logger.warning(f"{self.name} returned no data, skipping store.")
 
     def store(self, data: list[IngestorRecord]) -> None:
-        output_path = self.storage_config.directory_path(DataStageType.BRONZE, self.dataset)
-        records: list[dict[str, Any]] = JsonSerializer.serialize_batch(data)
-        table = pa.Table.from_pylist(records)
-        pq.write_to_dataset(table, root_path=output_path)
-        self.logger.info(f"Written {len(table)} {self.name} records to {output_path}")
+        catalog = self._catalog or self.lakehouse_config.open_catalog()
+        arrow_table = pa.Table.from_pylist([r.to_row() for r in data])
+        table = catalog.load_table(self.lakehouse_config.table_id(DataStageType.BRONZE, self.dataset))
+        self.bronze_table.write(table, arrow_table)
+        self.logger.info(f"Written {len(arrow_table)} {self.name} records to Bronze")
 
 
 @dataclass
 class SyncIngestor(Ingestor):
+    http_config: HttpConfig
 
     @abstractmethod
     def load(self) -> list[IngestorRecord]:
@@ -82,11 +96,13 @@ class SyncIngestor(Ingestor):
 
     def run(self) -> None:
         self.logger.info(f"Starting load for {self.name}...")
+        self.ensure_bronze_table()
         self._handle_result(self.load())
 
 
 @dataclass
 class AsyncIngestor(Ingestor):
+    http_config: HttpConfig
 
     @abstractmethod
     async def load(self) -> list[IngestorRecord]:
@@ -113,4 +129,5 @@ class AsyncIngestor(Ingestor):
 
     async def run(self) -> None:
         self.logger.info(f"Starting load for {self.name}...")
+        self.ensure_bronze_table()
         self._handle_result(data=await self.load())

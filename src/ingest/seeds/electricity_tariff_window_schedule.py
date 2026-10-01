@@ -5,16 +5,15 @@ from datetime import datetime, UTC
 from common.classes import Dataset
 from common.enums import DatasetType, DatasetName
 from config.apis.evn import EVNConfig
-from config.http import HttpConfig
 from config.loader import ConfigLoader
-from config.storage import GCPStorageConfig
 from ingest.evn_base import EVNBaseIngestor
 from ingest.models.electricity_tariff_window_schedule import ElectricityTariffWindowSchedule
+from ingest.schemas.electricity_tariff_window_schedule import ELECTRICITY_TARIFF_WINDOW_SCHEDULE_BRONZE_SCHEMA
+from ingest.write_strategy import OverwriteByPartition, BronzeTable
 
 
 @dataclass
 class ElectricityTariffWindowScheduleIngestor(EVNBaseIngestor):
-    http_config: HttpConfig
 
     def load(self) -> list[ElectricityTariffWindowSchedule]:
         parser = self.fetch_soup(self.config.tariff_tiers_url)
@@ -52,7 +51,6 @@ class ElectricityTariffWindowScheduleIngestor(EVNBaseIngestor):
 def main():
     loader: ConfigLoader = ConfigLoader()
     evn_config: EVNConfig = loader.get_evn()
-    storage_config: GCPStorageConfig = loader.get_storage()
     electricity_tariff_window_schedule_dataset: Dataset = Dataset(dataset_name=DatasetName.ELECTRICITY_TARIFF_WINDOW_SCHEDULE, dataset_type=DatasetType.SEEDS)
     if not evn_config.enabled:
         return
@@ -60,14 +58,15 @@ def main():
     electricity_tariff_window_schedule_ingestor = ElectricityTariffWindowScheduleIngestor(
         dataset=electricity_tariff_window_schedule_dataset,
         config=evn_config,
-        storage_config=storage_config,
+        lakehouse_config=loader.get_lakehouse(),
+        bronze_table=BronzeTable(ELECTRICITY_TARIFF_WINDOW_SCHEDULE_BRONZE_SCHEMA, OverwriteByPartition()),
         http_config=loader.get_http(),
     )
     logging.info(f"Starting seed {electricity_tariff_window_schedule_ingestor.name}...")
     electricity_tariff_window_schedule_ingestor.run()
 
 
-def run():
+def run(scheduled_at: str | None = None):  # unused: effective date comes from the source (ADR-019)
     main()
 
 

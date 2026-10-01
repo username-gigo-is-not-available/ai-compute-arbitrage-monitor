@@ -8,7 +8,7 @@ models:
           arguments:
             combination_of_columns:
               - offer_id
-              - ingested_at
+              - snapshot_at
               - offer_type
     columns:
       - name: offer_id
@@ -290,6 +290,11 @@ models:
 
       - name: rented_flag
         description: "Whether the offer is currently rented"
+        tests:
+          - not_null
+
+      - name: snapshot_at
+        description: "Scheduled hour this offer snapshot represents (ADR-019); part of the snapshot key"
         tests:
           - not_null
 

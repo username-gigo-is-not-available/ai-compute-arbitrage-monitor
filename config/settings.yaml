@@ -29,14 +29,16 @@ http:
 gcp:
   region_name: "europe-west3"
   dataproc:
-    image_tag: "europe-west3-docker.pkg.dev/ai-compute-arbitrage-monitor/ai-compute-arbitrage-monitor-repository/ai-compute-arbitrage-monitor-dataproc-image:latest"
+    image_tag: "europe-west3-docker.pkg.dev/graphic-mission-505412-j7/ai-compute-arbitrage-monitor-repository/ai-compute-arbitrage-monitor-dataproc-image:latest"
     runtime_packages: ["common", "config", "refine"]
-    subnetwork_name: "projects/ai-compute-arbitrage-monitor/regions/europe-west3/subnetworks/ai-compute-arbitrage-monitor-subnet"
-    service_account_email: "dataproc-sa@ai-compute-arbitrage-monitor.iam.gserviceaccount.com"
+    subnetwork_name: "projects/graphic-mission-505412-j7/regions/europe-west3/subnetworks/ai-compute-arbitrage-monitor-subnet"
+    service_account_email: "dataproc-sa@graphic-mission-505412-j7.iam.gserviceaccount.com"
   cloud_run:
     job_name: "ai-compute-arbitrage-monitor-dbt-job"
   composer:
     runtime_packages: ["common", "config", "ingest", "serializers"]
+  big_lake:
+    catalog_id: "ai_compute_arbitrage_monitor_catalog"
 
 dbt:
   local:

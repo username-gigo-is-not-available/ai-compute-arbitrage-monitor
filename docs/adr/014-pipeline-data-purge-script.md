@@ -32,6 +32,14 @@ logged verbatim on failure.
 - Bronze/Silver purge: `gcloud storage rm -r gs://{bucket}/{stage}/**` — the
   `**` wildcard with `-r` deletes only live objects under the prefix (it does
   not touch the bucket itself or versions).
+  _Amended after the Iceberg migration (#31)_: Bronze/Silver are Iceberg tables
+  in namespaces `<stage>_sources` / `<stage>_seeds` (ADR-016). Per namespace the
+  script drops every table from the catalog, then runs
+  `gcloud storage rm -r gs://{bucket}/<namespace>/**`. `drop_table` alone leaves
+  data files in GCS (verified 2026-10-01), so the prefix delete is required; it
+  also removes orphans of tables dropped earlier. Tables are dropped first so a
+  failed delete leaves orphan files, never catalog entries pointing at missing
+  files.
 - Gold/BigQuery purge: drop the dataset with `bq rm -r -f -d {project}:{dataset}`;
   the next `dbt run` recreates the dataset and all tables. Per-table
   `TRUNCATE TABLE` was rejected: a table list would drift as dbt models evolve,

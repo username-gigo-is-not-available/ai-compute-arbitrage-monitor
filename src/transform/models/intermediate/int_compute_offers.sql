@@ -72,7 +72,7 @@ transformed as (
         rented_flag,
 
         -- time
-        ingested_at                                                            as valid_from,
+        snapshot_at                                                            as valid_from,
         cast('9999-12-31' as timestamp)                                        as valid_to,
         processed_at
 

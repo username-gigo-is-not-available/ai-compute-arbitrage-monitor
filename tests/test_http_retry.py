@@ -30,6 +30,7 @@ import asyncio
 import logging
 import sys
 import traceback
+from datetime import datetime, UTC
 from http import HTTPStatus
 from unittest import mock
 
@@ -42,7 +43,10 @@ from config.apis.evn import EVNConfig
 from config.apis.exchange_rate import ExchangeRateConfig
 from config.apis.vast_ai import VastAIConfig
 from config.http import HttpConfig
-from config.storage import GCPStorageConfig
+from config.lakehouse import GCPLakehouseConfig
+from ingest.write_strategy import AppendByHour, BronzeTable, OverwriteByPartition
+from pyiceberg.schema import Schema
+from pyiceberg.types import NestedField, StringType
 from ingest.evn_base import EVNBaseIngestor
 from ingest.sources.compute_offers import ComputeOffersIngestor
 from ingest.sources.exchange_rates import ExchangeRateIngestor
@@ -89,8 +93,11 @@ def _http(retry_count: int = HTTP_RETRY_COUNT, retry_delay_seconds: int = HTTP_R
     )
 
 
-def _storage() -> GCPStorageConfig:
-    return GCPStorageConfig(bucket_name="test-bucket")
+_DUMMY_BRONZE_SCHEMA = Schema(NestedField(field_id=1, name="id", field_type=StringType(), required=False))
+
+
+def _lakehouse() -> GCPLakehouseConfig:
+    return GCPLakehouseConfig(catalog_id="test", project_id="test", warehouse="gs://test")
 
 
 class FakeResponse:
@@ -159,7 +166,8 @@ def _evn(retry_count: int) -> _EVNTestIngestor:
     return _EVNTestIngestor(
         dataset=Dataset(dataset_name=DatasetName.ELECTRICITY_TARIFF_TIERS, dataset_type=DatasetType.SEEDS),
         config=EVNConfig(enabled=True, tariff_tiers_url="https://evn.test/", tariff_system_url="https://evn.test/"),
-        storage_config=_storage(),
+        lakehouse_config=_lakehouse(),
+        bronze_table=BronzeTable(_DUMMY_BRONZE_SCHEMA, OverwriteByPartition()),
         http_config=_http(retry_count=retry_count),
     )
 
@@ -259,7 +267,8 @@ def _exchange(retry_count: int) -> ExchangeRateIngestor:
             to_currency="MKD",
             api_key="test-key",
         ),
-        storage_config=_storage(),
+        lakehouse_config=_lakehouse(),
+        bronze_table=BronzeTable(_DUMMY_BRONZE_SCHEMA, AppendByHour()),
         http_config=_http(retry_count=retry_count),
     )
 
@@ -331,8 +340,10 @@ def _compute(retry_count: int) -> ComputeOffersIngestor:
     return ComputeOffersIngestor(
         dataset=Dataset(dataset_name=DatasetName.COMPUTE_OFFERS, dataset_type=DatasetType.SOURCES),
         config=VastAIConfig(enabled=True, base_url="https://console.vast.test/api/v0", limit=10),
-        storage_config=_storage(),
+        lakehouse_config=_lakehouse(),
+        bronze_table=BronzeTable(_DUMMY_BRONZE_SCHEMA, AppendByHour()),
         http_config=_http(retry_count=retry_count),
+        snapshot_at=datetime.now(UTC),
     )
 
 

@@ -10,7 +10,7 @@ from airflow.sdk import BaseOperator
 from common.enums import ExecutionType
 from config.cluster import GCPClusterConfig
 from config.loader import ConfigLoader
-from config.storage import GCPStorageConfig
+from config.bucket import GCSBucketConfig
 from callable_builder import CallableBuilder
 from pipeline_config import PipelineConfig
 
@@ -27,7 +27,7 @@ class RefineStrategy(ABC):
         if execution_type == ExecutionType.GCP:
             return DataprocRefineStrategy(
                 cluster_config=config.get_cluster(),
-                storage_config=config.get_storage()
+                bucket_config=config.get_bucket()
             )
         elif execution_type == ExecutionType.LOCAL:
             return LocalRefineStrategy()
@@ -49,19 +49,19 @@ class LocalRefineStrategy(RefineStrategy):
 
 class DataprocRefineStrategy(RefineStrategy):
 
-    def __init__(self, cluster_config: GCPClusterConfig, storage_config: GCPStorageConfig) -> None:
+    def __init__(self, cluster_config: GCPClusterConfig, bucket_config: GCSBucketConfig) -> None:
         self.cluster_config = cluster_config
-        self.storage_config = storage_config
+        self.bucket_config = bucket_config
 
     def batch_config(self, pipeline_config: PipelineConfig) -> dict:
         return {
             "pyspark_batch": {
-                "main_python_file_uri": f"gs://{self.storage_config.bucket_name}/jobs/{pipeline_config.refine_uri}",
+                "main_python_file_uri": f"gs://{self.bucket_config.bucket_name}/jobs/{pipeline_config.refine_uri}",
                 "python_file_uris": [
-                    f"gs://{self.storage_config.bucket_name}/jobs/modules.zip",
+                    f"gs://{self.bucket_config.bucket_name}/jobs/modules.zip",
                 ],
                 "file_uris": [
-                    f"gs://{self.storage_config.bucket_name}/jobs/config/settings.yaml",
+                    f"gs://{self.bucket_config.bucket_name}/jobs/config/settings.yaml",
                 ],
             },
             "runtime_config": {

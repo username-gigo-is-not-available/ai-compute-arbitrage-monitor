@@ -14,7 +14,8 @@ from config.cluster import GCPClusterConfig
 from config.dbt import DbtConfig
 from config.execution import CloudRunConfig
 from config.http import HttpConfig
-from config.storage import GCPStorageConfig
+from config.lakehouse import GCPLakehouseConfig
+from config.bucket import GCSBucketConfig
 
 load_dotenv()
 
@@ -23,7 +24,7 @@ class ConfigLoader:
     def __init__(self, config_path: Path = Path(os.getenv("SETTINGS_PATH", "settings.yaml"))):
         self._raw = self._load_yaml(config_path)
         self._setup_logging()
-        self._paths = self.get_storage()
+
 
     def get_execution_type(self) -> ExecutionType:
         execution_type: ExecutionType = ExecutionType(self._raw.get("execution_type", "local"))
@@ -56,8 +57,8 @@ class ConfigLoader:
     def get_http(self) -> HttpConfig:
         return HttpConfig(**self._raw["http"])
 
-    def get_storage(self) -> GCPStorageConfig:
-        return GCPStorageConfig(
+    def get_bucket(self) -> GCSBucketConfig:
+        return GCSBucketConfig(
             bucket_name=os.environ["GCS_BUCKET_NAME"]
         )
 
@@ -68,6 +69,15 @@ class ConfigLoader:
             project_directory_path=dbt_config["project_directory_path"],
             profiles_directory_path=dbt_config["profiles_directory_path"],
             target_directory_path=dbt_config["target_directory_path"],
+        )
+
+    def get_lakehouse(self) -> GCPLakehouseConfig:
+        catalog_id = self._raw["gcp"]["big_lake"]["catalog_id"]
+        project_id = os.environ["GCP_PROJECT_ID"]
+        return GCPLakehouseConfig(
+            catalog_id=catalog_id,
+            project_id=project_id,
+            warehouse=f"bl://projects/{project_id}/catalogs/{catalog_id}",
         )
 
     def get_cloud_run(self) -> CloudRunConfig:

@@ -1,6 +1,6 @@
 from pyspark.sql.types import StructType, StructField, StringType, IntegerType, DateType
 
-ELECTRICITY_TARIFF_WINDOW_SCHEDULE_SCHEMA = StructType(
+ELECTRICITY_TARIFF_WINDOW_SCHEDULE_SILVER_SCHEMA = StructType(
     [
         StructField("tariff_window_type", StringType(), nullable=False),
         StructField("day_of_week", IntegerType(), nullable=False),

@@ -7,11 +7,11 @@ from bs4 import Tag
 from common.classes import Dataset
 from common.enums import DatasetName, DatasetType, ConsumerCategoryType
 from config.apis.evn import EVNConfig
-from config.http import HttpConfig
 from config.loader import ConfigLoader
-from config.storage import GCPStorageConfig
 from ingest.evn_base import EVNBaseIngestor
 from ingest.models.electricity_tariff_fee import ElectricityTariffFee
+from ingest.schemas.electricity_tariff_fees import ELECTRICITY_TARIFF_FEES_BRONZE_SCHEMA
+from ingest.write_strategy import OverwriteByPartition, BronzeTable
 
 
 @dataclass(frozen=True)
@@ -24,7 +24,6 @@ class CellSpecification:
 
 @dataclass
 class ElectricityTariffFeesIngestor(EVNBaseIngestor):
-    http_config: HttpConfig
 
     def load(self) -> list[ElectricityTariffFee]:
         parser = self.fetch_soup(self.config.tariff_tiers_url)
@@ -96,7 +95,6 @@ class ElectricityTariffFeesIngestor(EVNBaseIngestor):
 def main():
     loader: ConfigLoader = ConfigLoader()
     evn_config: EVNConfig = loader.get_evn()
-    storage_config: GCPStorageConfig = loader.get_storage()
     electricity_tariff_fees: Dataset = Dataset(dataset_name=DatasetName.ELECTRICITY_TARIFF_FEES,
                                                dataset_type=DatasetType.SEEDS)
     if not evn_config.enabled:
@@ -105,14 +103,15 @@ def main():
     electricity_tariff_fees_ingestor = ElectricityTariffFeesIngestor(
         dataset=electricity_tariff_fees,
         config=evn_config,
-        storage_config=storage_config,
+        lakehouse_config=loader.get_lakehouse(),
+        bronze_table=BronzeTable(ELECTRICITY_TARIFF_FEES_BRONZE_SCHEMA, OverwriteByPartition()),
         http_config=loader.get_http(),
     )
     logging.info(f"Starting seed {electricity_tariff_fees_ingestor.name}...")
     electricity_tariff_fees_ingestor.run()
 
 
-def run():
+def run(scheduled_at: str | None = None):  # unused: effective date comes from the source (ADR-019)
     main()
 
 

@@ -3,15 +3,15 @@ from typing import Callable
 from pyspark.sql import DataFrame, SparkSession
 
 from common.classes import Dataset
-from common.enums import DataStageType, DatasetType, DatasetName
+from common.enums import DatasetType, DatasetName
 from config.loader import ConfigLoader
 from config.apis.vast_ai import VastAIConfig
-from config.storage import GCPStorageConfig
-from refine.assets.filtering import deduplicate
+from refine.write_strategy import AppendByHour, SilverTable
+from refine.assets.filtering import deduplicate_keep_latest, keep_latest_per_group
 from refine.init import initialize_spark
 from refine.base import Pipeline
 from refine.assets.cleaning import strip_non_ascii, trim_whitespace, replace_substring, empty_to_null
-from refine.schemas.compute_offers import COMPUTE_OFFER_SCHEMA
+from refine.schemas.compute_offers import COMPUTE_OFFERS_SILVER_SCHEMA
 
 
 def strip_cpu_core_suffix(df: DataFrame) -> DataFrame:
@@ -19,7 +19,10 @@ def strip_cpu_core_suffix(df: DataFrame) -> DataFrame:
 
 
 def deduplicate_compute_offers(df: DataFrame) -> DataFrame:
-    return deduplicate(df, columns=["offer_id", "offer_type", "ingested_at"])
+    # A retried ingest replaces its earlier attempt for the same snapshot_at wholesale (each attempt has one
+    # ingested_at); merging per key would union two different market views into one snapshot (ADR-019).
+    df = keep_latest_per_group(df, group_by="snapshot_at", order_by="ingested_at")
+    return deduplicate_keep_latest(df, columns=["offer_id", "offer_type", "snapshot_at"], order_by="ingested_at")
 
 
 @dataclass
@@ -37,17 +40,16 @@ def run():
     session: SparkSession = initialize_spark()
     loader: ConfigLoader = ConfigLoader()
     vast_ai_config: VastAIConfig = loader.get_vast_ai()
-    storage_config: GCPStorageConfig = loader.get_storage()
     compute_offers: Dataset = Dataset(dataset_name=DatasetName.COMPUTE_OFFERS, dataset_type=DatasetType.SOURCES)
     if not vast_ai_config.enabled:
         return
 
     compute_offers_pipeline: ComputeOffersPipeline = ComputeOffersPipeline(
         session=session,
-        schema=COMPUTE_OFFER_SCHEMA,
         dataset=compute_offers,
         config=vast_ai_config,
-        storage_config=storage_config
+        lakehouse_config=loader.get_lakehouse(),
+        silver_table=SilverTable(COMPUTE_OFFERS_SILVER_SCHEMA, AppendByHour(column="snapshot_at")),
     )
     compute_offers_pipeline.run()
 

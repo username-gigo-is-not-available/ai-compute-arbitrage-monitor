@@ -13,7 +13,10 @@ _SRC = Path(__file__).resolve().parents[1] / "src"
 if str(_SRC) not in sys.path:
     sys.path.insert(0, str(_SRC))
 
-from common.enums import DataStageType  # noqa: E402
+from common.enums import DataStageType, DatasetType  # noqa: E402
+from config.lakehouse import GCPLakehouseConfig  # noqa: E402
+from config.loader import ConfigLoader  # noqa: E402
+from pyiceberg.catalog import Catalog  # noqa: E402
 
 load_dotenv()
 
@@ -37,7 +40,7 @@ def _setup_logging(log_config: dict | None = None) -> None:
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Purge pipeline data (Bronze/Silver GCS objects, Gold/BigQuery dataset) for local dev reset.",
+        description="Purge pipeline data (Bronze/Silver Iceberg tables and their GCS files, Gold/BigQuery dataset) for local dev reset.",
         epilog=(
             "Destructive and irreversible. No flags purges nothing; without --confirm the script "
             "asks interactively before deleting. GCP identity comes from the environment "
@@ -45,8 +48,16 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         ),
     )
     stages = parser.add_mutually_exclusive_group(required=True)
-    stages.add_argument("--bronze", action="store_true", help="Delete all objects under gs://{bucket}/bronze/**")
-    stages.add_argument("--silver", action="store_true", help="Delete all objects under gs://{bucket}/silver/**")
+    stages.add_argument(
+        "--bronze",
+        action="store_true",
+        help="Drop all Iceberg tables in bronze_sources/bronze_seeds and delete gs://{bucket}/bronze_*/**",
+    )
+    stages.add_argument(
+        "--silver",
+        action="store_true",
+        help="Drop all Iceberg tables in silver_sources/silver_seeds and delete gs://{bucket}/silver_*/**",
+    )
     stages.add_argument(
         "--gold",
         action="store_true",
@@ -61,15 +72,34 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
-def purge_gcs_stage(bucket: str, stage: DataStageType) -> None:
-    target: str = f"gs://{bucket}/{stage.value}/**"
+def stage_namespaces(stage: DataStageType) -> list[str]:
+    return [GCPLakehouseConfig.stage_namespace(stage, dataset_type) for dataset_type in DatasetType]
+
+
+def open_catalog() -> Catalog:
+    # Module-level seam: tests replace it with a fake catalog.
+    return ConfigLoader().get_lakehouse().open_catalog()
+
+
+def purge_iceberg_stage(catalog: Catalog, bucket: str, stage: DataStageType) -> None:
+    """Drop the stage's Iceberg tables, then delete each namespace's GCS prefix.
+
+    drop_table only removes the catalog entry; the data files stay in GCS. Deleting the
+    whole namespace prefix also removes orphans left by tables dropped earlier. Tables
+    are dropped first so a failed file delete leaves orphans, never dangling metadata.
+    """
     gcloud_bin = shutil.which("gcloud") or "gcloud"
-    logging.info(f"Purging GCS {stage.value} data - {target}")
-    try:
-        subprocess.run([gcloud_bin, "storage", "rm", "-r", target], check=True)
-    except subprocess.CalledProcessError as e:
-        logging.error(f"gcloud failed for {target} - {e}")
-        sys.exit(1)
+    for namespace in stage_namespaces(stage):
+        for identifier in catalog.list_tables(namespace):
+            logging.info(f"Dropping Iceberg table {'.'.join(identifier)}")
+            catalog.drop_table(identifier)
+        target: str = f"gs://{bucket}/{namespace}/**"
+        logging.info(f"Purging GCS {stage.value} data - {target}")
+        try:
+            subprocess.run([gcloud_bin, "storage", "rm", "-r", target], check=True)
+        except subprocess.CalledProcessError as e:
+            logging.error(f"gcloud failed for {target} - {e}")
+            sys.exit(1)
 
 
 def purge_bigquery(project: str, dataset: str) -> None:
@@ -116,7 +146,8 @@ def main() -> None:
         if stage == DataStageType.GOLD:
             logging.info(f"  - bq rm -r -f -d {project}:{dataset}")
         else:
-            logging.info(f"  - gcloud storage rm -r gs://{bucket}/{stage.value}/**")
+            for namespace in stage_namespaces(stage):
+                logging.info(f"  - drop all Iceberg tables in {namespace}; gcloud storage rm -r gs://{bucket}/{namespace}/**")
 
     if not args.confirm:
         try:
@@ -127,11 +158,12 @@ def main() -> None:
             logging.error("Aborted - nothing was deleted.")
             sys.exit(1)
 
+    catalog = open_catalog() if any(stage != DataStageType.GOLD for stage in stages) else None
     for stage in stages:
         if stage == DataStageType.GOLD:
             purge_bigquery(project, dataset)
         else:
-            purge_gcs_stage(bucket, stage)
+            purge_iceberg_stage(catalog, bucket, stage)
 
     logging.info("Purge complete.")
 

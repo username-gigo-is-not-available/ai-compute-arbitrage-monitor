@@ -4,7 +4,8 @@ project_id              = "graphic-mission-505412-j7"
 bq_dataset_name         = "ai_compute_arbitrage_monitor_dataset"
 gcs_bucket_name         = "ai-compute-arbitrage-monitor-bucket"
 
-# gcp.tfvars
+# gcp.tfvars (also repeat project_id, gcs_bucket_name and bq_dataset_name from shared;
+# bq_dataset_name feeds the dbt Cloud Run job's BQ_DATASET_NAME)
 vpc_name                = "ai-compute-arbitrage-monitor-vpc"
 subnet_name             = "ai-compute-arbitrage-monitor-subnet"
 compute_router_name     = "ai-compute-arbitrage-monitor-router"

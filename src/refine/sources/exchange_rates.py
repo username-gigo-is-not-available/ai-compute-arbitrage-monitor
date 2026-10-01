@@ -4,19 +4,19 @@ from typing import Callable
 from pyspark.sql import DataFrame, SparkSession
 
 from common.classes import Dataset
-from common.enums import DataStageType, DatasetName, DatasetType
+from common.enums import DatasetName, DatasetType
 from config.loader import ConfigLoader
 from config.apis.exchange_rate import ExchangeRateConfig
-from config.storage import GCPStorageConfig
-from refine.assets.filtering import deduplicate
+from refine.write_strategy import OverwriteByPartition, SilverTable
+from refine.assets.filtering import deduplicate_keep_latest
 from refine.init import initialize_spark
 from refine.assets.cleaning import trim_whitespace, empty_to_null
 from refine.base import Pipeline
-from refine.schemas.exchange_rates import EXCHANGE_RATE_SCHEMA
+from refine.schemas.exchange_rates import EXCHANGE_RATES_SILVER_SCHEMA
 
 
 def deduplicate_exchange_rate(df: DataFrame) -> DataFrame:
-    return deduplicate(df, columns=['from_currency', 'to_currency', 'timestamp'])
+    return deduplicate_keep_latest(df, columns=['from_currency', 'to_currency', 'timestamp'], order_by='ingested_at')
 
 
 @dataclass
@@ -32,17 +32,16 @@ def run():
     session: SparkSession = initialize_spark()
     loader: ConfigLoader = ConfigLoader()
     exchange_rate_config: ExchangeRateConfig = loader.get_exchange_rate()
-    storage_config: GCPStorageConfig = loader.get_storage()
     exchange_rates: Dataset = Dataset(dataset_name=DatasetName.EXCHANGE_RATES, dataset_type=DatasetType.SOURCES)
     if not exchange_rate_config.enabled:
         return
 
     exchange_rate_pipeline: ExchangeRatesPipeline = ExchangeRatesPipeline(
         session=session,
-        schema=EXCHANGE_RATE_SCHEMA,
         dataset=exchange_rates,
         config=exchange_rate_config,
-        storage_config=storage_config
+        lakehouse_config=loader.get_lakehouse(),
+        silver_table=SilverTable(EXCHANGE_RATES_SILVER_SCHEMA, OverwriteByPartition(column="timestamp")),
     )
     exchange_rate_pipeline.run()
 

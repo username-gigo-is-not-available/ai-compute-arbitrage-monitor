@@ -3,18 +3,19 @@ from dataclasses import field, dataclass
 from typing import Callable
 
 from pyspark.sql import DataFrame, SparkSession
+from pyspark.sql import functions as F
 
 from common.classes import Dataset
 from common.enums import DatasetType, DatasetName, TariffWindowType
 from config.apis.evn import EVNConfig
 from config.loader import ConfigLoader
-from config.storage import GCPStorageConfig
+from refine.write_strategy import OverwriteByPartition, SilverTable
 from refine.assets.cleaning import trim_whitespace, empty_to_null
 from refine.assets.extraction import extract_valid_from_date
 from refine.assets.patterns import SCHEDULE_LOW_TARIFF_HOUR_PAIR_PATTERN, WEEKDAY_WEEKEND_SPLIT
 from refine.base import Pipeline
 from refine.init import initialize_spark
-from refine.schemas.electricity_tariff_window_schedule import ELECTRICITY_TARIFF_WINDOW_SCHEDULE_SCHEMA
+from refine.schemas.electricity_tariff_window_schedule import ELECTRICITY_TARIFF_WINDOW_SCHEDULE_SILVER_SCHEMA
 
 
 def extract_low_tariff_window_hours(text: str) -> set[int]:
@@ -28,11 +29,6 @@ def extract_low_tariff_window_hours(text: str) -> set[int]:
         low_hours.update(hours)
     return low_hours
 
-
-def get_tariff_window_type(day: int, hour: int, low_hours: set[int]) -> TariffWindowType:
-    if day == 7 or hour in low_hours:
-        return TariffWindowType.LOW
-    return TariffWindowType.HIGH
 
 
 @dataclass
@@ -52,26 +48,25 @@ class ElectricityTariffWindowSchedulePipeline(Pipeline):
         weekday_text, _ = parts
         low_hours = extract_low_tariff_window_hours(weekday_text)
 
-        rows = [
-            {
-                "tariff_window_type": get_tariff_window_type(day, h, low_hours).value,
-                "day_of_week": day,
-                "start_hour": h,
-                "end_hour": h + 1,
-                "valid_from": valid_from,
-                "ingested_at": ingested_at
-            }
-            for day in range(1, 8)
-            for h in range(24)
-        ]
-        return self.session.createDataFrame(rows)
+        days = self.session.range(1, 8).withColumnRenamed("id", "day_of_week")
+        hours = self.session.range(0, 24).withColumnRenamed("id", "start_hour")
+        return (
+            days.crossJoin(hours)
+            .withColumn("end_hour", F.col("start_hour") + 1)
+            .withColumn("tariff_window_type", F.when(
+                (F.col("day_of_week") == 7) | F.col("start_hour").isin(list(low_hours)),
+                TariffWindowType.LOW.value,
+            ).otherwise(TariffWindowType.HIGH.value))
+            .withColumn("valid_from", F.lit(valid_from))
+            .withColumn("ingested_at", F.lit(ingested_at))
+            .select("tariff_window_type", "day_of_week", "start_hour", "end_hour", "valid_from", "ingested_at")
+        )
 
 
 def run():
     session: SparkSession = initialize_spark()
     loader: ConfigLoader = ConfigLoader()
     evn_config: EVNConfig = loader.get_evn()
-    storage_config: GCPStorageConfig = loader.get_storage()
     electricity_tariff_window_schedule: Dataset = Dataset(dataset_name=DatasetName.ELECTRICITY_TARIFF_WINDOW_SCHEDULE,
                                                    dataset_type=DatasetType.SEEDS)
     if not evn_config.enabled:
@@ -79,10 +74,10 @@ def run():
 
     electricity_tariff_window_schedule_pipeline: ElectricityTariffWindowSchedulePipeline = ElectricityTariffWindowSchedulePipeline(
         session=session,
-        schema=ELECTRICITY_TARIFF_WINDOW_SCHEDULE_SCHEMA,
         dataset=electricity_tariff_window_schedule,
         config=evn_config,
-        storage_config=storage_config,
+        lakehouse_config=loader.get_lakehouse(),
+        silver_table=SilverTable(ELECTRICITY_TARIFF_WINDOW_SCHEDULE_SILVER_SCHEMA, OverwriteByPartition()),
     )
 
     electricity_tariff_window_schedule_pipeline.run()

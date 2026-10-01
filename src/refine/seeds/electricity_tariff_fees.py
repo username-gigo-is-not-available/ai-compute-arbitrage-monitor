@@ -7,12 +7,12 @@ from common.classes import Dataset
 from common.enums import DatasetName, DatasetType
 from config.apis.evn import EVNConfig
 from config.loader import ConfigLoader
-from config.storage import GCPStorageConfig
+from refine.write_strategy import OverwriteByPartition, SilverTable
 from refine.assets.cleaning import trim_whitespace, replace_substring, empty_to_null
 from refine.assets.extraction import extract_valid_from_date
 from refine.init import initialize_spark
 from refine.base import Pipeline
-from refine.schemas.electricity_tariff_fees import ELECTRICITY_TARIFF_FEES_SCHEMA
+from refine.schemas.electricity_tariff_fees import ELECTRICITY_TARIFF_FEES_SILVER_SCHEMA
 
 
 def replace_decimal_separator(df: DataFrame) -> DataFrame:
@@ -44,7 +44,6 @@ def run():
     session: SparkSession = initialize_spark()
     loader: ConfigLoader = ConfigLoader()
     evn_config: EVNConfig = loader.get_evn()
-    storage_config: GCPStorageConfig = loader.get_storage()
     electricity_tariff_fees: Dataset = Dataset(dataset_name=DatasetName.ELECTRICITY_TARIFF_FEES,
                                                dataset_type=DatasetType.SEEDS)
     if not evn_config.enabled:
@@ -52,10 +51,10 @@ def run():
 
     electricity_tariff_prices_pipeline: ElectricityTariffFeesPipeline = ElectricityTariffFeesPipeline(
         session=session,
-        schema=ELECTRICITY_TARIFF_FEES_SCHEMA,
         dataset=electricity_tariff_fees,
         config=evn_config,
-        storage_config=storage_config,
+        lakehouse_config=loader.get_lakehouse(),
+        silver_table=SilverTable(ELECTRICITY_TARIFF_FEES_SILVER_SCHEMA, OverwriteByPartition()),
     )
     electricity_tariff_prices_pipeline.run()
 

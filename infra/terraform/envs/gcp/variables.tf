@@ -17,6 +17,7 @@ variable "cc_environment_name" {}
 
 # Storage
 variable "gcs_bucket_name" {}
+variable "bq_dataset_name" {}
 
 # GitHub Workload Identity Federation
 variable "gh_wif_pool_id" {}

@@ -21,6 +21,20 @@ resource "google_cloud_run_v2_job" "dbt_transform" {
 
         args = ["run"]
 
+        # Required by src/transform/profiles.yml (ADR-013, ADR-018: BQ_LOCATION has no default).
+        env {
+          name  = "GCP_PROJECT_ID"
+          value = var.project_id
+        }
+        env {
+          name  = "BQ_DATASET_NAME"
+          value = var.bq_dataset_name
+        }
+        env {
+          name  = "BQ_LOCATION"
+          value = var.location
+        }
+
         resources {
           limits = {
             cpu    = "2"
