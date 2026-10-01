@@ -223,6 +223,30 @@ def test_gcs_cp_issues_expected_gcloud_command() -> None:
     ]
 
 
+class _FakeCatalog:
+    """Stands in for the Iceberg REST catalog: one table per namespace; drops are recorded into ``calls``
+    as ``["drop_table", "<ns>.<table>"]`` so their order relative to gcloud commands is asserted too."""
+
+    def __init__(self, calls: list[list[str]]):
+        self.calls = calls
+
+    def list_tables(self, namespace: str) -> list[tuple[str, str]]:
+        return [(namespace, "t")]
+
+    def drop_table(self, identifier: tuple[str, str]) -> None:
+        self.calls.append(["drop_table", ".".join(identifier)])
+
+
+def _expected_stage(stage: str) -> list[list[str]]:
+    """Per namespace: drop its tables from the catalog, then delete its GCS prefix (orphans included)."""
+    expected: list[list[str]] = []
+    for kind in ("sources", "seeds"):
+        ns = f"{stage}_{kind}"
+        expected.append(["drop_table", f"{ns}.t"])
+        expected.append(["gcloud", "storage", "rm", "-r", f"gs://{EXPECTED_BUCKET}/{ns}/**"])
+    return expected
+
+
 def _run_purge(
     argv: list[str],
     confirm: str | None = None,
@@ -251,7 +275,9 @@ def _run_purge(
         _set_env()
         with _chdir(REPO_ROOT), _patched(subprocess, run=fake_run), _patched(
             sys, argv=["purge_data.py", *argv]
-        ), _patched(shutil, which=lambda _name: None):
+        ), _patched(shutil, which=lambda _name: None), _patched(
+            script, open_catalog=lambda: _FakeCatalog([] if fail else calls)
+        ):
             try:
                 if confirm is None:
                     script.main()
@@ -278,12 +304,10 @@ def test_purge_conflicting_flags_exits_nonzero_and_purges_nothing() -> None:
     assert exit_code == 2, exit_code
     assert calls == [], calls
 
-def test_purge_bronze_confirm_issues_expected_rm_command() -> None:
-    """--bronze --confirm -> exactly `gcloud storage rm -r gs://<bucket>/bronze/**`."""
+def test_purge_bronze_confirm_drops_tables_then_deletes_namespace_prefixes() -> None:
+    """--bronze --confirm -> per Bronze namespace: drop Iceberg tables, then `gcloud storage rm` its prefix."""
     calls, exit_code = _run_purge(["--bronze"])
-    assert calls == [
-        ["gcloud", "storage", "rm", "-r", f"gs://{EXPECTED_BUCKET}/bronze/**"]
-    ], calls
+    assert calls == _expected_stage("bronze"), calls
     assert exit_code is None, exit_code
 
 def test_purge_bucket_with_trailing_slash_is_stripped() -> None:
@@ -302,14 +326,12 @@ def test_purge_bucket_with_trailing_slash_is_stripped() -> None:
             shutil, which=lambda _name: None
         ), _patched(
             sys, argv=["purge_data.py", "--bronze", "--confirm"]
-        ):
+        ), _patched(script, open_catalog=lambda: _FakeCatalog(calls)):
             script.main()
     finally:
         _restore_env()
         subprocess.run = real_run
-    assert calls == [
-        ["gcloud", "storage", "rm", "-r", f"gs://{EXPECTED_BUCKET}/bronze/**"]
-    ], calls
+    assert calls == _expected_stage("bronze"), calls
 
 def test_purge_gold_confirm_issues_expected_bq_command() -> None:
     """--gold --confirm -> exactly `bq rm -r -f -d <project>:<dataset>`."""
@@ -324,8 +346,8 @@ def test_purge_all_confirm_issues_expected_commands_in_order() -> None:
     """--all --confirm -> bronze, then silver, then gold dataset drop."""
     calls, exit_code = _run_purge(["--all"])
     assert calls == [
-        ["gcloud", "storage", "rm", "-r", f"gs://{EXPECTED_BUCKET}/bronze/**"],
-        ["gcloud", "storage", "rm", "-r", f"gs://{EXPECTED_BUCKET}/silver/**"],
+        *_expected_stage("bronze"),
+        *_expected_stage("silver"),
         ["bq", "rm", "-r", "-f", "-d", f"{EXPECTED_PROJECT}:{EXPECTED_DATASET}"],
     ], calls
     assert exit_code is None, exit_code
@@ -342,9 +364,7 @@ def test_purge_confirmed_interactively_executes() -> None:
     """No --confirm + 'yes' answer -> proceeds with the delete."""
     calls, exit_code = _run_purge(["--silver"], confirm="yes")
     assert exit_code is None, exit_code
-    assert calls == [
-        ["gcloud", "storage", "rm", "-r", f"gs://{EXPECTED_BUCKET}/silver/**"]
-    ], calls
+    assert calls == _expected_stage("silver"), calls
 
 
 def test_purge_subprocess_failure_exits_nonzero() -> None:
@@ -377,14 +397,14 @@ def test_purge_uses_logging_not_print() -> None:
             shutil, which=lambda _name: None
         ), _patched(
             sys, argv=["purge_data.py", "--bronze", "--confirm"]
-        ), _patched(logging, info=capture_info, error=capture_error):
+        ), _patched(logging, info=capture_info, error=capture_error), _patched(
+            script, open_catalog=lambda: _FakeCatalog(calls)
+        ):
             script.main()
     finally:
         _restore_env()
         subprocess.run = real_run
-    assert calls == [
-        ["gcloud", "storage", "rm", "-r", f"gs://{EXPECTED_BUCKET}/bronze/**"]
-    ], calls
+    assert calls == _expected_stage("bronze"), calls
     assert any(level == "INFO" and "bronze" in msg for level, msg in records), records
     assert any(level == "INFO" and "Purge complete" in msg for level, msg in records), records
     assert not any(level not in ("INFO", "ERROR") for level, _msg in records), records
@@ -483,7 +503,7 @@ _TESTS = [
     test_gcs_cp_issues_expected_gcloud_command,
     test_purge_no_flags_exits_nonzero_and_purges_nothing,
     test_purge_conflicting_flags_exits_nonzero_and_purges_nothing,
-    test_purge_bronze_confirm_issues_expected_rm_command,
+    test_purge_bronze_confirm_drops_tables_then_deletes_namespace_prefixes,
     test_purge_bucket_with_trailing_slash_is_stripped,
     test_purge_gold_confirm_issues_expected_bq_command,
     test_purge_all_confirm_issues_expected_commands_in_order,
