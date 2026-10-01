@@ -36,7 +36,11 @@ class IncrementalAppend(SilverWriteStrategy):
 
 
 class PartitionedOverwrite(SilverWriteStrategy):
-    """Seeds: full Bronze read, overwrite Silver by valid_from partition."""
+    """Full Bronze read, overwrite Silver by an effective-date partition (valid_from for seeds,
+    the provider's timestamp for exchange_rates). Re-ingesting the same fact replaces it."""
+
+    def __init__(self, partition_column: str = "valid_from") -> None:
+        self.partition_column = partition_column
 
     def read_filter(self, df: DataFrame, session: SparkSession, silver_table: str) -> DataFrame:
         return df
@@ -45,4 +49,4 @@ class PartitionedOverwrite(SilverWriteStrategy):
         try:
             df.writeTo(silver_table).overwritePartitions()
         except AnalysisException:
-            df.writeTo(silver_table).using("iceberg").partitionedBy("valid_from").create()
+            df.writeTo(silver_table).using("iceberg").partitionedBy(self.partition_column).create()

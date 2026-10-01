@@ -7,8 +7,8 @@ from common.classes import Dataset
 from common.enums import DataStageType, DatasetName, DatasetType
 from config.loader import ConfigLoader
 from config.apis.exchange_rate import ExchangeRateConfig
-from refine.write_strategy import IncrementalAppend
-from refine.assets.filtering import deduplicate
+from refine.write_strategy import PartitionedOverwrite
+from refine.assets.filtering import deduplicate_keep_latest
 from refine.init import initialize_spark
 from refine.assets.cleaning import trim_whitespace, empty_to_null
 from refine.base import Pipeline
@@ -16,7 +16,7 @@ from refine.schemas.exchange_rates import EXCHANGE_RATE_SCHEMA
 
 
 def deduplicate_exchange_rate(df: DataFrame) -> DataFrame:
-    return deduplicate(df, columns=['from_currency', 'to_currency', 'timestamp'])
+    return deduplicate_keep_latest(df, columns=['from_currency', 'to_currency', 'timestamp'], order_by='ingested_at')
 
 
 @dataclass
@@ -42,7 +42,7 @@ def run():
         dataset=exchange_rates,
         config=exchange_rate_config,
         lakehouse_config=loader.get_lakehouse(),
-        silver_strategy=IncrementalAppend(),
+        silver_strategy=PartitionedOverwrite(partition_column="timestamp"),
     )
     exchange_rate_pipeline.run()
 
