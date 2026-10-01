@@ -7,13 +7,13 @@ from common.classes import Dataset
 from common.enums import DatasetName, DatasetType
 from config.apis.evn import EVNConfig
 from config.loader import ConfigLoader
-from refine.write_strategy import OverwriteByPartition
+from refine.write_strategy import OverwriteByPartition, SilverTable
 from refine.assets.cleaning import trim_whitespace, replace_substring, empty_to_null
 from refine.assets.extraction import extract_valid_from_date
 from refine.assets.imputation import forward_fill
 from refine.init import initialize_spark
 from refine.base import Pipeline
-from refine.schemas.electricity_tariff_tiers import ELECTRICITY_TARIFF_TIERS_SCHEMA
+from refine.schemas.electricity_tariff_tiers import ELECTRICITY_TARIFF_TIERS_SILVER_SCHEMA
 
 
 def replace_decimal_separator(df: DataFrame) -> DataFrame:
@@ -66,11 +66,10 @@ def run():
 
     electricity_tariff_tiers_pipeline: ElectricityTariffTiersPipeline = ElectricityTariffTiersPipeline(
         session=session,
-        schema=ELECTRICITY_TARIFF_TIERS_SCHEMA,
         dataset=electricity_tariff_tiers,
         config=evn_config,
         lakehouse_config=loader.get_lakehouse(),
-        write_strategy=OverwriteByPartition(),
+        silver_table=SilverTable(ELECTRICITY_TARIFF_TIERS_SILVER_SCHEMA, OverwriteByPartition()),
     )
     electricity_tariff_tiers_pipeline.run()
 

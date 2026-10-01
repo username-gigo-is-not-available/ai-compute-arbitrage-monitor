@@ -1,6 +1,6 @@
 from pyspark.sql.types import StructType, StructField, StringType, IntegerType, DoubleType, BooleanType, TimestampType
 
-COMPUTE_OFFER_SCHEMA = StructType(
+COMPUTE_OFFERS_SILVER_SCHEMA = StructType(
     [
         # SNAPSHOT (ADR-019)
         StructField("snapshot_at", TimestampType(), nullable=False),

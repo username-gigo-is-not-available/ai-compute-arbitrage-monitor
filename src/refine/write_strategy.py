@@ -1,8 +1,10 @@
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 from typing import Callable
 
 from pyspark.sql import Column, DataFrame, DataFrameWriterV2, SparkSession
 from pyspark.sql.functions import col, hours as spark_hours, max as spark_max
+from pyspark.sql.types import StructType
 from pyspark.sql.utils import AnalysisException
 
 
@@ -11,20 +13,20 @@ class SilverWriteStrategy(ABC):
         self.column = column
 
     @abstractmethod
-    def read_filter(self, df: DataFrame, session: SparkSession, silver_table: str) -> DataFrame:
+    def read_filter(self, df: DataFrame, session: SparkSession, table_name: str) -> DataFrame:
         raise NotImplementedError
 
     @abstractmethod
-    def write(self, df: DataFrame, silver_table: str) -> None:
+    def write(self, df: DataFrame, table_name: str) -> None:
         raise NotImplementedError
 
     @staticmethod
-    def _write_or_create(df: DataFrame, silver_table: str,
+    def _write_or_create(df: DataFrame, table_name: str,
                          write: Callable[[DataFrameWriterV2], None], partition: Column | str) -> None:
         try:
-            write(df.writeTo(silver_table))
+            write(df.writeTo(table_name))
         except AnalysisException:
-            df.writeTo(silver_table).using("iceberg").partitionedBy(partition).create()
+            df.writeTo(table_name).using("iceberg").partitionedBy(partition).create()
 
 
 class AppendByHour(SilverWriteStrategy):
@@ -34,9 +36,9 @@ class AppendByHour(SilverWriteStrategy):
     def __init__(self, column: str = "ingested_at") -> None:
         super().__init__(column)
 
-    def read_filter(self, df: DataFrame, session: SparkSession, silver_table: str) -> DataFrame:
+    def read_filter(self, df: DataFrame, session: SparkSession, table_name: str) -> DataFrame:
         try:
-            row = session.table(silver_table).agg(spark_max(self.column)).collect()[0]
+            row = session.table(table_name).agg(spark_max(self.column)).collect()[0]
             watermark = row[0]
             if watermark is not None:
                 return df.filter(col(self.column) > watermark)
@@ -44,8 +46,8 @@ class AppendByHour(SilverWriteStrategy):
             pass
         return df
 
-    def write(self, df: DataFrame, silver_table: str) -> None:
-        self._write_or_create(df, silver_table, lambda writer: writer.append(), spark_hours(self.column))
+    def write(self, df: DataFrame, table_name: str) -> None:
+        self._write_or_create(df, table_name, lambda writer: writer.append(), spark_hours(self.column))
 
 
 class OverwriteByPartition(SilverWriteStrategy):
@@ -55,8 +57,21 @@ class OverwriteByPartition(SilverWriteStrategy):
     def __init__(self, column: str = "valid_from") -> None:
         super().__init__(column)
 
-    def read_filter(self, df: DataFrame, session: SparkSession, silver_table: str) -> DataFrame:
+    def read_filter(self, df: DataFrame, session: SparkSession, table_name: str) -> DataFrame:
         return df
 
-    def write(self, df: DataFrame, silver_table: str) -> None:
-        self._write_or_create(df, silver_table, lambda writer: writer.overwritePartitions(), self.column)
+    def write(self, df: DataFrame, table_name: str) -> None:
+        self._write_or_create(df, table_name, lambda writer: writer.overwritePartitions(), self.column)
+
+
+@dataclass(frozen=True)
+class SilverTable:
+    """A Silver table's schema and the strategy that reads Bronze into it and writes it."""
+    schema: StructType
+    write_strategy: SilverWriteStrategy
+
+    def read_filter(self, df: DataFrame, session: SparkSession, table_name: str) -> DataFrame:
+        return self.write_strategy.read_filter(df, session, table_name)
+
+    def write(self, df: DataFrame, table_name: str) -> None:
+        self.write_strategy.write(df, table_name)

@@ -7,13 +7,13 @@ from common.classes import Dataset
 from common.enums import DatasetName, DatasetType
 from config.apis.evn import EVNConfig
 from config.loader import ConfigLoader
-from refine.write_strategy import OverwriteByPartition
+from refine.write_strategy import OverwriteByPartition, SilverTable
 from refine.assets.cleaning import trim_whitespace, empty_to_null
 from refine.assets.extraction import extract_pattern, extract_valid_from_date
 from refine.assets.patterns import KWH_BOUNDS_PATTERN, TARIFF_BLOCK_NUMBER_PATTERN
 from refine.init import initialize_spark
 from refine.base import Pipeline
-from refine.schemas.electricity_tariff_blocks import ELECTRICITY_TARIFF_BLOCKS_SCHEMA
+from refine.schemas.electricity_tariff_blocks import ELECTRICITY_TARIFF_BLOCKS_SILVER_SCHEMA
 
 
 def extract_tariff_block_number(df: DataFrame) -> DataFrame:
@@ -62,11 +62,10 @@ def run():
 
     electricity_tariff_blocks_pipeline: ElectricityTariffBlocksPipeline = ElectricityTariffBlocksPipeline(
         session=session,
-        schema=ELECTRICITY_TARIFF_BLOCKS_SCHEMA,
         dataset=electricity_tariff_blocks,
         config=evn_config,
         lakehouse_config=loader.get_lakehouse(),
-        write_strategy=OverwriteByPartition(),
+        silver_table=SilverTable(ELECTRICITY_TARIFF_BLOCKS_SILVER_SCHEMA, OverwriteByPartition()),
     )
     electricity_tariff_blocks_pipeline.run()
 

@@ -9,13 +9,13 @@ from common.classes import Dataset
 from common.enums import DatasetType, DatasetName, TariffWindowType
 from config.apis.evn import EVNConfig
 from config.loader import ConfigLoader
-from refine.write_strategy import OverwriteByPartition
+from refine.write_strategy import OverwriteByPartition, SilverTable
 from refine.assets.cleaning import trim_whitespace, empty_to_null
 from refine.assets.extraction import extract_valid_from_date
 from refine.assets.patterns import SCHEDULE_LOW_TARIFF_HOUR_PAIR_PATTERN, WEEKDAY_WEEKEND_SPLIT
 from refine.base import Pipeline
 from refine.init import initialize_spark
-from refine.schemas.electricity_tariff_window_schedule import ELECTRICITY_TARIFF_WINDOW_SCHEDULE_SCHEMA
+from refine.schemas.electricity_tariff_window_schedule import ELECTRICITY_TARIFF_WINDOW_SCHEDULE_SILVER_SCHEMA
 
 
 def extract_low_tariff_window_hours(text: str) -> set[int]:
@@ -74,11 +74,10 @@ def run():
 
     electricity_tariff_window_schedule_pipeline: ElectricityTariffWindowSchedulePipeline = ElectricityTariffWindowSchedulePipeline(
         session=session,
-        schema=ELECTRICITY_TARIFF_WINDOW_SCHEDULE_SCHEMA,
         dataset=electricity_tariff_window_schedule,
         config=evn_config,
         lakehouse_config=loader.get_lakehouse(),
-        write_strategy=OverwriteByPartition(),
+        silver_table=SilverTable(ELECTRICITY_TARIFF_WINDOW_SCHEDULE_SILVER_SCHEMA, OverwriteByPartition()),
     )
 
     electricity_tariff_window_schedule_pipeline.run()

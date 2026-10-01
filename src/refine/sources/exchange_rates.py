@@ -7,12 +7,12 @@ from common.classes import Dataset
 from common.enums import DatasetName, DatasetType
 from config.loader import ConfigLoader
 from config.apis.exchange_rate import ExchangeRateConfig
-from refine.write_strategy import OverwriteByPartition
+from refine.write_strategy import OverwriteByPartition, SilverTable
 from refine.assets.filtering import deduplicate_keep_latest
 from refine.init import initialize_spark
 from refine.assets.cleaning import trim_whitespace, empty_to_null
 from refine.base import Pipeline
-from refine.schemas.exchange_rates import EXCHANGE_RATE_SCHEMA
+from refine.schemas.exchange_rates import EXCHANGE_RATES_SILVER_SCHEMA
 
 
 def deduplicate_exchange_rate(df: DataFrame) -> DataFrame:
@@ -38,11 +38,10 @@ def run():
 
     exchange_rate_pipeline: ExchangeRatesPipeline = ExchangeRatesPipeline(
         session=session,
-        schema=EXCHANGE_RATE_SCHEMA,
         dataset=exchange_rates,
         config=exchange_rate_config,
         lakehouse_config=loader.get_lakehouse(),
-        write_strategy=OverwriteByPartition(column="timestamp"),
+        silver_table=SilverTable(EXCHANGE_RATES_SILVER_SCHEMA, OverwriteByPartition(column="timestamp")),
     )
     exchange_rate_pipeline.run()
 

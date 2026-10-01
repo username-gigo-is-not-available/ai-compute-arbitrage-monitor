@@ -11,18 +11,17 @@ from common.types import DatasetConfig
 from config.lakehouse import GCPLakehouseConfig
 from refine.assets.casting import cast_to_schema
 from refine.assets.extraction import add_processed_at_column
-from refine.schemas.base import META_COLUMNS_SCHEMA
-from refine.write_strategy import SilverWriteStrategy
+from refine.schemas.base import SILVER_META_COLUMNS_SCHEMA
+from refine.write_strategy import SilverTable
 
 
 @dataclass
 class Pipeline:
     session: SparkSession
-    schema: StructType
     dataset: Dataset
     config: DatasetConfig
     lakehouse_config: GCPLakehouseConfig
-    write_strategy: SilverWriteStrategy
+    silver_table: SilverTable
     transform_steps: list[Callable[[DataFrame], DataFrame]] = field(default_factory=list)
     logger: logging.Logger = field(init=False)
 
@@ -40,12 +39,12 @@ class Pipeline:
         self.logger.info(f"Reading from {bronze}")
         df = self.session.table(bronze)
         silver = self.lakehouse_config.spark_table(DataStageType.SILVER, self.dataset)
-        return self.write_strategy.read_filter(df, self.session, silver)
+        return self.silver_table.read_filter(df, self.session, silver)
 
     def save(self, df: DataFrame) -> DataFrame:
         silver = self.lakehouse_config.spark_table(DataStageType.SILVER, self.dataset)
         self.logger.info(f"Writing to {silver}")
-        self.write_strategy.write(df, silver)
+        self.silver_table.write(df, silver)
         self.logger.info("Write complete")
         return df
 
@@ -56,7 +55,7 @@ class Pipeline:
             df = df.transform(step)
         self.logger.info("Applying cast_to_schema")
         df = df.transform(add_processed_at_column)
-        return cast_to_schema(df, StructType(self.schema.fields + META_COLUMNS_SCHEMA.fields))
+        return cast_to_schema(df, StructType(self.silver_table.schema.fields + SILVER_META_COLUMNS_SCHEMA.fields))
 
     def generate(self, df: DataFrame) -> DataFrame | None:
         return None
