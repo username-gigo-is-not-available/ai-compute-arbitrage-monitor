@@ -2,7 +2,20 @@
 
 ## Status
 
-Accepted.
+Accepted. Amended — read these before relying on the Decision below:
+
+- **Catalog id** is `ai_compute_arbitrage_monitor_catalog` (underscores),
+  per ADR-018's correction; the hyphenated id below was never created.
+- **Bronze sources** are true append (ADR-017), partitioned by
+  `hour(ingested_at)`; `compute_offers` by `hour(snapshot_at)` (ADR-019).
+- **Bronze seeds** overwrite by **identity partition on `valid_from_text`**
+  (`OverwriteByPartition(column="valid_from_text")`), not by hour partition:
+  the overwrite filter is scoped to the incoming `valid_from_text` values
+  (commit `9d1d314`).
+- **Silver `exchange_rates`** overwrites by its effective `timestamp`
+  partition with a full Bronze read, not append (ADR-019).
+- `GCPStorageConfig.directory_path` was removed and `scripts/purge_data.py`
+  now purges Iceberg namespaces (#31, ADR-014 amendment).
 
 ## Context
 

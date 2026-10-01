@@ -58,12 +58,13 @@ hourly snapshot is distinct.
 | `exchange_rates` | full Bronze read | overwrite `timestamp` partition | `timestamp` |
 | `electricity_tariff_*` seeds | full Bronze read | overwrite `valid_from` partition | `valid_from` |
 
-The watermark (`max(ingested_at)` from Silver) is derived at the start of
-`Pipeline.run()` via a Spark query on the Silver table. `None` on first run
-= read all of Bronze.
+Only append (event-log) datasets have a watermark: `max(snapshot_at)` from
+Silver for `compute_offers`, derived at the start of `Pipeline.run()` via a
+Spark query on the Silver table. `None` on first run = read all of Bronze.
+Overwrite datasets (`exchange_rates`, seeds) read all of Bronze every run.
 
-The watermark column (`ingested_at` for sources, `valid_from` for seeds)
-is a property subclasses can override. The base class handles the rest.
+The watermark column is configured on the Silver write strategy
+(`AppendByHour(column="snapshot_at")`), not overridden per subclass.
 
 Table identifier: `silver_sources.<dataset_name>` or
 `silver_seeds.<dataset_name>` per ADR-016.
@@ -93,6 +94,11 @@ spark.sql.catalog.<catalog_id>.rest.auth.type = org.apache.iceberg.gcp.auth.Goog
 ```
 
 ### Config (`src/config/`, `config/settings.yaml`)
+
+> **As built:** `GCPLakehouseConfig` via `ConfigLoader.get_lakehouse()`, with
+> `catalog_id` under `gcp.big_lake` in settings.yaml, `project_id` from the
+> `GCP_PROJECT_ID` env var (ADR-013) and `warehouse` derived from both.
+> The block below is the original proposal.
 
 New `IcebergConfig` pydantic class loaded via `ConfigLoader.get_iceberg()`:
 

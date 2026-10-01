@@ -2,7 +2,9 @@
 
 ## Status
 
-Accepted.
+Accepted. _Retry-safety resolved by ADR-019_ (deterministic `snapshot_at` from
+the Airflow `data_interval_end`, passed via `op_kwargs`), so the "deferred"
+decision below no longer applies. The terraform user-ADC decision stands.
 
 ## Context
 

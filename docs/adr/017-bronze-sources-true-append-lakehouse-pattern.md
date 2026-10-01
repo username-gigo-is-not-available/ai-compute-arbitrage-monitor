@@ -2,7 +2,12 @@
 
 ## Status
 
-Accepted.
+Accepted. _Reasoning superseded by ADR-019_: the decision (Bronze sources are
+true append) stands, but the justification below does not hold. `ingested_at`
+is `now()` at fetch, so a retry gets a new `ingested_at` and passes both the
+dedup and the watermark. Retry idempotency now comes from a deterministic key:
+`compute_offers` is keyed and partitioned on `snapshot_at`, and
+`exchange_rates` Silver overwrites by its effective `timestamp`.
 
 ## Context
 
