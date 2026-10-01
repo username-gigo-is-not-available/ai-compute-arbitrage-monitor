@@ -13,7 +13,7 @@ import unittest
 from pyspark.sql import SparkSession
 
 from refine.sources.compute_offers import deduplicate_compute_offers
-from refine.write_strategy import IncrementalAppend
+from refine.write_strategy import AppendByHour
 
 
 def _offers(session: SparkSession, rows: str):
@@ -38,7 +38,7 @@ class TestComputeOffersSilver(unittest.TestCase):
         bronze = _offers(self.session,
                          "(1, 'bid', 0.11, '2026-10-01 14:00:00', '2026-10-01 14:40:00'), "
                          "(1, 'bid', 0.12, '2026-10-01 15:00:00', '2026-10-01 15:00:04')")
-        result = IncrementalAppend(column="snapshot_at").read_filter(bronze, self.session, "silver_offers")
+        result = AppendByHour(column="snapshot_at").read_filter(bronze, self.session, "silver_offers")
         self.assertEqual([r["price"] for r in result.collect()], [0.12])
 
     def test_retry_replaces_whole_earlier_attempt_not_merges(self):

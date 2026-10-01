@@ -20,7 +20,7 @@ from config.apis.vast_ai import VastAIConfig
 from config.http import HttpConfig
 from config.lakehouse import GCPLakehouseConfig
 from ingest.sources.compute_offers import ComputeOffersIngestor
-from ingest.write_strategy import AppendByHour
+from ingest.write_strategy import AppendByHour, BronzeTable
 
 OFFER = {
     "ask_contract_id": 111, "machine_id": 222, "host_id": 333,
@@ -36,8 +36,10 @@ def _ingestor(snapshot_at: datetime) -> ComputeOffersIngestor:
         dataset=Dataset(dataset_name=DatasetName.COMPUTE_OFFERS, dataset_type=DatasetType.SOURCES),
         config=VastAIConfig(enabled=True, base_url="https://console.vast.test/api/v0", limit=10),
         lakehouse_config=GCPLakehouseConfig(catalog_id="test", project_id="test", warehouse="gs://test"),
-        bronze_schema=Schema(NestedField(field_id=1, name="id", field_type=StringType(), required=False)),
-        write_strategy=AppendByHour(column="snapshot_at"),
+        bronze_table=BronzeTable(
+            Schema(NestedField(field_id=1, name="id", field_type=StringType(), required=False)),
+            AppendByHour(column="snapshot_at"),
+        ),
         http_config=HttpConfig(timeout_seconds=30, retry_count=1, retry_delay_seconds=0),
         snapshot_at=snapshot_at,
     )
@@ -55,9 +57,9 @@ class TestSnapshotAt(unittest.TestCase):
 
     def test_backfill_is_skipped_without_touching_the_catalog(self):
         ingestor = _ingestor(datetime.now(UTC).replace(minute=0, second=0, microsecond=0) - timedelta(hours=3))
-        with mock.patch.object(ingestor, "init") as init_mock, mock.patch.object(ingestor, "load") as load_mock:
+        with mock.patch.object(ingestor, "ensure_bronze_table") as ensure_mock, mock.patch.object(ingestor, "load") as load_mock:
             asyncio.run(ingestor.run())
-        init_mock.assert_not_called()
+        ensure_mock.assert_not_called()
         load_mock.assert_not_called()
 
     def test_current_hour_runs(self):
@@ -66,9 +68,9 @@ class TestSnapshotAt(unittest.TestCase):
         async def no_offers():
             return []
 
-        with mock.patch.object(ingestor, "init") as init_mock, mock.patch.object(ingestor, "load", side_effect=no_offers):
+        with mock.patch.object(ingestor, "ensure_bronze_table") as ensure_mock, mock.patch.object(ingestor, "load", side_effect=no_offers):
             asyncio.run(ingestor.run())
-        init_mock.assert_called_once()
+        ensure_mock.assert_called_once()
 
 
 if __name__ == "__main__":

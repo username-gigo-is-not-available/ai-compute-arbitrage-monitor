@@ -14,7 +14,9 @@ if str(_SRC) not in sys.path:
     sys.path.insert(0, str(_SRC))
 
 from common.enums import DataStageType, DatasetType  # noqa: E402
+from config.lakehouse import GCPLakehouseConfig  # noqa: E402
 from config.loader import ConfigLoader  # noqa: E402
+from pyiceberg.catalog import Catalog  # noqa: E402
 
 load_dotenv()
 
@@ -71,15 +73,15 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 
 def stage_namespaces(stage: DataStageType) -> list[str]:
-    # Mirrors GCPLakehouseConfig.namespace: <stage>_<dataset_type> (ADR-016).
-    return [f"{stage.value}_{dataset_type.value}" for dataset_type in DatasetType]
+    return [GCPLakehouseConfig.stage_namespace(stage, dataset_type) for dataset_type in DatasetType]
 
 
-def open_catalog():
+def open_catalog() -> Catalog:
+    # Module-level seam: tests replace it with a fake catalog.
     return ConfigLoader().get_lakehouse().open_catalog()
 
 
-def purge_iceberg_stage(catalog, bucket: str, stage: DataStageType) -> None:
+def purge_iceberg_stage(catalog: Catalog, bucket: str, stage: DataStageType) -> None:
     """Drop the stage's Iceberg tables, then delete each namespace's GCS prefix.
 
     drop_table only removes the catalog entry; the data files stay in GCS. Deleting the

@@ -29,8 +29,8 @@ The fix depends on where a row's time comes from:
 ## Decision
 
 **Effective-dated data overwrites by its effective date.** `exchange_rates` is reference
-data, not an event log: Silver moves from `IncrementalAppend` to
-`PartitionedOverwrite(partition_column="timestamp")`, with full Bronze read and dedup
+data, not an event log: Silver moves from `AppendByHour` to
+`OverwriteByPartition(column="timestamp")`, with full Bronze read and dedup
 keeping the latest `ingested_at` per `(from_currency, to_currency, timestamp)`. Seeds are
 unchanged.
 

@@ -16,7 +16,7 @@ from config.loader import ConfigLoader
 from ingest.base import AsyncIngestor
 from ingest.models.exchange_rate import ExchangeRate
 from ingest.schemas.exchange_rates import EXCHANGE_RATES_BRONZE_SCHEMA
-from ingest.write_strategy import AppendByHour
+from ingest.write_strategy import AppendByHour, BronzeTable
 
 
 @dataclass
@@ -80,8 +80,7 @@ async def main():
         dataset=exchange_rates,
         config=exchange_rate_config,
         lakehouse_config=loader.get_lakehouse(),
-        bronze_schema=EXCHANGE_RATES_BRONZE_SCHEMA,
-        write_strategy=AppendByHour(),
+        bronze_table=BronzeTable(EXCHANGE_RATES_BRONZE_SCHEMA, AppendByHour()),
         http_config=loader.get_http(),
     )
     logging.info(f"Starting source {exchange_rate_ingestor.name}...")

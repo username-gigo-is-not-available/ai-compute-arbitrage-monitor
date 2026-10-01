@@ -11,7 +11,7 @@ from config.loader import ConfigLoader
 from ingest.evn_base import EVNBaseIngestor
 from ingest.models.electricity_tariff_fee import ElectricityTariffFee
 from ingest.schemas.electricity_tariff_fees import ELECTRICITY_TARIFF_FEES_BRONZE_SCHEMA
-from ingest.write_strategy import OverwriteByValidFrom
+from ingest.write_strategy import OverwriteByPartition, BronzeTable
 
 
 @dataclass(frozen=True)
@@ -104,8 +104,7 @@ def main():
         dataset=electricity_tariff_fees,
         config=evn_config,
         lakehouse_config=loader.get_lakehouse(),
-        bronze_schema=ELECTRICITY_TARIFF_FEES_BRONZE_SCHEMA,
-        write_strategy=OverwriteByValidFrom(),
+        bronze_table=BronzeTable(ELECTRICITY_TARIFF_FEES_BRONZE_SCHEMA, OverwriteByPartition()),
         http_config=loader.get_http(),
     )
     logging.info(f"Starting seed {electricity_tariff_fees_ingestor.name}...")

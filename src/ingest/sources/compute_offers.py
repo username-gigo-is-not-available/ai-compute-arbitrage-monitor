@@ -16,7 +16,7 @@ from ingest.base import AsyncIngestor
 from ingest.models.vast_ai_offer import VastAIOffer
 from ingest.schemas.compute_offers import COMPUTE_OFFERS_BRONZE_SCHEMA
 from ingest.scheduling import is_backfill, resolve_snapshot_at
-from ingest.write_strategy import AppendByHour
+from ingest.write_strategy import AppendByHour, BronzeTable
 
 @dataclass
 class ComputeOffersIngestor(AsyncIngestor):
@@ -121,8 +121,7 @@ async def main(scheduled_at: str | None = None):
         dataset=compute_offers,
         config=vast_ai_config,
         lakehouse_config=loader.get_lakehouse(),
-        bronze_schema=COMPUTE_OFFERS_BRONZE_SCHEMA,
-        write_strategy=AppendByHour(column="snapshot_at"),
+        bronze_table=BronzeTable(COMPUTE_OFFERS_BRONZE_SCHEMA, AppendByHour(column="snapshot_at")),
         http_config=loader.get_http(),
         snapshot_at=resolve_snapshot_at(scheduled_at),
     )

@@ -5,8 +5,7 @@ from http import HTTPStatus
 from typing import Any, cast
 
 import pyarrow as pa
-from pyiceberg.exceptions import NamespaceAlreadyExistsError
-from pyiceberg.schema import Schema
+from pyiceberg.catalog import Catalog
 from tenacity import (
     before_sleep_log,
     retry,
@@ -22,7 +21,7 @@ from common.types import DatasetConfig
 from config.http import HttpConfig
 from config.lakehouse import GCPLakehouseConfig
 from ingest.models.types import IngestorRecord
-from ingest.write_strategy import BronzeWriteStrategy
+from ingest.write_strategy import BronzeTable
 
 
 @dataclass
@@ -30,11 +29,10 @@ class Ingestor(ABC):
     dataset: Dataset
     config: DatasetConfig
     lakehouse_config: GCPLakehouseConfig
-    bronze_schema: Schema
-    write_strategy: BronzeWriteStrategy
+    bronze_table: BronzeTable
     name: str = field(init=False)
     logger: logging.Logger = field(init=False)
-    _catalog: Any = field(init=False, default=None)
+    _catalog: Catalog | None = field(init=False, default=None)
 
     def __post_init__(self):
         self.name = self.__class__.__name__
@@ -44,20 +42,15 @@ class Ingestor(ABC):
     def parse(self, **kwargs) -> IngestorRecord | None:
         raise NotImplementedError
 
-    def init(self) -> None:
+    def ensure_bronze_table(self) -> None:
         self._catalog = self.lakehouse_config.open_catalog()
-        namespace = self.lakehouse_config.namespace(DataStageType.BRONZE, self.dataset)
-        table_id = self.lakehouse_config.table_id(DataStageType.BRONZE, self.dataset)
-        try:
-            self._catalog.create_namespace(namespace)
-        except NamespaceAlreadyExistsError:
-            pass
-        if not self._catalog.table_exists(table_id):
-            self._catalog.create_table(
-                table_id,
-                schema=self.bronze_schema,
-                partition_spec=self.write_strategy.partition_spec(self.bronze_schema),
-            )
+        self.lakehouse_config.ensure_table(
+            self._catalog,
+            DataStageType.BRONZE,
+            self.dataset,
+            schema=self.bronze_table.schema,
+            partition_spec=self.bronze_table.partition_spec(),
+        )
 
     def _handle_result(self, data: list[IngestorRecord]) -> None:
         if data:
@@ -70,7 +63,7 @@ class Ingestor(ABC):
         catalog = self._catalog or self.lakehouse_config.open_catalog()
         arrow_table = pa.Table.from_pylist([r.to_row() for r in data])
         table = catalog.load_table(self.lakehouse_config.table_id(DataStageType.BRONZE, self.dataset))
-        self.write_strategy.write(table, arrow_table)
+        self.bronze_table.write(table, arrow_table)
         self.logger.info(f"Written {len(arrow_table)} {self.name} records to Bronze")
 
 
@@ -103,7 +96,7 @@ class SyncIngestor(Ingestor):
 
     def run(self) -> None:
         self.logger.info(f"Starting load for {self.name}...")
-        self.init()
+        self.ensure_bronze_table()
         self._handle_result(self.load())
 
 
@@ -136,5 +129,5 @@ class AsyncIngestor(Ingestor):
 
     async def run(self) -> None:
         self.logger.info(f"Starting load for {self.name}...")
-        self.init()
+        self.ensure_bronze_table()
         self._handle_result(data=await self.load())

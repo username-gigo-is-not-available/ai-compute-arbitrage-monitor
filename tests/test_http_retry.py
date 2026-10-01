@@ -44,7 +44,7 @@ from config.apis.exchange_rate import ExchangeRateConfig
 from config.apis.vast_ai import VastAIConfig
 from config.http import HttpConfig
 from config.lakehouse import GCPLakehouseConfig
-from ingest.write_strategy import AppendByHour, OverwriteByValidFrom
+from ingest.write_strategy import AppendByHour, BronzeTable, OverwriteByPartition
 from pyiceberg.schema import Schema
 from pyiceberg.types import NestedField, StringType
 from ingest.evn_base import EVNBaseIngestor
@@ -167,8 +167,7 @@ def _evn(retry_count: int) -> _EVNTestIngestor:
         dataset=Dataset(dataset_name=DatasetName.ELECTRICITY_TARIFF_TIERS, dataset_type=DatasetType.SEEDS),
         config=EVNConfig(enabled=True, tariff_tiers_url="https://evn.test/", tariff_system_url="https://evn.test/"),
         lakehouse_config=_lakehouse(),
-        bronze_schema=_DUMMY_BRONZE_SCHEMA,
-        write_strategy=OverwriteByValidFrom(),
+        bronze_table=BronzeTable(_DUMMY_BRONZE_SCHEMA, OverwriteByPartition()),
         http_config=_http(retry_count=retry_count),
     )
 
@@ -269,8 +268,7 @@ def _exchange(retry_count: int) -> ExchangeRateIngestor:
             api_key="test-key",
         ),
         lakehouse_config=_lakehouse(),
-        bronze_schema=_DUMMY_BRONZE_SCHEMA,
-        write_strategy=AppendByHour(),
+        bronze_table=BronzeTable(_DUMMY_BRONZE_SCHEMA, AppendByHour()),
         http_config=_http(retry_count=retry_count),
     )
 
@@ -343,8 +341,7 @@ def _compute(retry_count: int) -> ComputeOffersIngestor:
         dataset=Dataset(dataset_name=DatasetName.COMPUTE_OFFERS, dataset_type=DatasetType.SOURCES),
         config=VastAIConfig(enabled=True, base_url="https://console.vast.test/api/v0", limit=10),
         lakehouse_config=_lakehouse(),
-        bronze_schema=_DUMMY_BRONZE_SCHEMA,
-        write_strategy=AppendByHour(),
+        bronze_table=BronzeTable(_DUMMY_BRONZE_SCHEMA, AppendByHour()),
         http_config=_http(retry_count=retry_count),
         snapshot_at=datetime.now(UTC),
     )

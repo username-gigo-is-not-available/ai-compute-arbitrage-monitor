@@ -2,7 +2,6 @@ import logging
 from dataclasses import dataclass, field
 from typing import Callable
 
-from pyiceberg.exceptions import NamespaceAlreadyExistsError
 from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql.types import StructType
 
@@ -23,34 +22,30 @@ class Pipeline:
     dataset: Dataset
     config: DatasetConfig
     lakehouse_config: GCPLakehouseConfig
-    silver_strategy: SilverWriteStrategy
+    write_strategy: SilverWriteStrategy
     transform_steps: list[Callable[[DataFrame], DataFrame]] = field(default_factory=list)
     logger: logging.Logger = field(init=False)
 
     def __post_init__(self):
         self.name = self.__class__.__name__
         self.logger = logging.getLogger(self.name)
-        self._ensure_silver_namespace()
 
-    def _ensure_silver_namespace(self) -> None:
-        ns = self.lakehouse_config.namespace(DataStageType.SILVER, self.dataset)
+    def ensure_silver_namespace(self) -> None:
+        # Spark creates the Silver table on first write; only the namespace must exist beforehand.
         catalog = self.lakehouse_config.open_catalog()
-        try:
-            catalog.create_namespace(ns)
-        except NamespaceAlreadyExistsError:
-            pass
+        self.lakehouse_config.ensure_namespace(catalog, DataStageType.SILVER, self.dataset)
 
     def read(self) -> DataFrame:
         bronze = self.lakehouse_config.spark_table(DataStageType.BRONZE, self.dataset)
         self.logger.info(f"Reading from {bronze}")
         df = self.session.table(bronze)
         silver = self.lakehouse_config.spark_table(DataStageType.SILVER, self.dataset)
-        return self.silver_strategy.read_filter(df, self.session, silver)
+        return self.write_strategy.read_filter(df, self.session, silver)
 
     def save(self, df: DataFrame) -> DataFrame:
         silver = self.lakehouse_config.spark_table(DataStageType.SILVER, self.dataset)
         self.logger.info(f"Writing to {silver}")
-        self.silver_strategy.write(df, silver)
+        self.write_strategy.write(df, silver)
         self.logger.info("Write complete")
         return df
 
@@ -69,6 +64,7 @@ class Pipeline:
     def run(self):
         name = self.__class__.__name__
         self.logger.info(f"{name} starting")
+        self.ensure_silver_namespace()
         df = self.read()
         generated_df = self.generate(df)
         if generated_df is not None:

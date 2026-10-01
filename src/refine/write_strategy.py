@@ -1,11 +1,15 @@
 from abc import ABC, abstractmethod
+from typing import Callable
 
-from pyspark.sql import DataFrame, SparkSession
+from pyspark.sql import Column, DataFrame, DataFrameWriterV2, SparkSession
 from pyspark.sql.functions import col, hours as spark_hours, max as spark_max
 from pyspark.sql.utils import AnalysisException
 
 
 class SilverWriteStrategy(ABC):
+    def __init__(self, column: str) -> None:
+        self.column = column
+
     @abstractmethod
     def read_filter(self, df: DataFrame, session: SparkSession, silver_table: str) -> DataFrame:
         raise NotImplementedError
@@ -14,13 +18,21 @@ class SilverWriteStrategy(ABC):
     def write(self, df: DataFrame, silver_table: str) -> None:
         raise NotImplementedError
 
+    @staticmethod
+    def _write_or_create(df: DataFrame, silver_table: str,
+                         write: Callable[[DataFrameWriterV2], None], partition: Column | str) -> None:
+        try:
+            write(df.writeTo(silver_table))
+        except AnalysisException:
+            df.writeTo(silver_table).using("iceberg").partitionedBy(partition).create()
 
-class IncrementalAppend(SilverWriteStrategy):
+
+class AppendByHour(SilverWriteStrategy):
     """Event logs: watermark-filtered read on column, append partitioned by hour(column).
     compute_offers uses snapshot_at, so a rerun of an already-refined hour equals the watermark and is ignored (ADR-019)."""
 
     def __init__(self, column: str = "ingested_at") -> None:
-        self.column = column
+        super().__init__(column)
 
     def read_filter(self, df: DataFrame, session: SparkSession, silver_table: str) -> DataFrame:
         try:
@@ -33,24 +45,18 @@ class IncrementalAppend(SilverWriteStrategy):
         return df
 
     def write(self, df: DataFrame, silver_table: str) -> None:
-        try:
-            df.writeTo(silver_table).append()
-        except AnalysisException:
-            df.writeTo(silver_table).using("iceberg").partitionedBy(spark_hours(self.column)).create()
+        self._write_or_create(df, silver_table, lambda writer: writer.append(), spark_hours(self.column))
 
 
-class PartitionedOverwrite(SilverWriteStrategy):
-    """Full Bronze read, overwrite Silver by an effective-date partition (valid_from for seeds,
-    the provider's timestamp for exchange_rates). Re-ingesting the same fact replaces it."""
+class OverwriteByPartition(SilverWriteStrategy):
+    """Effective-dated data: full Bronze read, overwrite Silver by an identity partition on column
+    (valid_from for seeds, the provider's timestamp for exchange_rates). Re-ingesting the same fact replaces it."""
 
-    def __init__(self, partition_column: str = "valid_from") -> None:
-        self.partition_column = partition_column
+    def __init__(self, column: str = "valid_from") -> None:
+        super().__init__(column)
 
     def read_filter(self, df: DataFrame, session: SparkSession, silver_table: str) -> DataFrame:
         return df
 
     def write(self, df: DataFrame, silver_table: str) -> None:
-        try:
-            df.writeTo(silver_table).overwritePartitions()
-        except AnalysisException:
-            df.writeTo(silver_table).using("iceberg").partitionedBy(self.partition_column).create()
+        self._write_or_create(df, silver_table, lambda writer: writer.overwritePartitions(), self.column)

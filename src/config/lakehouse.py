@@ -1,12 +1,15 @@
 from typing import ClassVar
 
-from google.auth import default as gcp_default
-from google.auth.transport.requests import Request as GcpRequest
 from pydantic import BaseModel
+from pyiceberg.catalog import Catalog
 from pyiceberg.catalog.rest import RestCatalog
+from pyiceberg.exceptions import NamespaceAlreadyExistsError
+from pyiceberg.partitioning import PartitionSpec
+from pyiceberg.schema import Schema
 
 from common.classes import Dataset
-from common.enums import DataStageType
+from common.enums import DataStageType, DatasetType
+from config.gcp_auth import access_token
 
 
 class GCPLakehouseConfig(BaseModel):
@@ -24,8 +27,13 @@ class GCPLakehouseConfig(BaseModel):
             "header.x-goog-user-project": self.project_id,
         }
 
+    @staticmethod
+    def stage_namespace(stage: DataStageType, dataset_type: DatasetType) -> str:
+        # Flat <stage>_<dataset_type>: BigLake rejects nested namespaces (ADR-016).
+        return f"{stage.value}_{dataset_type.value}"
+
     def namespace(self, stage: DataStageType, dataset: Dataset) -> str:
-        return f"{stage.value}_{dataset.dataset_type.value}"
+        return self.stage_namespace(stage, dataset.dataset_type)
 
     def table_id(self, stage: DataStageType, dataset: Dataset) -> tuple[str, str]:
         return (self.namespace(stage, dataset), dataset.dataset_name.value)
@@ -36,11 +44,21 @@ class GCPLakehouseConfig(BaseModel):
 
     def open_catalog(self) -> RestCatalog:
         # pyiceberg REST client has no Google ADC integration; pass a fresh Bearer token explicitly
-        creds, _ = gcp_default(scopes=["https://www.googleapis.com/auth/cloud-platform"])
-        creds.refresh(GcpRequest())
         return RestCatalog(self.catalog_id, **{
             **self.catalog_props(),
-            "token": creds.token,
+            "token": access_token(),
             "py-io-impl": "pyiceberg.io.pyarrow.PyArrowFileIO",
         })
 
+    def ensure_namespace(self, catalog: Catalog, stage: DataStageType, dataset: Dataset) -> None:
+        try:
+            catalog.create_namespace(self.namespace(stage, dataset))
+        except NamespaceAlreadyExistsError:
+            pass
+
+    def ensure_table(self, catalog: Catalog, stage: DataStageType, dataset: Dataset,
+                     schema: Schema, partition_spec: PartitionSpec) -> None:
+        self.ensure_namespace(catalog, stage, dataset)
+        table_id = self.table_id(stage, dataset)
+        if not catalog.table_exists(table_id):
+            catalog.create_table(table_id, schema=schema, partition_spec=partition_spec)
