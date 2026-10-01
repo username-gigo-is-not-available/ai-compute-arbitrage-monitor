@@ -7,8 +7,8 @@
 -- (`valid_from <= date < valid_to`) and the SQL standard's OVERLAPS operator:
 -- a and b overlap iff a.valid_from < b.valid_to AND b.valid_from < a.valid_to.
 -- Adjacent ranges (one ends exactly where the next starts) are legal by
--- construction (dims: valid_to = next valid_from - 1 day; fct: post_hook closes
--- with valid_to = next snapshot's valid_from), so they are NOT flagged.
+-- construction (dims: valid_to = next valid_from via the valid_to macro; fct:
+-- post_hook closes with valid_to = next snapshot's valid_from), so they are NOT flagged.
 --
 -- Applied via schema.yml model-level tests by natural key, so a single macro
 -- serves every SCD table (YAML key drops the test_ prefix, hence assert_*).
