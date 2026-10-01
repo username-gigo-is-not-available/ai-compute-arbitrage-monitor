@@ -1,7 +1,9 @@
-from pyspark.sql.types import StructType, StructField, StringType, IntegerType, FloatType, BooleanType
+from pyspark.sql.types import StructType, StructField, StringType, IntegerType, FloatType, BooleanType, TimestampType
 
 COMPUTE_OFFER_SCHEMA = StructType(
     [
+        # SNAPSHOT (ADR-019)
+        StructField("snapshot_at", TimestampType(), nullable=False),
         # IDs
         StructField("offer_id", IntegerType(), nullable=False),
         StructField("machine_id", IntegerType(), nullable=False),

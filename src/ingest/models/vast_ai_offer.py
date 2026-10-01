@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from pydantic import field_validator
 
 from ingest.models.base import BaseRecord
@@ -5,6 +7,8 @@ from common.enums import VerificationStatusType, OfferType
 
 
 class VastAIOffer(BaseRecord):
+    # SNAPSHOT: scheduled hour this offer snapshot represents (ADR-019); ingested_at is the fetch moment
+    snapshot_at: datetime
     # IDs
     offer_id: int
     machine_id: int

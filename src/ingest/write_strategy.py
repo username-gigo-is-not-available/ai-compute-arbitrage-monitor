@@ -17,12 +17,15 @@ class BronzeWriteStrategy(ABC):
 
 
 class AppendByHour(BronzeWriteStrategy):
-    """Sources: append-only, partitioned by hour(ingested_at)."""
+    """Sources: append-only, partitioned by hour(column) — ingested_at, or snapshot_at for compute_offers (ADR-019)."""
+
+    def __init__(self, column: str = "ingested_at") -> None:
+        self.column = column
 
     def partition_spec(self, schema):
-        field_id = schema.find_field("ingested_at").field_id
+        field_id = schema.find_field(self.column).field_id
         return PartitionSpec(
-            PartitionField(source_id=field_id, field_id=1000, transform=HourTransform(), name="ingested_at_hour")
+            PartitionField(source_id=field_id, field_id=1000, transform=HourTransform(), name=f"{self.column}_hour")
         )
 
     def write(self, table, arrow_table: pa.Table) -> None:

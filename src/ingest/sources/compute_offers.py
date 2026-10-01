@@ -15,10 +15,21 @@ from config.loader import ConfigLoader
 from ingest.base import AsyncIngestor
 from ingest.models.vast_ai_offer import VastAIOffer
 from ingest.schemas.compute_offers import COMPUTE_OFFERS_BRONZE_SCHEMA
+from ingest.scheduling import is_backfill, resolve_snapshot_at
 from ingest.write_strategy import AppendByHour
 
 @dataclass
 class ComputeOffersIngestor(AsyncIngestor):
+    snapshot_at: datetime
+
+    async def run(self) -> None:
+        if is_backfill(self.snapshot_at):
+            self.logger.warning(
+                f"Skipping {self.name}: snapshot_at {self.snapshot_at.isoformat()} is in the past and "
+                f"Vast.ai only serves the current market, so it cannot be backfilled (ADR-019)."
+            )
+            return
+        await super().run()
 
     async def load(self) -> list[VastAIOffer]:
         async with ClientSession() as session:
@@ -54,6 +65,7 @@ class ComputeOffersIngestor(AsyncIngestor):
         offer_type: OfferType = kwargs.get("offer_type")
         try:
             return VastAIOffer(
+                snapshot_at=self.snapshot_at,
                 ingested_at=ingested_at,
                 offer_id=data.get("ask_contract_id"),
                 machine_id=data.get("machine_id"),
@@ -98,7 +110,7 @@ class ComputeOffersIngestor(AsyncIngestor):
             return None
 
 
-async def main():
+async def main(scheduled_at: str | None = None):
     loader: ConfigLoader = ConfigLoader()
     vast_ai_config: VastAIConfig = loader.get_vast_ai()
     compute_offers: Dataset = Dataset(dataset_name=DatasetName.COMPUTE_OFFERS, dataset_type=DatasetType.SOURCES)
@@ -110,15 +122,16 @@ async def main():
         config=vast_ai_config,
         lakehouse_config=loader.get_lakehouse(),
         bronze_schema=COMPUTE_OFFERS_BRONZE_SCHEMA,
-        write_strategy=AppendByHour(),
+        write_strategy=AppendByHour(column="snapshot_at"),
         http_config=loader.get_http(),
+        snapshot_at=resolve_snapshot_at(scheduled_at),
     )
     logging.info(f"Starting source {compute_offers_ingestor.name}...")
     await compute_offers_ingestor.run()
 
 
-def run():
-    asyncio.run(main())
+def run(scheduled_at: str | None = None):
+    asyncio.run(main(scheduled_at))
 
 
 if __name__ == "__main__":

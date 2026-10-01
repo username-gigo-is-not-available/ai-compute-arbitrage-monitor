@@ -40,4 +40,5 @@ COMPUTE_OFFERS_BRONZE_SCHEMA = Schema(
     NestedField(field_id=36, name="rentable_flag", field_type=BooleanType(), required=False),
     NestedField(field_id=37, name="rented_flag", field_type=BooleanType(), required=False),
     NestedField(field_id=38, name="ingested_at", field_type=TimestamptzType(), required=False),
+    NestedField(field_id=39, name="snapshot_at", field_type=TimestamptzType(), required=False),
 )

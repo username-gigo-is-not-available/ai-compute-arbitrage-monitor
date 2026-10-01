@@ -45,6 +45,8 @@ class DagFactory:
             t_ingest = PythonOperator(
                 task_id="ingest",
                 python_callable=CallableBuilder(config.ingest_module).build(),
+                # Fire time of this run; compute_offers keys its snapshot on it (ADR-019).
+                op_kwargs={"scheduled_at": "{{ data_interval_end }}"},
             )
 
             t_refine = self.refine_strategy.build_operator(self.pipeline_config)

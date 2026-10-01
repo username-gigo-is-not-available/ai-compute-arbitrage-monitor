@@ -67,7 +67,7 @@ def main():
     electricity_tariff_window_schedule_ingestor.run()
 
 
-def run():
+def run(scheduled_at: str | None = None):  # unused: effective date comes from the source (ADR-019)
     main()
 
 

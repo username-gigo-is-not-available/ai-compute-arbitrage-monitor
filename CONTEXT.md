@@ -13,7 +13,7 @@ The pricing modality of an offer listing — `on_demand`, `bid`, or `reserved`. 
 _Avoid_: Pricing mode, plan
 
 **Offer snapshot**:
-A point-in-time capture of an offer's specs and pricing, keyed by `(offer_id, ingested_at, offer_type)`. The same `offer_id` can appear under 2–3 offer types with different prices at one `ingested_at`, so each type is its own snapshot.
+A capture of an offer's specs and pricing as of a scheduled hour, keyed by `(offer_id, snapshot_at, offer_type)`. `snapshot_at` is the ingest run's scheduled time floored to the hour (ADR-019), not the fetch moment — that is `ingested_at`. The same `offer_id` can appear under 2–3 offer types with different prices at one `snapshot_at`, so each type is its own snapshot. `int_compute_offers` maps `snapshot_at` to `valid_from`.
 _Avoid_: Record, row, version
 
 **Tariff tier**:

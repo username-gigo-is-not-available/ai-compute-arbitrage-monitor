@@ -7,7 +7,7 @@ from common.enums import DataStageType, DatasetType, DatasetName
 from config.loader import ConfigLoader
 from config.apis.vast_ai import VastAIConfig
 from refine.write_strategy import IncrementalAppend
-from refine.assets.filtering import deduplicate
+from refine.assets.filtering import deduplicate_keep_latest, keep_latest_per_group
 from refine.init import initialize_spark
 from refine.base import Pipeline
 from refine.assets.cleaning import strip_non_ascii, trim_whitespace, replace_substring, empty_to_null
@@ -19,7 +19,10 @@ def strip_cpu_core_suffix(df: DataFrame) -> DataFrame:
 
 
 def deduplicate_compute_offers(df: DataFrame) -> DataFrame:
-    return deduplicate(df, columns=["offer_id", "offer_type", "ingested_at"])
+    # A retried ingest replaces its earlier attempt for the same snapshot_at wholesale (each attempt has one
+    # ingested_at); merging per key would union two different market views into one snapshot (ADR-019).
+    df = keep_latest_per_group(df, group_by="snapshot_at", order_by="ingested_at")
+    return deduplicate_keep_latest(df, columns=["offer_id", "offer_type", "snapshot_at"], order_by="ingested_at")
 
 
 @dataclass
@@ -47,7 +50,7 @@ def run():
         dataset=compute_offers,
         config=vast_ai_config,
         lakehouse_config=loader.get_lakehouse(),
-        silver_strategy=IncrementalAppend(),
+        silver_strategy=IncrementalAppend(column="snapshot_at"),
     )
     compute_offers_pipeline.run()
 

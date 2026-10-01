@@ -30,6 +30,7 @@ import asyncio
 import logging
 import sys
 import traceback
+from datetime import datetime, UTC
 from http import HTTPStatus
 from unittest import mock
 
@@ -43,7 +44,7 @@ from config.apis.exchange_rate import ExchangeRateConfig
 from config.apis.vast_ai import VastAIConfig
 from config.http import HttpConfig
 from config.lakehouse import GCPLakehouseConfig
-from ingest.write_strategy import AppendByHour, FullOverwrite
+from ingest.write_strategy import AppendByHour, OverwriteByValidFrom
 from pyiceberg.schema import Schema
 from pyiceberg.types import NestedField, StringType
 from ingest.evn_base import EVNBaseIngestor
@@ -167,7 +168,7 @@ def _evn(retry_count: int) -> _EVNTestIngestor:
         config=EVNConfig(enabled=True, tariff_tiers_url="https://evn.test/", tariff_system_url="https://evn.test/"),
         lakehouse_config=_lakehouse(),
         bronze_schema=_DUMMY_BRONZE_SCHEMA,
-        write_strategy=FullOverwrite(),
+        write_strategy=OverwriteByValidFrom(),
         http_config=_http(retry_count=retry_count),
     )
 
@@ -345,6 +346,7 @@ def _compute(retry_count: int) -> ComputeOffersIngestor:
         bronze_schema=_DUMMY_BRONZE_SCHEMA,
         write_strategy=AppendByHour(),
         http_config=_http(retry_count=retry_count),
+        snapshot_at=datetime.now(UTC),
     )
 
 

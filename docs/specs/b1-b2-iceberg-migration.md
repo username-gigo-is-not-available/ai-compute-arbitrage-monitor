@@ -18,6 +18,11 @@ stays clean because `deduplicate_compute_offers` already deduplicates on
 `["offer_id", "offer_type", "ingested_at"]` and the Silver watermark
 excludes already-processed `ingested_at` values.
 
+> **Superseded by ADR-019.** `ingested_at` is `now()` at fetch, so the
+> reasoning above does not hold for retries. The tables below reflect
+> ADR-019: `compute_offers` is keyed on `snapshot_at`; `exchange_rates`
+> overwrites by its effective `timestamp`.
+
 ## Files in scope
 
 - `src/ingest/base.py` — `Ingestor.store()`
@@ -34,7 +39,8 @@ Rewrite using pyiceberg against the Lakehouse REST catalog.
 
 | Source | Write strategy | Partition |
 |---|---|---|
-| `compute_offers`, `exchange_rates` | append | `hour(ingested_at)` |
+| `compute_offers` | append | `hour(snapshot_at)` |
+| `exchange_rates` | append | `hour(ingested_at)` |
 | `electricity_tariff_*` seeds | overwrite `valid_from` partition | `valid_from` |
 
 Table identifier: `bronze_sources.<dataset_name>` or
@@ -48,7 +54,8 @@ hourly snapshot is distinct.
 
 | Source | Read | Write strategy | Partition |
 |---|---|---|---|
-| `compute_offers`, `exchange_rates` | Bronze where `ingested_at > max(ingested_at in Silver)` | append | `hour(ingested_at)` |
+| `compute_offers` | Bronze where `snapshot_at > max(snapshot_at in Silver)` | append | `hour(snapshot_at)` |
+| `exchange_rates` | full Bronze read | overwrite `timestamp` partition | `timestamp` |
 | `electricity_tariff_*` seeds | full Bronze read | overwrite `valid_from` partition | `valid_from` |
 
 The watermark (`max(ingested_at)` from Silver) is derived at the start of

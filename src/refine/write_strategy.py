@@ -16,14 +16,18 @@ class SilverWriteStrategy(ABC):
 
 
 class IncrementalAppend(SilverWriteStrategy):
-    """Sources: watermark-filtered read, append partitioned by hour(ingested_at)."""
+    """Event logs: watermark-filtered read on column, append partitioned by hour(column).
+    compute_offers uses snapshot_at, so a rerun of an already-refined hour equals the watermark and is ignored (ADR-019)."""
+
+    def __init__(self, column: str = "ingested_at") -> None:
+        self.column = column
 
     def read_filter(self, df: DataFrame, session: SparkSession, silver_table: str) -> DataFrame:
         try:
-            row = session.table(silver_table).agg(spark_max("ingested_at")).collect()[0]
+            row = session.table(silver_table).agg(spark_max(self.column)).collect()[0]
             watermark = row[0]
             if watermark is not None:
-                return df.filter(col("ingested_at") > watermark)
+                return df.filter(col(self.column) > watermark)
         except AnalysisException:
             pass
         return df
@@ -32,7 +36,7 @@ class IncrementalAppend(SilverWriteStrategy):
         try:
             df.writeTo(silver_table).append()
         except AnalysisException:
-            df.writeTo(silver_table).using("iceberg").partitionedBy(spark_hours("ingested_at")).create()
+            df.writeTo(silver_table).using("iceberg").partitionedBy(spark_hours(self.column)).create()
 
 
 class PartitionedOverwrite(SilverWriteStrategy):

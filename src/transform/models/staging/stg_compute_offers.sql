@@ -1,7 +1,7 @@
 {{
     config(
         materialized = 'incremental',
-        unique_key   = ['offer_id', 'ingested_at', 'offer_type'],
+        unique_key   = ['offer_id', 'snapshot_at', 'offer_type'],
         tags = ['compute_offers']
     )
 }}
@@ -73,6 +73,7 @@ renamed as (
         cast(rented_flag as bool)                                      as rented_flag,
 
         -- time
+        {{ cast_utc('snapshot_at') }}                                  as snapshot_at,
         {{ cast_utc('ingested_at') }}                                  as ingested_at,
         {{ cast_utc('processed_at') }}                                 as processed_at
 
@@ -82,5 +83,5 @@ renamed as (
 select * from renamed
 
 {% if is_incremental() %}
-  where ingested_at > (select max(ingested_at) from {{ this }})
+  where snapshot_at > (select max(snapshot_at) from {{ this }})
 {% endif %}

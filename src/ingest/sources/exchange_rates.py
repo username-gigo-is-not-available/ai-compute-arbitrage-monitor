@@ -88,7 +88,7 @@ async def main():
     await exchange_rate_ingestor.run()
 
 
-def run():
+def run(scheduled_at: str | None = None):  # unused: effective date comes from the source (ADR-019)
     asyncio.run(main())
 
 
