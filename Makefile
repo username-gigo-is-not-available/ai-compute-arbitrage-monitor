@@ -43,6 +43,7 @@ help:
 	@echo "dbt"
 	@echo "  make dbt-run           Run all dbt models"
 	@echo "  make dbt-test          Run all dbt tests"
+	@echo "  make dbt-build-full    Full-refresh build + test of every dbt model"
 	@echo "  make dbt-docs          Generate and serve dbt docs"
 	@echo ""
 	@echo "Data purge (local dev reset - destructive!)"
@@ -137,19 +138,24 @@ restart: down up
 
 # ── dbt ───────────────────────────────────────────────────────────────────────
 
-DBT := cd src/transform &&
+# profiles.yml reads GCP_PROJECT_ID / BQ_DATASET_NAME / BQ_LOCATION from the environment (ADR-013, ADR-018).
+DBT := cd src/transform && uv run --env-file ../../.env dbt
 
 .PHONY: dbt-run
 dbt-run:
-	$(DBT) dbt run
+	$(DBT) run
 
 .PHONY: dbt-test
 dbt-test:
-	$(DBT) dbt test
+	$(DBT) test
+
+.PHONY: dbt-build-full
+dbt-build-full:
+	$(DBT) build --full-refresh
 
 .PHONY: dbt-docs
 dbt-docs:
-	$(DBT) dbt docs generate && dbt docs serve
+	$(DBT) docs generate && uv run --env-file ../../.env dbt docs serve
 
 # ── Data purge ──────────────────────────────────────────────────────────────
 
