@@ -6,6 +6,7 @@ from pyiceberg.catalog.rest import RestCatalog
 from pyiceberg.exceptions import NamespaceAlreadyExistsError
 from pyiceberg.partitioning import PartitionSpec
 from pyiceberg.schema import Schema
+from pyiceberg.table import Table
 
 from common.classes import Dataset
 from common.enums import DataStageType, DatasetType
@@ -62,3 +63,20 @@ class GCPLakehouseConfig(BaseModel):
         table_id = self.table_id(stage, dataset)
         if not catalog.table_exists(table_id):
             catalog.create_table(table_id, schema=schema, partition_spec=partition_spec)
+            return
+        self.add_missing_columns(catalog.load_table(table_id), schema)
+
+    @staticmethod
+    def add_missing_columns(table: Table, schema: Schema) -> None:
+        # Columns are only ever added, at the position the schema gives them; existing ones are left as they are.
+        existing = set(table.schema().column_names)
+        missing = [(i, f) for i, f in enumerate(schema.fields) if f.name not in existing]
+        if not missing:
+            return
+        with table.update_schema() as update:
+            for i, f in missing:
+                update.add_column(f.name, f.field_type, doc=f.doc, required=False)
+                if i == 0:
+                    update.move_first(f.name)
+                else:
+                    update.move_after(f.name, schema.fields[i - 1].name)

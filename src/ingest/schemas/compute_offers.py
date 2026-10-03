@@ -1,5 +1,5 @@
 from pyiceberg.schema import Schema
-from pyiceberg.types import BooleanType, DoubleType, LongType, NestedField, StringType, TimestamptzType
+from pyiceberg.types import BooleanType, DoubleType, ListType, LongType, NestedField, StringType, TimestamptzType
 
 COMPUTE_OFFERS_BRONZE_SCHEMA = Schema(
     NestedField(field_id=1, name="offer_id", field_type=LongType(), required=False),
@@ -18,6 +18,8 @@ COMPUTE_OFFERS_BRONZE_SCHEMA = Schema(
     NestedField(field_id=14, name="gpu_memory_mb", field_type=DoubleType(), required=False),
     NestedField(field_id=15, name="gpu_tdp_watts", field_type=DoubleType(), required=False),
     NestedField(field_id=16, name="number_of_gpus", field_type=LongType(), required=False),
+    NestedField(field_id=40, name="gpu_fraction_of_machine", field_type=DoubleType(), required=False),
+    NestedField(field_id=41, name="gpu_ids", field_type=ListType(element_id=42, element_type=LongType(), element_required=False), required=False),
     NestedField(field_id=17, name="gpu_max_cuda_version_supported", field_type=DoubleType(), required=False),
     NestedField(field_id=18, name="gpu_tflops", field_type=DoubleType(), required=False),
     NestedField(field_id=19, name="gpu_bandwidth_gbytes_per_sec", field_type=DoubleType(), required=False),

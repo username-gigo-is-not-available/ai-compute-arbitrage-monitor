@@ -47,6 +47,7 @@ from config.lakehouse import GCPLakehouseConfig
 from ingest.write_strategy import AppendByHour, BronzeTable, OverwriteByPartition
 from pyiceberg.schema import Schema
 from pyiceberg.types import NestedField, StringType
+from ingest.sources.compute_offers import CensusIncompleteError
 from ingest.evn_base import EVNBaseIngestor
 from ingest.sources.compute_offers import ComputeOffersIngestor
 from ingest.sources.exchange_rates import ExchangeRateIngestor
@@ -333,13 +334,14 @@ def test_exchange_retry_count_1_single_attempt_no_sleep() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Vast.ai compute offers (async): ComputeOffersIngestor.load, per offer_type
+# Vast.ai compute offers (async): ComputeOffersIngestor.load, one census range
 # ---------------------------------------------------------------------------
 
 def _compute(retry_count: int) -> ComputeOffersIngestor:
     return ComputeOffersIngestor(
         dataset=Dataset(dataset_name=DatasetName.COMPUTE_OFFERS, dataset_type=DatasetType.SOURCES),
-        config=VastAIConfig(enabled=True, base_url="https://console.vast.test/api/v0", limit=10),
+        config=VastAIConfig(enabled=True, base_url="https://console.vast.test/api/v0", limit=512, split_at=500,
+                            census_parts=4, request_interval_seconds=1),
         lakehouse_config=_lakehouse(),
         bronze_table=BronzeTable(_DUMMY_BRONZE_SCHEMA, AppendByHour()),
         http_config=_http(retry_count=retry_count),
@@ -347,37 +349,31 @@ def _compute(retry_count: int) -> ComputeOffersIngestor:
     )
 
 
-def test_compute_transient_500_then_200_parses_all_offer_types() -> None:
+def test_compute_transient_500_then_200_completes_census() -> None:
     ingestor = _compute(retry_count=3)
     handler = _capture_logs(ingestor)
-    offer_ok = FakeResponse(200, json_data=OFFER_JSON)
-    side_effects = [
-        FakeResponse(500),
-        FakeResponse(500),
-        offer_ok,
-        offer_ok,
-        offer_ok,
-    ]
-    with mock.patch.object(aiohttp.ClientSession, "get", new=mock.AsyncMock(side_effect=side_effects)) as get_mock, \
-            mock.patch("asyncio.sleep", new=mock.AsyncMock()) as sleep_mock:
+    side_effects = [FakeResponse(500), FakeResponse(500), FakeResponse(200, json_data=OFFER_JSON)]
+    with mock.patch.object(aiohttp.ClientSession, "get", new=mock.AsyncMock(side_effect=side_effects)) as get_mock,             mock.patch("asyncio.sleep", new=mock.AsyncMock()) as sleep_mock:
         result = asyncio.run(ingestor.load())
 
-    assert len(result) == 3, "first offer_type needed retries, then all three parses succeeded"
-    assert get_mock.await_count == 5
-    assert _sleep_calls(sleep_mock) == [mock.call(60), mock.call(60)]
+    assert len(result) == 1, "the one census range needed retries, then parsed"
+    assert get_mock.await_count == 3
+    assert _sleep_calls(sleep_mock) == [mock.call(60), mock.call(60), mock.call(1)], "two retry waits, then the request interval"
     assert _errors(handler) == []
     assert len(_warnings(handler)) == 2
 
 
-def test_compute_permanent_500_returns_empty_and_logs_error_once() -> None:
+def test_compute_permanent_500_fails_census_and_logs_error_once() -> None:
     ingestor = _compute(retry_count=3)
     handler = _capture_logs(ingestor)
     side_effects = [FakeResponse(500), FakeResponse(500), FakeResponse(500)]
-    with mock.patch.object(aiohttp.ClientSession, "get", new=mock.AsyncMock(side_effect=side_effects)) as get_mock, \
-            mock.patch("asyncio.sleep", new=mock.AsyncMock()) as sleep_mock:
-        result = asyncio.run(ingestor.load())
+    with mock.patch.object(aiohttp.ClientSession, "get", new=mock.AsyncMock(side_effect=side_effects)) as get_mock,             mock.patch("asyncio.sleep", new=mock.AsyncMock()) as sleep_mock:
+        try:
+            asyncio.run(ingestor.load())
+            raise AssertionError("an incomplete census must fail, not return a partial market (ADR-020)")
+        except CensusIncompleteError:
+            pass
 
-    assert result == []
     assert get_mock.await_count == 3
     assert _sleep_calls(sleep_mock) == [mock.call(60), mock.call(60)]
     errors = _errors(handler)
@@ -388,11 +384,13 @@ def test_compute_permanent_500_returns_empty_and_logs_error_once() -> None:
 def test_compute_retry_count_1_single_attempt_no_sleep() -> None:
     ingestor = _compute(retry_count=1)
     handler = _capture_logs(ingestor)
-    with mock.patch.object(aiohttp.ClientSession, "get", new=mock.AsyncMock(side_effect=[FakeResponse(500)])) as get_mock, \
-            mock.patch("asyncio.sleep", new=mock.AsyncMock()) as sleep_mock:
-        result = asyncio.run(ingestor.load())
+    with mock.patch.object(aiohttp.ClientSession, "get", new=mock.AsyncMock(side_effect=[FakeResponse(500)])) as get_mock,             mock.patch("asyncio.sleep", new=mock.AsyncMock()) as sleep_mock:
+        try:
+            asyncio.run(ingestor.load())
+            raise AssertionError("an incomplete census must fail")
+        except CensusIncompleteError:
+            pass
 
-    assert result == []
     assert get_mock.await_count == 1
     assert _sleep_calls(sleep_mock) == []
     assert len(_errors(handler)) == 1
@@ -412,8 +410,8 @@ _TESTS = [
     test_exchange_permanent_500_returns_empty_and_logs_error_once,
     test_exchange_timeout_transport_error_retried_then_success,
     test_exchange_retry_count_1_single_attempt_no_sleep,
-    test_compute_transient_500_then_200_parses_all_offer_types,
-    test_compute_permanent_500_returns_empty_and_logs_error_once,
+    test_compute_transient_500_then_200_completes_census,
+    test_compute_permanent_500_fails_census_and_logs_error_once,
     test_compute_retry_count_1_single_attempt_no_sleep,
 ]
 
