@@ -104,9 +104,11 @@ def _lakehouse() -> GCPLakehouseConfig:
 class FakeResponse:
     """Stands in for both requests.Response and aiohttp.ClientResponse at the status level used here."""
 
-    def __init__(self, status: int = HTTPStatus.OK, text: str = "", json_data: dict | None = None):
+    def __init__(self, status: int = HTTPStatus.OK, text: str = "", json_data: dict | None = None,
+                 headers: dict | None = None):
         self.status = status
         self.status_code = status
+        self.headers = headers or {}
         self.text = text
         self._json_data = json_data if json_data is not None else {}
         self.closed = False
@@ -396,6 +398,21 @@ def test_compute_retry_count_1_single_attempt_no_sleep() -> None:
     assert len(_errors(handler)) == 1
 
 
+def test_compute_quota_exhausted_fails_without_retrying() -> None:
+    # Vast.ai's daily row quota answers 429 with Retry-After of hours; waiting retry_delay_seconds cannot help.
+    ingestor = _compute(retry_count=5)
+    quota = FakeResponse(429, headers={"Retry-After": "30129"})
+    with mock.patch.object(aiohttp.ClientSession, "get", new=mock.AsyncMock(side_effect=[quota])) as get_mock,             mock.patch("asyncio.sleep", new=mock.AsyncMock()) as sleep_mock:
+        try:
+            asyncio.run(ingestor.load())
+            raise AssertionError("an incomplete census must fail")
+        except CensusIncompleteError:
+            pass
+
+    assert get_mock.await_count == 1
+    assert _sleep_calls(sleep_mock) == []
+
+
 # ---------------------------------------------------------------------------
 # Standalone runner (also collectable by pytest: the test_* functions above)
 # ---------------------------------------------------------------------------
@@ -413,6 +430,7 @@ _TESTS = [
     test_compute_transient_500_then_200_completes_census,
     test_compute_permanent_500_fails_census_and_logs_error_once,
     test_compute_retry_count_1_single_attempt_no_sleep,
+    test_compute_quota_exhausted_fails_without_retrying,
 ]
 
 

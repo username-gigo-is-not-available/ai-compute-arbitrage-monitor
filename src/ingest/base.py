@@ -108,12 +108,18 @@ class AsyncIngestor(Ingestor):
     async def load(self) -> list[IngestorRecord]:
         raise NotImplementedError
 
+    def outlasts_retries(self, resp) -> bool:
+        # A Retry-After longer than every retry wait combined (e.g. a daily quota) cannot be outwaited.
+        retry_after = resp.headers.get("Retry-After", "")
+        budget = self.http_config.retry_delay_seconds * self.http_config.retry_count
+        return retry_after.isdigit() and int(retry_after) > budget
+
     def retry_async(self, exc_type):
         return retry(
             stop=stop_after_attempt(self.http_config.retry_count),
             wait=wait_fixed(self.http_config.retry_delay_seconds),
             retry=retry_if_exception_type(exc_type)
-            | retry_if_result(lambda resp: resp.status != HTTPStatus.OK),
+            | retry_if_result(lambda resp: resp.status != HTTPStatus.OK and not self.outlasts_retries(resp)),
             retry_error_callback=lambda retry_state: retry_state.outcome.result(),
             before_sleep=before_sleep_log(cast(Any, self.logger), logging.WARNING),
         )

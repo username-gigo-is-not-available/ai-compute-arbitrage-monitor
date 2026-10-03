@@ -84,6 +84,7 @@ class ComputeOffersIngestor(AsyncIngestor):
         offers = data.get("offers", [])
         self.requests += 1
         self.rows_used += len(offers)
+        self.logger.info(f"Range [{lo}, {hi}): {len(offers)} offers; {self.rows_used} rows used in {self.requests} requests")
         return offers
 
     def parse(self, **kwargs) -> VastAIOffer | None:

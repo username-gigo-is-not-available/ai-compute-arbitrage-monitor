@@ -24,6 +24,7 @@ from common.enums import DatasetName, DatasetType
 from config.apis.vast_ai import VastAIConfig
 from config.http import HttpConfig
 from config.lakehouse import GCPLakehouseConfig
+from config.loader import ConfigLoader
 from ingest.schemas.compute_offers import COMPUTE_OFFERS_BRONZE_SCHEMA
 from ingest.sources.compute_offers import CensusIncompleteError, ComputeOffersIngestor
 from ingest.write_strategy import AppendByHour, BronzeTable
@@ -41,6 +42,7 @@ OFFER = {
 class FakeResponse:
     def __init__(self, status: int = 200, offers: list[dict] | None = None) -> None:
         self.status = status
+        self.headers = {}
         self.offers = offers or []
 
     def close(self) -> None:
@@ -100,6 +102,18 @@ class TestComputeOffersCensus(unittest.TestCase):
         returned = [o.offer_id for o in offers]
         self.assertEqual(len(returned), 3_000)
         self.assertEqual(set(returned), set(ids))
+
+    def test_configured_census_costs_about_the_market_size(self):
+        # The daily quota counts returned rows, and a full range's rows are thrown away when it is split; the
+        # configured split must keep that overhead small (a 4-way split cost ~2x on 2026-10-03 and ran out of quota).
+        configured = ConfigLoader().get_vast_ai()
+        ingestor = _ingestor()
+        ingestor.config = ingestor.config.model_copy(update={"census_parts": configured.census_parts})
+        ids = random.Random(3).sample(range(7_000_000, 54_000_000), 10_000)
+        with mock.patch.object(aiohttp.ClientSession, "get", new=FakeMarket(ids).get):
+            offers = asyncio.run(ingestor.load())
+        self.assertEqual(len(offers), 10_000)
+        self.assertLessEqual(ingestor.rows_used, 11_500)
 
     def test_bronze_rows_keep_the_slice_of_the_machine(self):
         # gpu_frac gives machine size (num_gpus / gpu_frac); gpu_ids shows which slices overlap (ADR-020).

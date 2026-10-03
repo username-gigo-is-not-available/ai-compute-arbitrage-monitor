@@ -6,7 +6,7 @@ apis:
     base_url: "https://console.vast.ai/api/v0"
     limit: 512
     split_at: 500
-    census_parts: 4
+    census_parts: 64
     request_interval_seconds: 1.0
 
   exchange_rate:
