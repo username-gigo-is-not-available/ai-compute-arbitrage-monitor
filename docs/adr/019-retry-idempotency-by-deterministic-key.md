@@ -4,6 +4,8 @@
 
 Accepted. Supersedes the retry-safety reasoning of ADR-015 and ADR-017; amends the
 snapshot key of ADR-008 and the Silver write-strategy table of ADR-016.
+_Amended by ADR-020_: for `compute_offers` a snapshot is published only once its census is
+complete, and a retry fetches only the missing ranges instead of replacing the attempt.
 
 ## Context
 

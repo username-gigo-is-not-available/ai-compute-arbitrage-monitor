@@ -2,6 +2,9 @@
 
 ## Status
 
+_Superseded by ADR-020_: only on-demand offers are collected (the bid price is the on-demand
+offer's `min_bid`; reserved prices match on-demand), so `offer_type` leaves the key.
+
 Accepted. _Amended by ADR-019_: the snapshot timestamp is now `snapshot_at`
 (scheduled hour), not `ingested_at` (fetch moment). Read every
 `(offer_id, ingested_at, offer_type)` below as `(offer_id, snapshot_at,
