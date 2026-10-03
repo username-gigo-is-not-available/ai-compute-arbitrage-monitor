@@ -1,4 +1,6 @@
-from pyspark.sql.types import StructType, StructField, StringType, IntegerType, DoubleType, BooleanType, TimestampType
+from pyspark.sql.types import (
+    ArrayType, StructType, StructField, StringType, IntegerType, LongType, DoubleType, BooleanType, TimestampType
+)
 
 COMPUTE_OFFERS_SILVER_SCHEMA = StructType(
     [
@@ -24,6 +26,8 @@ COMPUTE_OFFERS_SILVER_SCHEMA = StructType(
         StructField("gpu_memory_mb", DoubleType(), nullable=False),
         StructField("gpu_tdp_watts", DoubleType(), nullable=False),
         StructField("number_of_gpus", IntegerType(), nullable=False),
+        StructField("gpu_fraction_of_machine", DoubleType(), nullable=True),
+        StructField("gpu_ids", ArrayType(LongType()), nullable=True),
         StructField("gpu_max_cuda_version_supported", DoubleType(), nullable=True),
         StructField("gpu_tflops", DoubleType(), nullable=True),
         StructField("gpu_bandwidth_gbytes_per_sec", DoubleType(), nullable=True),

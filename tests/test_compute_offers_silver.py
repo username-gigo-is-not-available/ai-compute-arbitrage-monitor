@@ -12,8 +12,11 @@ import unittest
 
 from pyspark.sql import SparkSession
 
-from refine.sources.compute_offers import deduplicate_compute_offers
-from refine.write_strategy import AppendByHour
+from common.classes import Dataset
+from common.enums import DatasetName, DatasetType
+from refine.schemas.compute_offers import COMPUTE_OFFERS_SILVER_SCHEMA
+from refine.sources.compute_offers import ComputeOffersPipeline, deduplicate_compute_offers
+from refine.write_strategy import AppendByHour, SilverTable
 
 
 def _offers(session: SparkSession, rows: str):
@@ -51,6 +54,27 @@ class TestComputeOffersSilver(unittest.TestCase):
                         "(4, 'bid', 0.40, '2026-10-01 16:00:00', '2026-10-01 16:00:03')")
         rows = {(r["offer_id"], r["price"]) for r in deduplicate_compute_offers(batch).collect()}
         self.assertEqual(rows, {(1, 0.12), (3, 0.30), (4, 0.40)})
+
+    def test_silver_keeps_the_slice_of_the_machine(self):
+        # dbt derives machine size as number_of_gpus / gpu_fraction_of_machine (ADR-020).
+        bronze = self.session.sql(
+            "SELECT 8936325 AS offer_id, 'on_demand' AS offer_type, 'AMD EPYC 7B13' AS cpu_model_name, "
+            "2 AS number_of_gpus, CAST(0.4 AS DOUBLE) AS gpu_fraction_of_machine, "
+            "array(CAST(55783 AS BIGINT), CAST(55784 AS BIGINT)) AS gpu_ids, "
+            "CAST('2026-10-03 12:00:00' AS TIMESTAMP) AS snapshot_at, "
+            "CAST('2026-10-03 12:00:04' AS TIMESTAMP) AS ingested_at"
+        )
+        pipeline = ComputeOffersPipeline(
+            session=self.session,
+            dataset=Dataset(dataset_name=DatasetName.COMPUTE_OFFERS, dataset_type=DatasetType.SOURCES),
+            config=None,
+            lakehouse_config=None,
+            silver_table=SilverTable(COMPUTE_OFFERS_SILVER_SCHEMA, AppendByHour(column="snapshot_at")),
+        )
+        row = pipeline.transform(bronze).collect()[0]
+        self.assertEqual(row["number_of_gpus"], 2)
+        self.assertEqual(row["gpu_fraction_of_machine"], 0.4)
+        self.assertEqual(row["gpu_ids"], [55783, 55784])
 
 
 if __name__ == "__main__":
