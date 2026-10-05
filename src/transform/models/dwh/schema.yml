@@ -401,16 +401,11 @@ models:
               - to_currency
 
   - name: fct_compute_offers
-    description: "Core fact table - one row per (Vast.ai GPU offer snapshot, offer_type, tariff tier), with electricity cost and profit metrics computed across all EVN tariff scenarios. Grain per ADR-008: (offer_id, valid_from, offer_type, tariff_tier_skey)."
+    description: "Core fact table - one row per (Vast.ai machine, census, tariff tier), with electricity cost and profit metrics computed across all EVN tariff scenarios. Grain per ADR-020: (machine_id, valid_from, tariff_tier_skey)."
     columns:
       # -----------------------------------------------------------------------
       # identity
       # -----------------------------------------------------------------------
-      - name: offer_id
-        description: "Vast.ai offer identifier"
-        tests:
-          - not_null
-
       - name: machine_id
         description: "Vast.ai machine identifier"
         tests:
@@ -425,23 +420,12 @@ models:
       # grain / time
       # -----------------------------------------------------------------------
       - name: valid_from
-        description: "Timestamp of the offer snapshot"
+        description: "Scheduled hour of the census this machine row comes from"
         tests:
           - not_null
 
       - name: valid_to
         description: "Timestamp to which this offer snapshot is valid - 9999-12-31 means currently active"
-
-      # -----------------------------------------------------------------------
-      # offer type
-      # -----------------------------------------------------------------------
-      - name: offer_type
-        description: "Offer type e.g. on_demand, bid, reserved"
-        tests:
-          - not_null
-          - accepted_values:
-              arguments:
-                values: "{{ offer_types() }}"
 
       # -----------------------------------------------------------------------
       # foreign keys to dims
@@ -475,12 +459,7 @@ models:
                 values: [ 'verified', 'unverified', 'deverified' ]
 
       - name: rentable_flag
-        description: "Whether the offer is currently rentable"
-        tests:
-          - not_null
-
-      - name: rented_flag
-        description: "Whether the offer is currently rented"
+        description: "Available: at least one of the machine's offers can be rented now. False means taken (rented, or switched off by its owner)"
         tests:
           - not_null
 
@@ -506,7 +485,7 @@ models:
           - not_null
 
       - name: number_of_gpus
-        description: "Number of GPUs in the offer"
+        description: "Machine size: GPUs in the machine, rented or not"
         tests:
           - not_null
           - dbt_utils.expression_is_true:
@@ -878,9 +857,8 @@ models:
       - dbt_utils.unique_combination_of_columns:
           arguments:
             combination_of_columns:
-              - offer_id
+              - machine_id
               - valid_from
-              - offer_type
               - tariff_tier_skey
       - dbt_utils.expression_is_true:
           arguments:
@@ -888,13 +866,11 @@ models:
       - assert_scd2_double_active:
           arguments:
             natural_key_columns:
-              - offer_id
-              - offer_type
+              - machine_id
               - tariff_tier_skey
             active_value: "timestamp '9999-12-31'"
       - assert_scd2_no_overlapping_ranges:
           arguments:
             natural_key_columns:
-              - offer_id
-              - offer_type
+              - machine_id
               - tariff_tier_skey

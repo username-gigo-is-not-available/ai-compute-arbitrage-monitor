@@ -1,7 +1,8 @@
 {{
     config(
         materialized = 'incremental',
-        unique_key   = ['offer_id', 'snapshot_at', 'offer_type'],
+        unique_key       = ['offer_id', 'snapshot_at', 'offer_type'],
+        on_schema_change = 'append_new_columns',
         tags = ['compute_offers']
     )
 }}
@@ -36,6 +37,7 @@ renamed as (
         cast(gpu_memory_mb as float64)                                 as gpu_memory_mb,
         cast(gpu_tdp_watts as float64)                                 as gpu_tdp_watts,
         cast(number_of_gpus as int64)                                  as number_of_gpus,
+        cast(gpu_fraction_of_machine as float64)                       as gpu_fraction_of_machine,
         cast(gpu_max_cuda_version_supported as float64)                as gpu_max_cuda_version_supported,
         cast(gpu_tflops as float64)                                    as gpu_tflops,
         cast(gpu_bandwidth_gbytes_per_sec as float64)                  as gpu_bandwidth_gbytes_per_sec,

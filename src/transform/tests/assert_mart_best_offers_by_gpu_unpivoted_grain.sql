@@ -6,14 +6,13 @@
 
 with row_counts as (
     select
-        offer_type,
         gpu_architecture,
         gpu_model_name,
         gpu_memory_gb,
         valid_from,
         count(*) as tier_count
     from {{ ref('mart_best_offers_by_gpu') }}
-    group by offer_type, gpu_architecture, gpu_model_name, gpu_memory_gb, valid_from
+    group by gpu_architecture, gpu_model_name, gpu_memory_gb, valid_from
 )
 
 -- Note: the outer row_counts.valid_from is passed QUALIFIED so the scalar subquery in the macro

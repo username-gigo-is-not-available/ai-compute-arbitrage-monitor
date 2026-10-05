@@ -8,7 +8,7 @@
 
 with invariant_check as (
     select
-        offer_id,
+        machine_id,
         valid_from,
         tariff_tier_skey,
         revenue_usd_per_hr,

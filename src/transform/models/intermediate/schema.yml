@@ -2,20 +2,14 @@ version: 2
 
 models:
   - name: int_compute_offers
-    description: "Intermediate compute offers - unit conversions, country code extraction and memory normalization applied"
+    description: "One row per machine per census (ADR-020): a machine's offers collapsed onto its largest offer, prices as per-GPU price x machine size; unit conversions, country code extraction and memory normalization applied"
     tests:
       - dbt_utils.unique_combination_of_columns:
           arguments:
             combination_of_columns:
-              - offer_id
+              - machine_id
               - valid_from
-              - offer_type
     columns:
-      - name: offer_id
-        description: "Vast.ai offer identifier"
-        tests:
-          - not_null
-
       - name: machine_id
         description: "Vast.ai machine identifier"
         tests:
@@ -26,16 +20,8 @@ models:
         tests:
           - not_null
 
-      - name: offer_type
-        description: "Offer type e.g. on-demand, bid, reserved"
-        tests:
-          - not_null
-          - accepted_values:
-              arguments:
-                values: "{{ offer_types() }}"
-
       - name: total_price_usd_per_hr
-        description: "Total hourly price including GPU, storage and bandwidth costs"
+        description: "Total hourly price to rent the whole machine: the per-GPU total price x machine size"
         tests:
           - not_null
           - dbt_utils.expression_is_true:
@@ -43,7 +29,7 @@ models:
                 expression: ">= 0"
 
       - name: gpu_price_usd_per_hr
-        description: "Base GPU rental cost excluding storage and bandwidth"
+        description: "Base GPU rental cost for the whole machine (per-GPU base price x machine size), excluding storage and bandwidth"
         tests:
           - not_null
           - dbt_utils.expression_is_true:
@@ -59,7 +45,7 @@ models:
                 expression: ">= 0"
 
       - name: minimum_bid_price_usd
-        description: "Minimum bid price in USD for bid-type offers"
+        description: "Lowest minimum bid for the whole machine: the lowest per-GPU minimum bid among its offers x machine size (the bid price, ADR-020)"
         tests:
           - not_null
           - dbt_utils.expression_is_true:
@@ -116,7 +102,7 @@ models:
                 severity: warn
 
       - name: number_of_gpus
-        description: "Number of GPUs in the offer"
+        description: "Machine size: GPUs in the machine, rented or not (number_of_gpus / gpu_fraction_of_machine of any of its offers)"
         tests:
           - not_null
           - dbt_utils.expression_is_true:
@@ -303,12 +289,7 @@ models:
                 values: [ 'verified', 'unverified', 'deverified' ]
 
       - name: rentable_flag
-        description: "Whether the offer is currently rentable"
-        tests:
-          - not_null
-
-      - name: rented_flag
-        description: "Whether the offer is currently rented"
+        description: "Available: at least one of the machine's offers can be rented now. False means taken (rented, or switched off by its owner)"
         tests:
           - not_null
 

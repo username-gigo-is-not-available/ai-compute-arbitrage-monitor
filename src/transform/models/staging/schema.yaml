@@ -123,6 +123,15 @@ models:
               arguments:
                 expression: "> 0"
 
+      - name: gpu_fraction_of_machine
+        description: "Share of its machine's GPUs this offer rents (gpu_frac); machine size = number_of_gpus / gpu_fraction_of_machine. Null before the first census (ADR-020)"
+        tests:
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: "> 0 and gpu_fraction_of_machine <= 1"
+              config:
+                where: "gpu_fraction_of_machine is not null"
+
       - name: gpu_max_cuda_version_supported
         description: "Maximum CUDA version supported by the GPU driver"
 

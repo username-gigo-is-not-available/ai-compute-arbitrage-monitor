@@ -1,7 +1,7 @@
 {{
     config(
         materialized     = 'incremental',
-        unique_key       = ['offer_id', 'valid_from', 'offer_type', 'tariff_tier_skey'],
+        unique_key       = ['machine_id', 'valid_from', 'tariff_tier_skey'],
         on_schema_change = 'append_new_columns',
         tags = ['compute_offers'],
         partition_by     = {
@@ -9,7 +9,7 @@
                 'data_type': 'timestamp',
                 'granularity': 'day'
             },
-        cluster_by       = ['gpu_model_name', 'offer_type'],
+        cluster_by       = ['gpu_model_name', 'machine_id'],
         post_hook = """
             {% if execute %}
                 {% set latest_ts_query %}
@@ -163,16 +163,12 @@ cost_metrics as (
 )
 
 select
-    -- identity / grain
-    offer_id,
+    -- identity / grain (one row per machine per census per tariff tier, ADR-020)
     machine_id,
     host_id,
     valid_from,
     valid_to,
     processed_at,
-
-    -- offer type
-    offer_type,
 
     -- dim skeys
     exchange_rate_skey,
@@ -182,7 +178,6 @@ select
     country_code,
     verification_flag,
     rentable_flag,
-    rented_flag,
     reliability_score,
 
     -- gpu specs

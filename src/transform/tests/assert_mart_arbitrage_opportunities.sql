@@ -1,4 +1,4 @@
--- Test: mart_arbitrage_opportunities must have one row per (offer snapshot, offer_type, tariff tier)
+-- Test: mart_arbitrage_opportunities must have one row per (machine snapshot, tariff tier) (ADR-020)
 -- This test verifies the offer×tier grain of the mart. The expected tier count is NOT hardcoded —
 -- it is derived from dim_electricity_tariff_tiers as of each group's valid_from, so EVN tariff
 -- restructures (new blocks / new tariff sets) update the expectation automatically.
@@ -6,12 +6,11 @@
 
 with row_counts as (
     select
-        offer_id,
+        machine_id,
         valid_from,
-        offer_type,
         count(*) as tier_count
     from {{ ref('mart_arbitrage_opportunities') }}
-    group by offer_id, valid_from, offer_type
+    group by machine_id, valid_from
 )
 
 -- Note: the outer row_counts.valid_from is passed QUALIFIED so the scalar subquery in the macro
