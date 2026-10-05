@@ -17,7 +17,8 @@ PIPELINE_CONFIGS: list[PipelineConfig] = [
     PipelineConfig(
         dataset_name=DatasetName.COMPUTE_OFFERS,
         dataset_type=DatasetType.SOURCES,
-        schedule="@hourly",
+        # One census a day fits Vast.ai's 20k rows/day quota, which resets at 00:00 UTC (ADR-020).
+        schedule="@daily",
         start_date=datetime(2026, 1, 1),
         description="Vast.ai compute offers → Bronze → Silver → Gold",
     ),

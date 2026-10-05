@@ -54,6 +54,11 @@ across three types). Probes on 2026-10-01 and 2026-10-03 found:
   which scheduled censuses use at most ~half the daily quota, leaving room for retries and
   development. Expected 1–2 censuses per day. A higher quota is to be requested from Vast.ai
   support, as its rate-limit docs invite.
+  _Measured 2026-10-05_: the first complete census found 13,069 offers on 7,357 machines and
+  used 13,581 rows (65 requests). That exceeds half the quota, so `compute_offers` runs
+  `@daily`, at 00:00 UTC when the quota resets. Across the full market, no machine's offers
+  disagreed on machine size or per-GPU price (3,294 machines with several slices); 28% of
+  machines had an available offer.
 
 ## Considered options
 
