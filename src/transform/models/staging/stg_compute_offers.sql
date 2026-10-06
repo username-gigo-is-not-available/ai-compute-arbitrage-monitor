@@ -36,7 +36,7 @@ renamed as (
         cast(gpu_model_name as string)                                 as gpu_model_name,
         cast(gpu_memory_mb as float64)                                 as gpu_memory_mb,
         cast(gpu_tdp_watts as float64)                                 as gpu_tdp_watts,
-        cast(number_of_gpus as int64)                                  as number_of_offer_gpus,
+        cast(number_of_offer_gpus as int64)                            as number_of_offer_gpus,
         cast(gpu_fraction_of_machine as float64)                       as gpu_fraction_of_machine,
         cast(gpu_max_cuda_version_supported as float64)                as gpu_max_cuda_version_supported,
         cast(gpu_tflops as float64)                                    as gpu_tflops,

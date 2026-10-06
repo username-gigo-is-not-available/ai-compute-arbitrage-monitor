@@ -49,16 +49,16 @@ class TestSilverSchemaEvolution(unittest.TestCase):
     def test_existing_table_gains_new_columns_in_batch_order(self):
         strategy = AppendByHour(column="snapshot_at")
         strategy.write(self._batch(
-            "1 AS offer_id, 4 AS number_of_gpus, 12.1 AS gpu_max_cuda_version_supported, "
+            "1 AS offer_id, 4 AS number_of_offer_gpus, 12.1 AS gpu_max_cuda_version_supported, "
             "CAST('2026-10-03 11:00:00' AS TIMESTAMP) AS snapshot_at"
         ), TABLE)
         strategy.write(self._batch(
-            "2 AS offer_id, 2 AS number_of_gpus, CAST(0.4 AS DOUBLE) AS gpu_fraction_of_machine, "
+            "2 AS offer_id, 2 AS number_of_offer_gpus, CAST(0.4 AS DOUBLE) AS gpu_fraction_of_machine, "
             "array(CAST(55783 AS BIGINT), CAST(55784 AS BIGINT)) AS gpu_ids, 12.1 AS gpu_max_cuda_version_supported, "
             "CAST('2026-10-03 12:00:00' AS TIMESTAMP) AS snapshot_at"
         ), TABLE)
         table = self.session.table(TABLE)
-        self.assertEqual(table.columns, ["offer_id", "number_of_gpus", "gpu_fraction_of_machine", "gpu_ids",
+        self.assertEqual(table.columns, ["offer_id", "number_of_offer_gpus", "gpu_fraction_of_machine", "gpu_ids",
                                          "gpu_max_cuda_version_supported", "snapshot_at"])
         rows = {r["offer_id"]: (r["gpu_fraction_of_machine"], r["gpu_ids"]) for r in table.collect()}
         self.assertEqual(rows, {1: (None, None), 2: (0.4, [55783, 55784])})

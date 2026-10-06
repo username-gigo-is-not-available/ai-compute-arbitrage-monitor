@@ -56,10 +56,10 @@ class TestComputeOffersSilver(unittest.TestCase):
         self.assertEqual(rows, {(1, 0.12), (3, 0.30), (4, 0.40)})
 
     def test_silver_keeps_the_slice_of_the_machine(self):
-        # dbt derives machine size as number_of_gpus / gpu_fraction_of_machine (ADR-020).
+        # dbt derives machine size as number_of_offer_gpus / gpu_fraction_of_machine (ADR-020).
         bronze = self.session.sql(
             "SELECT 8936325 AS offer_id, 'on_demand' AS offer_type, 'AMD EPYC 7B13' AS cpu_model_name, "
-            "2 AS number_of_gpus, CAST(0.4 AS DOUBLE) AS gpu_fraction_of_machine, "
+            "2 AS number_of_offer_gpus, CAST(0.4 AS DOUBLE) AS gpu_fraction_of_machine, "
             "array(CAST(55783 AS BIGINT), CAST(55784 AS BIGINT)) AS gpu_ids, "
             "CAST('2026-10-03 12:00:00' AS TIMESTAMP) AS snapshot_at, "
             "CAST('2026-10-03 12:00:04' AS TIMESTAMP) AS ingested_at"
@@ -72,7 +72,7 @@ class TestComputeOffersSilver(unittest.TestCase):
             silver_table=SilverTable(COMPUTE_OFFERS_SILVER_SCHEMA, AppendByHour(column="snapshot_at")),
         )
         row = pipeline.transform(bronze).collect()[0]
-        self.assertEqual(row["number_of_gpus"], 2)
+        self.assertEqual(row["number_of_offer_gpus"], 2)
         self.assertEqual(row["gpu_fraction_of_machine"], 0.4)
         self.assertEqual(row["gpu_ids"], [55783, 55784])
 

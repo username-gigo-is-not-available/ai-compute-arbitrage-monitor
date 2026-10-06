@@ -110,7 +110,7 @@ class ComputeOffersIngestor(AsyncIngestor):
                 gpu_model_name=data.get("gpu_name"),
                 gpu_memory_mb=data.get("gpu_ram"),
                 gpu_tdp_watts=data.get("gpu_max_power"),
-                number_of_gpus=data.get("num_gpus", 1),
+                number_of_offer_gpus=data.get("num_gpus", 1),
                 gpu_fraction_of_machine=data.get("gpu_frac"),
                 gpu_ids=data.get("gpu_ids"),
                 gpu_max_cuda_version_supported=data.get("cuda_max_good"),
