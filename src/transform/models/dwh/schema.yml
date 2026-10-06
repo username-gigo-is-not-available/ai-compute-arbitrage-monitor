@@ -425,7 +425,7 @@ models:
           - not_null
 
       - name: valid_to
-        description: "Timestamp to which this offer snapshot is valid - 9999-12-31 means currently active"
+        description: "Census time at which this machine row was superseded - 9999-12-31 means currently active"
 
       # -----------------------------------------------------------------------
       # foreign keys to dims
@@ -678,7 +678,7 @@ models:
                 expression: ">= 0"
 
       - name: minimum_bid_price_usd
-        description: "Minimum bid price in USD for bid-type offers"
+        description: "Lowest minimum bid for the whole machine: lowest per-GPU minimum bid among its offers x number_of_machine_gpus"
         tests:
           - not_null
           - dbt_utils.expression_is_true:
@@ -694,7 +694,12 @@ models:
                 expression: ">= 0"
 
       - name: revenue_usd_per_hr
-        description: "Total hourly revenue from renting the offer (total_price_usd_per_hour)"
+        description: "Total hourly revenue from renting the whole machine (total_price_usd_per_hr)"
+        tests:
+          - not_null
+
+      - name: revenue_per_gpu_usd_per_hr
+        description: "Hourly revenue per GPU of the machine (revenue_usd_per_hr / number_of_machine_gpus)"
         tests:
           - not_null
           - dbt_utils.expression_is_true:

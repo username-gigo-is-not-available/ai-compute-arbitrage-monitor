@@ -50,7 +50,7 @@ models:
           - not_null
 
       - name: number_of_machine_gpus
-        description: "Number of GPUs in the offer"
+        description: "GPUs in the machine, rented or not"
         tests:
           - not_null
 
@@ -58,7 +58,7 @@ models:
         description: "TFLOPS per GPU"
 
       - name: total_system_tflops
-        description: "Total TFLOPS across all GPUs in the offer"
+        description: "Total TFLOPS across all GPUs in the machine"
 
       - name: gpu_memory_gb
         description: "GPU VRAM in gigabytes"
@@ -173,7 +173,7 @@ models:
         description: "Profit per TFLOP in USD for this tariff tier - used for ranking"
 
       - name: valid_from
-        description: "Timestamp of the offer snapshot"
+        description: "Scheduled hour of the census this machine row comes from"
         tests:
           - not_null
 
@@ -284,7 +284,7 @@ models:
     description: >
       Hourly aggregated machine-level profitability metrics grouped by GPU variant, scheduled tariff window type,
       and tariff tier context. Joins fct_compute_offers to dim_electricity_tariff_window_schedule to filter
-      to hours where the tariff tier's window matches the EVN schedule. Metrics are raw offer-level averages
+      to hours where the tariff tier's window matches the EVN schedule. Metrics are raw machine-level averages
       (not per-GPU normalized) - use mart_best_offers_by_gpu or mart_gpu_model_summary for per-GPU comparisons.
       One row per (hour_bucket, gpu_architecture, gpu_model_name, gpu_memory_gb, gpu_tdp_watts,
       gpu_bandwidth_gbytes_per_sec, gpu_max_cuda_version_supported, number_of_machine_gpus, scheduled_tariff_window_type,
@@ -342,7 +342,7 @@ models:
         description: "Maximum CUDA version supported - part of grain"
       - name: number_of_machine_gpus
         description: "Number of GPUs - part of grain"
-      - name: machine_count
+      - name: number_of_machines
         description: "Number of machines in this group (ADR-020)"
         tests:
           - not_null
@@ -350,15 +350,15 @@ models:
               arguments:
                 expression: "> 0"
       - name: avg_revenue_usd_per_hr
-        description: "Average offer revenue in USD/hr"
+        description: "Average machine revenue in USD/hr"
 
       # generic profit aggregates (tier-scoped)
       - name: avg_profit_usd_per_hr
-        description: "Average offer profit in USD/hr for this tariff tier"
+        description: "Average machine profit in USD/hr for this tariff tier"
       - name: min_profit_usd_per_hr
-        description: "Minimum offer profit in USD/hr for this tariff tier"
+        description: "Minimum machine profit in USD/hr for this tariff tier"
       - name: max_profit_usd_per_hr
-        description: "Maximum offer profit in USD/hr for this tariff tier"
+        description: "Maximum machine profit in USD/hr for this tariff tier"
 
       - name: avg_profit_per_tflop_usd
         description: "Average profit per TFLOP in USD for this tariff tier"
@@ -418,7 +418,7 @@ models:
       - name: gpu_memory_gb
         description: "GPU VRAM in gigabytes - part of grain to separate RTX 4090 16GB vs 32GB"
 
-      - name: machine_count
+      - name: number_of_machines
         description: "Machines of this GPU variant in the latest census"
         tests:
           - not_null
@@ -426,8 +426,8 @@ models:
               arguments:
                 expression: "> 0"
 
-      - name: gpu_count
-        description: "GPUs across those machines (sum of machine sizes, rented or not)"
+      - name: total_number_of_machine_gpus
+        description: "GPUs across those machines (sum of number_of_machine_gpus, rented or not)"
         tests:
           - not_null
 

@@ -70,7 +70,7 @@ market_revenue as (
     -- machines differ in size, so a median of whole-machine prices would not match gpu_specs.number_of_machine_gpus.
     select
         gpu_model_name,
-        approx_quantiles(revenue_usd_per_hr / number_of_machine_gpus, 100)[offset(50)] as market_ask_usd_per_gpu_hr
+        approx_quantiles(revenue_per_gpu_usd_per_hr, 100)[offset(50)] as market_ask_per_gpu_usd_per_hr
     from {{ ref('fct_compute_offers') }}
     where cast(valid_to as date) = date '9999-12-31'
       and revenue_usd_per_hr > 0
@@ -124,7 +124,7 @@ combined as (
         gs.gpu_memory_gb,
         gs.gpu_bandwidth_gbytes_per_sec,
         gs.gpu_max_cuda_version_supported,
-        mr.market_ask_usd_per_gpu_hr * gs.number_of_machine_gpus          as market_ask_usd_per_hr,
+        mr.market_ask_per_gpu_usd_per_hr * gs.number_of_machine_gpus      as market_ask_usd_per_hr,
         tt.tariff_tier_skey,
         tt.tariff_value,
         tt.tariff_block_number,

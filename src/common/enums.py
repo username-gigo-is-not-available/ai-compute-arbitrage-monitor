@@ -46,3 +46,8 @@ class OfferType(StrEnum):
     ON_DEMAND = auto()
     BID = auto()
     RESERVED = auto()
+
+    @property
+    def api_value(self) -> str:
+        # Vast.ai's /bundles spells the type with a hyphen ("on-demand").
+        return self.value.replace("_", "-")

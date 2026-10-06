@@ -17,18 +17,16 @@ select
     tariff_block_number,
 
     -- supply
-    count(*)                                                                     as machine_count,
-    sum(number_of_machine_gpus)                                                  as gpu_count,
+    count(*)                                                                     as number_of_machines,
+    sum(number_of_machine_gpus)                                                  as total_number_of_machine_gpus,
 
     -- efficiency
     avg(kwh_per_tflop)                                                           as avg_kwh_per_tflop,
 
     -- revenue / profitability (USD/hr)
-    avg(revenue_usd_per_hr / nullif(number_of_machine_gpus, 0))                  as avg_revenue_per_gpu_usd_per_hr,
-    avg(case when rentable_flag then revenue_usd_per_hr / nullif(number_of_machine_gpus, 0) end)
-                                                                                 as avg_available_revenue_per_gpu_usd_per_hr,
-    avg(case when not rentable_flag then revenue_usd_per_hr / nullif(number_of_machine_gpus, 0) end)
-                                                                                 as avg_taken_revenue_per_gpu_usd_per_hr,
+    avg(revenue_per_gpu_usd_per_hr)                                              as avg_revenue_per_gpu_usd_per_hr,
+    avg(if(rentable_flag, revenue_per_gpu_usd_per_hr, null))                     as avg_available_revenue_per_gpu_usd_per_hr,
+    avg(if(not rentable_flag, revenue_per_gpu_usd_per_hr, null))                 as avg_taken_revenue_per_gpu_usd_per_hr,
 
     round(100.0 * countif(profit_usd_per_hr > 0) / nullif(count(*), 0), 2)      as pct_profitable,
 

@@ -150,7 +150,9 @@ calculations as (
         (gpu_tdp_watts * number_of_machine_gpus) / 1000.0        as total_system_kwh_per_hr,
         (gpu_tdp_watts * number_of_machine_gpus) / 1000.0
             / nullif(total_system_tflops, 0)                     as kwh_per_tflop,
-        total_price_usd_per_hr                                   as revenue_usd_per_hr
+        total_price_usd_per_hr                                   as revenue_usd_per_hr,
+        total_price_usd_per_hr / nullif(number_of_machine_gpus, 0)
+                                                                 as revenue_per_gpu_usd_per_hr
     from joined
 ),
 
@@ -221,6 +223,7 @@ select
     minimum_bid_price_usd,
     storage_cost_usd_per_hr,
     revenue_usd_per_hr,
+    revenue_per_gpu_usd_per_hr,
 
     -- derived power / compute
     total_system_kwh_per_hr,

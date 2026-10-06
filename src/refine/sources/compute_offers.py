@@ -22,7 +22,7 @@ def deduplicate_compute_offers(df: DataFrame) -> DataFrame:
     # A retried ingest replaces its earlier attempt for the same snapshot_at wholesale (each attempt has one
     # ingested_at); merging per key would union two different market views into one snapshot (ADR-019).
     df = keep_latest_per_group(df, group_by="snapshot_at", order_by="ingested_at")
-    return deduplicate_keep_latest(df, columns=["offer_id", "offer_type", "snapshot_at"], order_by="ingested_at")
+    return deduplicate_keep_latest(df, columns=["offer_id", "snapshot_at"], order_by="ingested_at")
 
 
 @dataclass

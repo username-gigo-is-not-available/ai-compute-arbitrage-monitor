@@ -48,7 +48,7 @@ select
     country_code,
 
     -- revenue / cost / profit (USD/hr per GPU)
-    revenue_usd_per_hr / nullif(number_of_machine_gpus, 0)          as revenue_per_gpu_usd_per_hr,
+    revenue_per_gpu_usd_per_hr,
     cost_usd_per_hr / nullif(number_of_machine_gpus, 0)             as cost_per_gpu_usd_per_hr,
     profit_usd_per_hr / nullif(number_of_machine_gpus, 0)           as profit_per_gpu_usd_per_hr,
 

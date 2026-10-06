@@ -6,7 +6,7 @@
 select
     machine_id,
     snapshot_at,
-    count(distinct round(number_of_offer_gpus / gpu_fraction_of_machine))   as machine_sizes,
+    count(distinct {{ number_of_machine_gpus() }})                          as machine_sizes,
     count(distinct round(gpu_price_usd_per_hr / number_of_offer_gpus, 4))   as per_gpu_prices
 from {{ ref('stg_compute_offers') }}
 group by machine_id, snapshot_at

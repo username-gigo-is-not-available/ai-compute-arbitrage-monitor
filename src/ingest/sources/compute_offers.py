@@ -8,7 +8,7 @@ from typing import Any
 from aiohttp import ClientError, ClientSession, ClientTimeout
 from pydantic import ValidationError
 
-from common.classes import Dataset
+from common.classes import AskContractIdRange, Dataset
 from common.enums import OfferType, DatasetType, DatasetName
 from config.apis.vast_ai import VastAIConfig
 from config.loader import ConfigLoader
@@ -43,39 +43,34 @@ class ComputeOffersIngestor(AsyncIngestor):
         # On-demand only: its rows carry the bid price (min_bid), and reserved prices equal on-demand (ADR-020).
         async with ClientSession() as session:
             ingested_at: datetime = datetime.now(UTC)
-            rows = await self.cover(session, 0, None)
+            rows = await self.fetch_complete_range(session, AskContractIdRange(start=0))
             self.logger.info(f"Census of {len(rows)} offers used {self.rows_used} rows in {self.requests} requests")
             offers = [self.parse(data=row, timestamp=ingested_at, offer_type=OfferType.ON_DEMAND) for row in rows]
             return [offer for offer in offers if offer]
 
-    async def cover(self, session: ClientSession, lo: int, hi: int | None) -> list[dict[str, Any]]:
+    async def fetch_complete_range(self, session: ClientSession, id_range: AskContractIdRange) -> list[dict[str, Any]]:
         # /bundles returns a random sample when more offers match than the limit (ADR-020). A range returning fewer
-        # than split_at is complete; a fuller one is split at the sample's quantiles, which keeps every part
-        # non-empty and narrower than the range.
-        offers = await self.search(session, lo, hi)
+        # than split_at is complete; a fuller one is split at its sample's quantiles and each part fetched the same way.
+        offers = await self.request_range(session, id_range)
         if len(offers) < self.config.split_at:
             return offers
-        ids = sorted(o["ask_contract_id"] for o in offers)
-        parts = self.config.census_parts
-        cuts = sorted({ids[len(ids) * i // parts] for i in range(1, parts)})
-        bounds = [lo, *cuts, hi]
-        covered = []
-        for part_lo, part_hi in zip(bounds, bounds[1:]):
-            covered += await self.cover(session, part_lo, part_hi)
-        return covered
+        complete = []
+        for part in id_range.split([o["ask_contract_id"] for o in offers], self.config.census_parts):
+            complete += await self.fetch_complete_range(session, part)
+        return complete
 
-    async def search(self, session: ClientSession, lo: int, hi: int | None) -> list[dict[str, Any]]:
+    async def request_range(self, session: ClientSession, id_range: AskContractIdRange) -> list[dict[str, Any]]:
         response = await self.fetch_async(
             (ClientError, asyncio.TimeoutError),
             session.get,
             self.config.url,
             headers=self.config.header,
-            params=self.config.params(lo, hi),
+            params=self.config.params(id_range),
             timeout=ClientTimeout(total=self.http_config.timeout_seconds),
         )
         if response.status != HTTPStatus.OK:
             self.logger.error(f"Vast.AI API returned HTTP {response.status}")
-            raise CensusIncompleteError(f"range [{lo}, {hi}) failed with HTTP {response.status}")
+            raise CensusIncompleteError(f"range {id_range} failed with HTTP {response.status}")
         try:
             data: dict[str, Any] = await response.json(encoding="utf-8")
         finally:
@@ -84,7 +79,7 @@ class ComputeOffersIngestor(AsyncIngestor):
         offers = data.get("offers", [])
         self.requests += 1
         self.rows_used += len(offers)
-        self.logger.info(f"Range [{lo}, {hi}): {len(offers)} offers; {self.rows_used} rows used in {self.requests} requests")
+        self.logger.info(f"Range {id_range}: {len(offers)} offers; {self.rows_used} rows used in {self.requests} requests")
         return offers
 
     def parse(self, **kwargs) -> VastAIOffer | None:

@@ -294,7 +294,7 @@ models:
           - not_null
 
       - name: valid_from
-        description: "Date from which this compute offer is valid"
+        description: "Scheduled hour of the census this machine row comes from"
         tests:
           - not_null
           - dbt_utils.expression_is_true:
@@ -302,7 +302,7 @@ models:
                   expression: "<= current_timestamp"
 
       - name: valid_to
-        description: "Date to which this compute offer is valid"
+        description: "End of validity; 9999-12-31 here, closed in fct_compute_offers when a newer census arrives"
 
       - name: processed_at
         description: "Timestamp when the record was processed by Spark into silver"

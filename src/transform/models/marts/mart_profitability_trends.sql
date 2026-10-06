@@ -49,7 +49,7 @@ select
     gpu_bandwidth_gbytes_per_sec,
     gpu_max_cuda_version_supported,
     number_of_machine_gpus,
-    count(*)                                                      as machine_count,
+    count(*)                                                      as number_of_machines,
 
     -- revenue (USD/hr)
     avg(revenue_usd_per_hr)                                       as avg_revenue_usd_per_hr,
@@ -71,4 +71,18 @@ select
     tariff_block_number
 
 from joined
-group by 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 19, 20, 21, 22
+group by
+    hour_bucket,
+    day_of_week,
+    hour_of_day,
+    gpu_architecture,
+    gpu_model_name,
+    gpu_memory_gb,
+    gpu_tdp_watts,
+    gpu_bandwidth_gbytes_per_sec,
+    gpu_max_cuda_version_supported,
+    number_of_machine_gpus,
+    tariff_tier_skey,
+    consumer_category,
+    scheduled_tariff_window_type,
+    tariff_block_number

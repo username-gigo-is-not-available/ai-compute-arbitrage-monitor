@@ -2,8 +2,8 @@
 
 ## Status
 
-Accepted; not yet implemented. Supersedes ADR-008. Amends ADR-019 (retry rule for
-`compute_offers`).
+Accepted; implemented in #39. Supersedes ADR-008. Amends ADR-016 (`compute_offers` is daily)
+and ADR-019 (retry rule for `compute_offers`).
 
 ## Context
 
@@ -47,16 +47,21 @@ across three types). Probes on 2026-10-01 and 2026-10-03 found:
   slices come back is random, so it cannot be known reliably.
 - **Available and taken machines are both kept** and marked; the marts may report price by
   availability and the share of each GPU model that is taken.
-- **All or nothing** (amends ADR-019): each range is stored as it is fetched; a retry fetches
-  only the missing ranges; a snapshot is published to Silver only once every range is in.
-  If it cannot finish before the next scheduled census, it is skipped.
+- **All or nothing** (amends ADR-019): a census is fetched in one run and written to Bronze only
+  once every range is in; any failed range fails the run and writes nothing. A retry fetches the
+  whole census again. Resuming from the ranges already fetched was considered and deferred: it
+  needs per-range progress kept between attempts, and the census fits the quota without it. A
+  quota 429 (`Retry-After` longer than all retry waits) fails at once instead of retrying. If a
+  census cannot finish before the next one, that snapshot is skipped.
 - **Frequency comes from the measured census cost**: the smallest interval dividing 24 h for
   which scheduled censuses use at most ~half the daily quota, leaving room for retries and
   development. Expected 1–2 censuses per day. A higher quota is to be requested from Vast.ai
   support, as its rate-limit docs invite.
   _Measured 2026-10-05_: the first complete census found 13,069 offers on 7,357 machines and
   used 13,581 rows (65 requests). That exceeds half the quota, so `compute_offers` runs
-  `@daily`, at 00:00 UTC when the quota resets. Across the full market, no machine's offers
+  `@daily`, at 00:00 UTC when the quota resets. The remaining ~6k rows do not cover a full
+  retry: an Airflow retry the same day re-runs the census until the quota runs out, then fails
+  at once; the snapshot is then skipped. Across the full market, no machine's offers
   disagreed on machine size or per-GPU price (3,294 machines with several slices); 28% of
   machines had an available offer.
 

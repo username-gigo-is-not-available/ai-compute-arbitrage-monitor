@@ -35,7 +35,7 @@ way machines are built ever changes, Gold can be rebuilt from Silver without dow
    - Ask for every offer ID → 512 come back → too many, so it is a sample. Use the sample's IDs to cut the
      ID range into 128 pieces (crowded ID stretches get narrower pieces).
    - Ask for each piece → each returns fewer than 500 → that piece is complete.
-   - A piece that still comes back full is cut again the same way (`cover()`).
+   - A piece that still comes back full is cut again the same way (`fetch_complete_range()`).
    - About 130 requests at one per second, using ~13–14k of the 20k rows/day quota.
 3. **All or nothing.** If any piece fails, the run stops and nothing is saved. If Vast.ai answers that the
    quota is used up (a `Retry-After` of hours), it stops at once instead of retrying.

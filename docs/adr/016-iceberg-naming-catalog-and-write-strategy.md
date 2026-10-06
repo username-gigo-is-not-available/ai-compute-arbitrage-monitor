@@ -4,6 +4,9 @@
 
 Accepted. Amended — read these before relying on the Decision below:
 
+- **`compute_offers` is `@daily`**, one complete census per day at 00:00 UTC, not `@hourly`
+  (ADR-020); read "24 distinct snapshots/day" and "each hourly poll" below as one per day.
+
 - **Catalog id** is `ai_compute_arbitrage_monitor_catalog` (underscores),
   per ADR-018's correction; the hyphenated id below was never created.
 - **Bronze sources** are true append (ADR-017), partitioned by

@@ -111,8 +111,7 @@ class AsyncIngestor(Ingestor):
     def outlasts_retries(self, resp) -> bool:
         # A Retry-After longer than every retry wait combined (e.g. a daily quota) cannot be outwaited.
         retry_after = resp.headers.get("Retry-After", "")
-        budget = self.http_config.retry_delay_seconds * self.http_config.retry_count
-        return retry_after.isdigit() and int(retry_after) > budget
+        return retry_after.isdigit() and int(retry_after) > self.http_config.retry_budget_seconds
 
     def retry_async(self, exc_type):
         return retry(

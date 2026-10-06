@@ -9,7 +9,7 @@ with offers as (
     -- Prices per GPU are the same on every offer of a machine (assert_stg_compute_offers_machine_slices_agree).
     select
         *,
-        cast(round(number_of_offer_gpus / gpu_fraction_of_machine) as int64)   as number_of_machine_gpus,
+        {{ number_of_machine_gpus() }}                                         as number_of_machine_gpus,
         gpu_price_usd_per_hr / number_of_offer_gpus                            as base_price_per_gpu_usd_per_hr,
         total_price_usd_per_hr / number_of_offer_gpus                          as total_price_per_gpu_usd_per_hr,
         minimum_bid_price_usd / number_of_offer_gpus                           as minimum_bid_price_per_gpu_usd,
