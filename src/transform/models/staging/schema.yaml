@@ -9,7 +9,6 @@ models:
             combination_of_columns:
               - offer_id
               - snapshot_at
-              - offer_type
     columns:
       - name: offer_id
         description: "Vast.ai offer identifier"
@@ -27,12 +26,12 @@ models:
           - not_null
 
       - name: offer_type
-        description: "Offer type e.g. on-demand, bid, reserved"
+        description: "Always on_demand: its rows carry the bid price (minimum_bid_price_usd), and reserved prices equal on-demand (ADR-020)"
         tests:
           - not_null
           - accepted_values:
               arguments:
-                values: "{{ offer_types() }}"
+                values: [ 'on_demand' ]
 
       - name: total_price_usd_per_hr
         description: "Total hourly price including GPU, storage and bandwidth costs (discounted_dph_total)"
@@ -124,13 +123,12 @@ models:
                 expression: "> 0"
 
       - name: gpu_fraction_of_machine
-        description: "Share of its machine's GPUs this offer rents (gpu_frac); machine size = number_of_gpus / gpu_fraction_of_machine. Null before the first census (ADR-020)"
+        description: "Share of its machine's GPUs this offer rents (gpu_frac); machine size = number_of_gpus / gpu_fraction_of_machine (ADR-020)"
         tests:
+          - not_null
           - dbt_utils.expression_is_true:
               arguments:
                 expression: "> 0 and gpu_fraction_of_machine <= 1"
-              config:
-                where: "gpu_fraction_of_machine is not null"
 
       - name: gpu_max_cuda_version_supported
         description: "Maximum CUDA version supported by the GPU driver"

@@ -79,5 +79,7 @@ across three types). Probes on 2026-10-01 and 2026-10-03 found:
   `offer_count`-style metrics now count machines (or GPUs), not overlapping slices.
 - The per-GPU-price and machine-size findings come from samples; the census should flag any
   machine whose slices disagree, instead of assuming they never do.
+- The only snapshot from before the first census (2026-10-01 10:00, a random sample across three offer
+  types) was deleted from Bronze and Silver on 2026-10-06, so every stored snapshot is a census.
 - Probing the API spends the same daily quota as the pipeline (a probe session on 2026-10-01
   exhausted it for ~11 h).

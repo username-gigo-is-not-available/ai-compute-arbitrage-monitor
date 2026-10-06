@@ -78,21 +78,18 @@ of what Vast.ai said.
 
 ### 3a. `stg_compute_offers`: staging
 
-Renames and types the columns. Still one row per offer, including the snapshots from before the first
-census.
+Renames and types the columns. Still one row per offer.
 
 ### 3b. `int_compute_offers`: one row per machine
 
-1. **Only census snapshots.** Snapshots from before 2026-10-05 were random samples across three offer
-   types and are skipped (they stay in Silver).
-2. **Group the slices by machine.** Our 3 rows form one group: #15489.
-3. **Machine size from any slice:** GPUs ÷ fraction = 1 ÷ 0.2 = **5 GPUs**, even though the biggest slice
+1. **Group the slices by machine.** Our 3 rows form one group: #15489.
+2. **Machine size from any slice:** GPUs ÷ fraction = 1 ÷ 0.2 = **5 GPUs**, even though the biggest slice
    returned was 4. Every slice gives the same answer; the test
    `assert_stg_compute_offers_machine_slices_agree` checks it on every census.
-4. **Specs from the biggest slice** (CPU, RAM, disk).
-5. **Price for the whole machine:** $0.40 per GPU × 5 = **$2.00/hr**. The per-GPU price is the same on
+3. **Specs from the biggest slice** (CPU, RAM, disk).
+4. **Price for the whole machine:** $0.40 per GPU × 5 = **$2.00/hr**. The per-GPU price is the same on
    every slice; the same test checks it.
-6. **Available or taken:** available if any slice can be rented now, otherwise taken (rented, or switched
+5. **Available or taken:** available if any slice can be rented now, otherwise taken (rented, or switched
    off by its owner; the data cannot tell these apart).
 
 | machine_id | GPU | GPUs | price/hr | available |

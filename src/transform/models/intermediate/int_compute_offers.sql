@@ -4,15 +4,13 @@
     )
 }}
 
-with census_offers as (
+with offers as (
+    -- offer_gpus: GPUs one offer (slice) rents; machine_gpus: GPUs in its machine, rented or not (ADR-020).
     select
-        *,
+        * except (number_of_gpus),
+        number_of_gpus                                                         as offer_gpus,
         cast(round(number_of_gpus / gpu_fraction_of_machine) as int64)         as machine_gpus
     from {{ ref('stg_compute_offers') }}
-    -- Gold starts at the first census: earlier snapshots were random samples across three offer types,
-    -- without the machine size needed to collapse them (ADR-020).
-    where gpu_fraction_of_machine is not null
-      and offer_type = 'on_demand'
 ),
 
 machines as (
@@ -22,9 +20,9 @@ machines as (
     select
         *,
         logical_or(rentable_flag) over machine_census                          as any_offer_rentable,
-        min(minimum_bid_price_usd / number_of_gpus) over machine_census        as minimum_bid_price_usd_per_gpu
-    from census_offers
-    qualify row_number() over (partition by machine_id, snapshot_at order by number_of_gpus desc, offer_id) = 1
+        min(minimum_bid_price_usd / offer_gpus) over machine_census            as minimum_bid_price_usd_per_gpu
+    from offers
+    qualify row_number() over (partition by machine_id, snapshot_at order by offer_gpus desc, offer_id) = 1
     window machine_census as (partition by machine_id, snapshot_at)
 ),
 
@@ -35,8 +33,8 @@ transformed as (
         host_id,
 
         -- prices: per GPU (identical across a machine's offers) x machine size
-        total_price_usd_per_hr / number_of_gpus * machine_gpus                 as total_price_usd_per_hr,
-        gpu_price_usd_per_hr / number_of_gpus * machine_gpus                   as gpu_price_usd_per_hr,
+        total_price_usd_per_hr / offer_gpus * machine_gpus                     as total_price_usd_per_hr,
+        gpu_price_usd_per_hr / offer_gpus * machine_gpus                       as gpu_price_usd_per_hr,
         deep_learning_score_per_usd,
         minimum_bid_price_usd_per_gpu * machine_gpus                           as minimum_bid_price_usd,
         storage_cost_usd_per_hr,
@@ -50,8 +48,8 @@ transformed as (
         gpu_tdp_watts,
         machine_gpus                                                           as number_of_gpus,
         round(gpu_max_cuda_version_supported, 1)                               as gpu_max_cuda_version_supported,
-        (gpu_tflops / number_of_gpus)                                          as tflops_per_gpu,
-        (gpu_tflops / number_of_gpus) * machine_gpus                           as total_system_tflops,
+        (gpu_tflops / offer_gpus)                                              as tflops_per_gpu,
+        (gpu_tflops / offer_gpus) * machine_gpus                               as total_system_tflops,
         gpu_bandwidth_gbytes_per_sec,
 
         -- cpu (as allocated to the largest offer)

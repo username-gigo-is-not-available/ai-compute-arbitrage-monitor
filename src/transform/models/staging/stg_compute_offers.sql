@@ -1,7 +1,7 @@
 {{
     config(
         materialized = 'incremental',
-        unique_key       = ['offer_id', 'snapshot_at', 'offer_type'],
+        unique_key       = ['offer_id', 'snapshot_at'],
         on_schema_change = 'append_new_columns',
         tags = ['compute_offers']
     )
