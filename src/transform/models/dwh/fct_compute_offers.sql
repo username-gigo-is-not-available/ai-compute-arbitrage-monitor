@@ -1,7 +1,7 @@
 {{
     config(
         materialized     = 'incremental',
-        unique_key       = ['offer_id', 'valid_from', 'offer_type', 'tariff_tier_skey'],
+        unique_key       = ['machine_id', 'valid_from', 'tariff_tier_skey'],
         on_schema_change = 'append_new_columns',
         tags = ['compute_offers'],
         partition_by     = {
@@ -9,7 +9,7 @@
                 'data_type': 'timestamp',
                 'granularity': 'day'
             },
-        cluster_by       = ['gpu_model_name', 'offer_type'],
+        cluster_by       = ['gpu_model_name', 'machine_id'],
         post_hook = """
             {% if execute %}
                 {% set latest_ts_query %}
@@ -147,10 +147,12 @@ joined as (
 calculations as (
     select
         *,
-        (gpu_tdp_watts * number_of_gpus) / 1000.0                as total_system_kwh_per_hr,
-        (gpu_tdp_watts * number_of_gpus) / 1000.0
+        (gpu_tdp_watts * number_of_machine_gpus) / 1000.0        as total_system_kwh_per_hr,
+        (gpu_tdp_watts * number_of_machine_gpus) / 1000.0
             / nullif(total_system_tflops, 0)                     as kwh_per_tflop,
-        total_price_usd_per_hr                                   as revenue_usd_per_hr
+        total_price_usd_per_hr                                   as revenue_usd_per_hr,
+        total_price_usd_per_hr / nullif(number_of_machine_gpus, 0)
+                                                                 as revenue_per_gpu_usd_per_hr
     from joined
 ),
 
@@ -163,16 +165,12 @@ cost_metrics as (
 )
 
 select
-    -- identity / grain
-    offer_id,
+    -- identity / grain (one row per machine per census per tariff tier, ADR-020)
     machine_id,
     host_id,
     valid_from,
     valid_to,
     processed_at,
-
-    -- offer type
-    offer_type,
 
     -- dim skeys
     exchange_rate_skey,
@@ -182,13 +180,12 @@ select
     country_code,
     verification_flag,
     rentable_flag,
-    rented_flag,
     reliability_score,
 
     -- gpu specs
     gpu_architecture,
     gpu_model_name,
-    number_of_gpus,
+    number_of_machine_gpus,
     tflops_per_gpu,
     gpu_tdp_watts,
     gpu_memory_gb,
@@ -226,6 +223,7 @@ select
     minimum_bid_price_usd,
     storage_cost_usd_per_hr,
     revenue_usd_per_hr,
+    revenue_per_gpu_usd_per_hr,
 
     -- derived power / compute
     total_system_kwh_per_hr,

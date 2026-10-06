@@ -1,7 +1,7 @@
 {{ config(
     materialized = 'table',
     tags         = ['marts'],
-    cluster_by   = ['offer_type', 'gpu_model_name']
+    cluster_by   = ['gpu_model_name']
 ) }}
 with current_offers as (
     select * from {{ ref('fct_compute_offers') }}
@@ -14,7 +14,6 @@ available_offers as (
         coalesce(total_system_tflops, 0) > 0
         and coalesce(revenue_usd_per_hr, 0) > 0
         and coalesce(gpu_tdp_watts, 0) > 0
-        and rented_flag = false
         and rentable_flag = true
         and verification_flag = 'verified'
 ),
@@ -23,7 +22,7 @@ ranked as (
     select
         *,
         row_number() over (
-            partition by offer_type, tariff_tier_skey
+            partition by tariff_tier_skey
             order by
                 profit_per_tflop_usd desc,
                 reliability_score desc,
@@ -37,8 +36,6 @@ ranked as (
 
 select
     arbitrage_rank,
-    offer_type,
-    offer_id,
     machine_id,
     host_id,
 
@@ -49,7 +46,7 @@ select
     -- gpu
     gpu_architecture,
     gpu_model_name,
-    number_of_gpus,
+    number_of_machine_gpus,
     tflops_per_gpu,
     total_system_tflops,
     gpu_memory_gb,

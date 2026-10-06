@@ -1,5 +1,5 @@
--- Test: fct_compute_offers must have one row per (offer snapshot, offer type, ACTIVE tariff tier).
--- The unpivoted grain of the fact table: an offer snapshot is keyed by (offer_id, snapshot_at, offer_type),
+-- Test: fct_compute_offers must have one row per (machine, valid_from, ACTIVE tariff tier).
+-- The unpivoted grain of the fact table: a census collapses to one row per machine (ADR-020),
 -- and the fact is fanned out across every tariff tier active at valid_from. The expected tier count is NOT
 -- hardcoded — it is derived from dim_electricity_tariff_tiers as of each snapshot's valid_from, so the test
 -- survives EVN tariff regime changes (new blocks / new tariff structure) without manual updates.
@@ -7,12 +7,11 @@
 
 with row_counts as (
     select
-        offer_id,
+        machine_id,
         valid_from,
-        offer_type,
         count(*) as tier_count
     from {{ ref('fct_compute_offers') }}
-    group by offer_id, valid_from, offer_type
+    group by machine_id, valid_from
 )
 
 -- Note: the outer row_counts.valid_from is passed QUALIFIED so the scalar subquery in the macro

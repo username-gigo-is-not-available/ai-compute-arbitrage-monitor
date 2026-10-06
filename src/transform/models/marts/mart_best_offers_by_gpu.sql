@@ -1,7 +1,7 @@
 {{ config(
     materialized = 'table',
     tags         = ['marts'],
-    cluster_by   = ['offer_type', 'gpu_architecture', 'gpu_model_name']
+    cluster_by   = ['gpu_architecture', 'gpu_model_name']
 ) }}
 with current_offers as (
     select * from {{ ref('fct_compute_offers') }}
@@ -14,7 +14,6 @@ available_offers as (
         coalesce(total_system_tflops, 0) > 0
         and coalesce(revenue_usd_per_hr, 0) > 0
         and coalesce(gpu_tdp_watts, 0) > 0
-        and rented_flag = false
         and rentable_flag = true
         and verification_flag = 'verified'
 ),
@@ -23,16 +22,13 @@ normalized_offers as (
     select
         *,
         row_number() over (
-            partition by offer_type, gpu_architecture, gpu_model_name, gpu_memory_gb, tariff_tier_skey
-            order by valid_from desc, (profit_usd_per_hr / nullif(number_of_gpus, 0)) desc
+            partition by gpu_architecture, gpu_model_name, gpu_memory_gb, tariff_tier_skey
+            order by valid_from desc, (profit_usd_per_hr / nullif(number_of_machine_gpus, 0)) desc
         ) as rn
     from available_offers
 )
 
 select
-    -- offer
-    offer_type,
-
     -- gpu
     gpu_architecture,
     gpu_model_name,
@@ -48,14 +44,13 @@ select
     -- host
     verification_flag,
     rentable_flag,
-    rented_flag,
     reliability_score,
     country_code,
 
     -- revenue / cost / profit (USD/hr per GPU)
-    revenue_usd_per_hr / nullif(number_of_gpus, 0)                  as revenue_per_gpu_usd_per_hr,
-    cost_usd_per_hr / nullif(number_of_gpus, 0)                     as cost_per_gpu_usd_per_hr,
-    profit_usd_per_hr / nullif(number_of_gpus, 0)                   as profit_per_gpu_usd_per_hr,
+    revenue_per_gpu_usd_per_hr,
+    cost_usd_per_hr / nullif(number_of_machine_gpus, 0)             as cost_per_gpu_usd_per_hr,
+    profit_usd_per_hr / nullif(number_of_machine_gpus, 0)           as profit_per_gpu_usd_per_hr,
 
     -- per TFLOP (USD)
     cost_per_tflop_usd,

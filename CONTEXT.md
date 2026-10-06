@@ -4,17 +4,33 @@ A dbt project that ingests Vast.ai GPU compute offers, joins them with Macedonia
 
 ## Language
 
+**Machine**:
+A physical GPU server listed on Vast.ai, identified by `machine_id`. The unit of market-benchmarking: every offer on a machine has the same per-GPU price, and its **machine size** (total GPU count, rented or not) is known from any one of its offers (ADR-020).
+_Avoid_: Node, instance, box
+
 **Offer**:
-A Vast.ai GPU compute listing — a (host, machine) pair that can be rented. Identified by `offer_id`.
-_Avoid_: Instance, node, machine (these conflate the listing with the physical host)
+A single Vast.ai rental listing — one slice of a machine's GPUs, at the machine's price. Identified by `offer_id`. A machine is usually listed as several overlapping offers (e.g. 1, 2 and all of its GPUs), so offers count listings, not GPUs.
+_Avoid_: Instance, node, machine (these conflate the listing with the physical server)
+
+**Slice**:
+The specific set of a machine's GPUs that one offer rents. Slices of the same machine overlap; renting one makes the overlapping ones disappear.
+_Avoid_: Bundle, partition
 
 **Offer type**:
-The pricing modality of an offer listing — `on_demand`, `bid`, or `reserved`. Part of the offer snapshot's identity: the same offer (host, machine pair) can be simultaneously listed under multiple types with different prices in a single ingest.
+The pricing modality of an offer — `on_demand`, `bid`, or `reserved`. Only on-demand offers are collected: the bid price is the on-demand offer's minimum bid, and reserved prices equal on-demand prices unless a rental duration is given (ADR-020).
 _Avoid_: Pricing mode, plan
 
+**Census**:
+One complete sweep of the Vast.ai on-demand market in which every listed machine appears, as opposed to a sample. A census is all-or-nothing: an incomplete one is never published (ADR-020).
+_Avoid_: Scrape, pull, fetch, sample
+
 **Offer snapshot**:
-A capture of an offer's specs and pricing as of a scheduled hour, keyed by `(offer_id, snapshot_at, offer_type)`. `snapshot_at` is the ingest run's scheduled time floored to the hour (ADR-019), not the fetch moment — that is `ingested_at`. The same `offer_id` can appear under 2–3 offer types with different prices at one `snapshot_at`, so each type is its own snapshot. `int_compute_offers` maps `snapshot_at` to `valid_from`.
+The market as of a scheduled hour, built from one complete census, one row per offer keyed by `(offer_id, snapshot_at)`. `snapshot_at` is the ingest run's scheduled time floored to the hour (ADR-019), not the fetch moment — that is `ingested_at`. `int_compute_offers` maps `snapshot_at` to `valid_from`.
 _Avoid_: Record, row, version
+
+**Available / Taken**:
+Whether an offer can be rented right now (Vast.ai's `rentable` flag). **Taken** means not rentable now — usually rented by someone, possibly switched off by its owner; the two cannot be told apart.
+_Avoid_: Rented (Vast.ai's `rented` flag means rented by the API caller, not by anyone)
 
 **Tariff tier**:
 A specific EVN electricity price configuration — a combination of `consumer_category`, `tariff_window_type`, and `tariff_block_number` — valid for a date range. Versioned as SCD Type 2 with `tariff_tier_skey`.
@@ -61,8 +77,8 @@ The economic actor this project models — someone who owns GPUs, places them in
 _Avoid_: Renter, consumer, buyer
 
 **Market-benchmarking**:
-The practice of treating competitors' Vast.ai ask prices as a proxy for what the host can charge for a similar GPU. The marts rank market offers to answer "which GPU config is worth hosting," not to model the host's own listings.
-_Avoid_: Own-inventory, validated-demand
+The practice of treating competitors' Vast.ai machines as a proxy for what the host can charge for a similar GPU. Taken machines show prices that are being paid; available machines show the competition. The marts compare machines to answer "which GPU config is worth hosting," not to model the host's own listings.
+_Avoid_: Own-inventory, confirmed demand (a taken machine may be offline, not rented)
 
 **Electricity-only cost model**:
 The deliberate scope of the cost model — it covers only the electricity to run the GPU (TDP-based), not hardware capex, maintenance, or placement fees. The host is assumed to already own the GPU; this is not a break-even calculator.

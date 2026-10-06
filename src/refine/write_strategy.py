@@ -24,9 +24,24 @@ class SilverWriteStrategy(ABC):
     def _write_or_create(df: DataFrame, table_name: str,
                          write: Callable[[DataFrameWriterV2], None], partition: Column | str) -> None:
         try:
+            SilverWriteStrategy._add_missing_columns(df, table_name)
             write(df.writeTo(table_name))
         except AnalysisException:
             df.writeTo(table_name).using("iceberg").partitionedBy(partition).create()
+
+    @staticmethod
+    def _add_missing_columns(df: DataFrame, table_name: str) -> None:
+        # A Silver schema that gained columns (e.g. ADR-020's slice columns) adds them to the existing table at the
+        # batch's position; existing columns are left as they are. A missing table raises, so the caller creates it.
+        existing = set(df.sparkSession.table(table_name).columns)
+        previous = None
+        for f in df.schema.fields:
+            if f.name not in existing:
+                position = f"AFTER `{previous}`" if previous else "FIRST"
+                df.sparkSession.sql(
+                    f"ALTER TABLE {table_name} ADD COLUMN `{f.name}` {f.dataType.simpleString()} {position}"
+                )
+            previous = f.name
 
 
 class AppendByHour(SilverWriteStrategy):

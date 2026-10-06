@@ -6,18 +6,17 @@
         'data_type': 'timestamp',
         'granularity': 'day'
     },
-    cluster_by   = ['gpu_model_name', 'offer_type']
+    cluster_by   = ['gpu_model_name']
 ) }}
 with joined as (
     select
-        f.offer_type,
         f.gpu_architecture,
         f.gpu_model_name,
         f.gpu_memory_gb,
         f.gpu_tdp_watts,
         f.gpu_bandwidth_gbytes_per_sec,
         f.gpu_max_cuda_version_supported,
-        f.number_of_gpus,
+        f.number_of_machine_gpus,
         f.valid_from,
         f.revenue_usd_per_hr,
         f.profit_usd_per_hr,
@@ -42,16 +41,15 @@ select
     mod(extract(dayofweek from valid_from) + 5, 7) + 1           as day_of_week,
     extract(hour from valid_from)                                 as hour_of_day,
 
-    -- offer / gpu
-    offer_type,
+    -- gpu
     gpu_architecture,
     gpu_model_name,
     gpu_memory_gb,
     gpu_tdp_watts,
     gpu_bandwidth_gbytes_per_sec,
     gpu_max_cuda_version_supported,
-    number_of_gpus,
-    count(*)                                                      as offer_count,
+    number_of_machine_gpus,
+    count(*)                                                      as number_of_machines,
 
     -- revenue (USD/hr)
     avg(revenue_usd_per_hr)                                       as avg_revenue_usd_per_hr,
@@ -73,4 +71,18 @@ select
     tariff_block_number
 
 from joined
-group by 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 20, 21, 22, 23
+group by
+    hour_bucket,
+    day_of_week,
+    hour_of_day,
+    gpu_architecture,
+    gpu_model_name,
+    gpu_memory_gb,
+    gpu_tdp_watts,
+    gpu_bandwidth_gbytes_per_sec,
+    gpu_max_cuda_version_supported,
+    number_of_machine_gpus,
+    tariff_tier_skey,
+    consumer_category,
+    scheduled_tariff_window_type,
+    tariff_block_number

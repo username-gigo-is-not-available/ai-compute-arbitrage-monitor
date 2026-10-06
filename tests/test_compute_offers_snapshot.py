@@ -34,7 +34,8 @@ OFFER = {
 def _ingestor(snapshot_at: datetime) -> ComputeOffersIngestor:
     return ComputeOffersIngestor(
         dataset=Dataset(dataset_name=DatasetName.COMPUTE_OFFERS, dataset_type=DatasetType.SOURCES),
-        config=VastAIConfig(enabled=True, base_url="https://console.vast.test/api/v0", limit=10),
+        config=VastAIConfig(enabled=True, base_url="https://console.vast.test/api/v0", limit=512, split_at=500,
+                            census_parts=4, request_interval_seconds=0),
         lakehouse_config=GCPLakehouseConfig(catalog_id="test", project_id="test", warehouse="gs://test"),
         bronze_table=BronzeTable(
             Schema(NestedField(field_id=1, name="id", field_type=StringType(), required=False)),

@@ -3,30 +3,19 @@ version: 2
 models:
   - name: mart_arbitrage_opportunities
     description: >
-      Current arbitrage opportunities ranked by profit per TFLOP within each (offer_type, tariff tier).
-      Filtered to verified, rentable, unrented offers with valid compute metrics.
-      One row per (offer, tariff tier). Partitioned rank per (offer_type, tariff_tier_skey).
+      Current arbitrage opportunities ranked by profit per TFLOP within each tariff tier.
+      Filtered to verified, available machines with valid compute metrics (ADR-020).
+      One row per (machine, tariff tier). Partitioned rank per tariff_tier_skey.
     tests:
       - dbt_utils.unique_combination_of_columns:
           arguments:
             combination_of_columns:
-              - offer_type
-              - offer_id
+              - machine_id
               - valid_from
               - tariff_tier_skey
     columns:
       - name: arbitrage_rank
-        description: "Rank by profit_per_tflop_usd descending within (offer_type, tariff_tier_skey) - rank 1 is the best opportunity for that tier"
-        tests:
-          - not_null
-
-      - name: offer_type
-        description: "Offer type e.g. on_demand, reserved, bid"
-        tests:
-          - not_null
-
-      - name: offer_id
-        description: "Vast.ai offer identifier"
+        description: "Rank by profit_per_tflop_usd descending within tariff_tier_skey - rank 1 is the best opportunity for that tier"
         tests:
           - not_null
 
@@ -60,8 +49,8 @@ models:
         tests:
           - not_null
 
-      - name: number_of_gpus
-        description: "Number of GPUs in the offer"
+      - name: number_of_machine_gpus
+        description: "GPUs in the machine, rented or not"
         tests:
           - not_null
 
@@ -69,7 +58,7 @@ models:
         description: "TFLOPS per GPU"
 
       - name: total_system_tflops
-        description: "Total TFLOPS across all GPUs in the offer"
+        description: "Total TFLOPS across all GPUs in the machine"
 
       - name: gpu_memory_gb
         description: "GPU VRAM in gigabytes"
@@ -184,30 +173,25 @@ models:
         description: "Profit per TFLOP in USD for this tariff tier - used for ranking"
 
       - name: valid_from
-        description: "Timestamp of the offer snapshot"
+        description: "Scheduled hour of the census this machine row comes from"
         tests:
           - not_null
 
   - name: mart_best_offers_by_gpu
     description: >
-      Best available offer per (GPU variant, tariff tier), deduped to the latest snapshot.
-      Filtered to verified, rentable, unrented offers. Selection is by profit_usd_per_hr / number_of_gpus
-      within each (offer_type, gpu_architecture, gpu_model_name, gpu_memory_gb, tariff_tier_skey) group.
-      One row per (offer_type, gpu_architecture, gpu_model_name, gpu_memory_gb, tariff_tier_skey).
+      Best available machine per (GPU variant, tariff tier), from the latest census.
+      Filtered to verified, available machines. Selection is by profit_usd_per_hr / number_of_machine_gpus
+      within each (gpu_architecture, gpu_model_name, gpu_memory_gb, tariff_tier_skey) group.
+      One row per (gpu_architecture, gpu_model_name, gpu_memory_gb, tariff_tier_skey).
     tests:
       - dbt_utils.unique_combination_of_columns:
           arguments:
             combination_of_columns:
-              - offer_type
               - gpu_architecture
               - gpu_model_name
               - gpu_memory_gb
               - tariff_tier_skey
     columns:
-      - name: offer_type
-        description: "Offer type e.g. on_demand, reserved, bid"
-        tests:
-          - not_null
 
       - name: gpu_architecture
         description: "GPU architecture family e.g. nvidia"
@@ -245,10 +229,7 @@ models:
         description: "Vast.ai host verification status"
 
       - name: rentable_flag
-        description: "Whether the offer is currently rentable"
-
-      - name: rented_flag
-        description: "Whether the offer is currently rented"
+        description: "Available: at least one of the machine's offers can be rented now (always true here)"
 
       - name: reliability_score
         description: "Vast.ai host reliability score"
@@ -301,26 +282,25 @@ models:
 
   - name: mart_profitability_trends
     description: >
-      Hourly aggregated offer-level profitability metrics grouped by GPU variant, scheduled tariff window type,
+      Hourly aggregated machine-level profitability metrics grouped by GPU variant, scheduled tariff window type,
       and tariff tier context. Joins fct_compute_offers to dim_electricity_tariff_window_schedule to filter
-      to hours where the tariff tier's window matches the EVN schedule. Metrics are raw offer-level averages
+      to hours where the tariff tier's window matches the EVN schedule. Metrics are raw machine-level averages
       (not per-GPU normalized) - use mart_best_offers_by_gpu or mart_gpu_model_summary for per-GPU comparisons.
-      One row per (hour_bucket, offer_type, gpu_architecture, gpu_model_name, gpu_memory_gb, gpu_tdp_watts,
-      gpu_bandwidth_gbytes_per_sec, gpu_max_cuda_version_supported, number_of_gpus, scheduled_tariff_window_type,
+      One row per (hour_bucket, gpu_architecture, gpu_model_name, gpu_memory_gb, gpu_tdp_watts,
+      gpu_bandwidth_gbytes_per_sec, gpu_max_cuda_version_supported, number_of_machine_gpus, scheduled_tariff_window_type,
       consumer_category, tariff_block_number, tariff_tier_skey).
     tests:
       - dbt_utils.unique_combination_of_columns:
           arguments:
             combination_of_columns:
               - hour_bucket
-              - offer_type
               - gpu_architecture
               - gpu_model_name
               - gpu_memory_gb
               - gpu_tdp_watts
               - gpu_bandwidth_gbytes_per_sec
               - gpu_max_cuda_version_supported
-              - number_of_gpus
+              - number_of_machine_gpus
               - tariff_tier_skey
               - consumer_category
               - scheduled_tariff_window_type
@@ -344,10 +324,6 @@ models:
           - dbt_utils.expression_is_true:
               arguments:
                 expression: ">= 0 and hour_of_day < 24"
-      - name: offer_type
-        description: "Offer type e.g. on_demand, reserved, bid"
-        tests:
-          - not_null
       - name: gpu_architecture
         description: "GPU architecture family"
         tests:
@@ -364,25 +340,25 @@ models:
         description: "GPU memory bandwidth in GB/s - part of grain"
       - name: gpu_max_cuda_version_supported
         description: "Maximum CUDA version supported - part of grain"
-      - name: number_of_gpus
+      - name: number_of_machine_gpus
         description: "Number of GPUs - part of grain"
-      - name: offer_count
-        description: "Number of offer snapshots in this group"
+      - name: number_of_machines
+        description: "Number of machines in this group (ADR-020)"
         tests:
           - not_null
           - dbt_utils.expression_is_true:
               arguments:
                 expression: "> 0"
       - name: avg_revenue_usd_per_hr
-        description: "Average offer revenue in USD/hr"
+        description: "Average machine revenue in USD/hr"
 
       # generic profit aggregates (tier-scoped)
       - name: avg_profit_usd_per_hr
-        description: "Average offer profit in USD/hr for this tariff tier"
+        description: "Average machine profit in USD/hr for this tariff tier"
       - name: min_profit_usd_per_hr
-        description: "Minimum offer profit in USD/hr for this tariff tier"
+        description: "Minimum machine profit in USD/hr for this tariff tier"
       - name: max_profit_usd_per_hr
-        description: "Maximum offer profit in USD/hr for this tariff tier"
+        description: "Maximum machine profit in USD/hr for this tariff tier"
 
       - name: avg_profit_per_tflop_usd
         description: "Average profit per TFLOP in USD for this tariff tier"
@@ -415,26 +391,20 @@ models:
 
   - name: mart_gpu_model_summary
     description: >
-      Summary profitability statistics aggregated by GPU model, offer type, and tariff tier.
-      Current offers only (valid_to is 9999-12-31). Includes a single pct_profitable column
-      (share of offers with profit_usd_per_hr > 0 for that tier), host quality metrics,
-      and per-GPU normalized averages. One row per (offer_type, gpu_architecture, gpu_model_name,
-      tflops_per_gpu, gpu_memory_gb, tariff_tier_skey).
+      Summary statistics per GPU variant and tariff tier over the latest census, counting machines, not their
+      overlapping offers (ADR-020). Includes pct_profitable (share of machines with profit_usd_per_hr > 0 for
+      that tier), pct_available, host quality metrics, and per-GPU averages split by available and taken
+      machines. One row per (gpu_architecture, gpu_model_name, tflops_per_gpu, gpu_memory_gb, tariff_tier_skey).
     tests:
       - dbt_utils.unique_combination_of_columns:
           arguments:
             combination_of_columns:
-              - offer_type
               - gpu_architecture
               - gpu_model_name
               - gpu_memory_gb
               - tflops_per_gpu
               - tariff_tier_skey
     columns:
-      - name: offer_type
-        description: "Offer type e.g. on_demand, reserved, bid"
-        tests:
-          - not_null
       - name: gpu_architecture
         description: "GPU architecture family"
         tests:
@@ -448,13 +418,18 @@ models:
       - name: gpu_memory_gb
         description: "GPU VRAM in gigabytes - part of grain to separate RTX 4090 16GB vs 32GB"
 
-      - name: total_offer_observations
-        description: "Total number of current offer snapshots in this group"
+      - name: number_of_machines
+        description: "Machines of this GPU variant in the latest census"
         tests:
           - not_null
           - dbt_utils.expression_is_true:
               arguments:
                 expression: "> 0"
+
+      - name: total_number_of_machine_gpus
+        description: "GPUs across those machines (sum of number_of_machine_gpus, rented or not)"
+        tests:
+          - not_null
 
       - name: avg_kwh_per_tflop
         description: "Average energy efficiency ratio - kWh per TFLOP"
@@ -462,8 +437,14 @@ models:
       - name: avg_revenue_per_gpu_usd_per_hr
         description: "Average revenue per GPU in USD/hr"
 
+      - name: avg_available_revenue_per_gpu_usd_per_hr
+        description: "Average ask per GPU in USD/hr of available machines - the competition"
+
+      - name: avg_taken_revenue_per_gpu_usd_per_hr
+        description: "Average ask per GPU in USD/hr of taken machines - prices being paid, or of switched-off machines"
+
       - name: pct_profitable
-        description: "Percentage of offers with profit_usd_per_hr > 0 for this tariff tier"
+        description: "Percentage of machines with profit_usd_per_hr > 0 for this tariff tier"
         tests:
           - dbt_utils.expression_is_true:
               arguments:
@@ -472,7 +453,7 @@ models:
                 severity: warn
 
       - name: pct_verified
-        description: "Percentage of offers with verified hosts"
+        description: "Percentage of machines with verified hosts"
         tests:
           - dbt_utils.expression_is_true:
               arguments:
@@ -481,7 +462,7 @@ models:
                 severity: warn
 
       - name: pct_available
-        description: "Percentage of offers currently not rented"
+        description: "Percentage of machines available (any offer rentable now); the rest are taken"
         tests:
           - dbt_utils.expression_is_true:
               arguments:
@@ -571,7 +552,7 @@ models:
           - dbt_utils.expression_is_true:
               arguments:
                 expression: "> 0"
-      - name: number_of_gpus
+      - name: number_of_machine_gpus
         description: "Number of GPUs in the machine"
         tests:
           - not_null
@@ -593,7 +574,7 @@ models:
       - name: gpu_max_cuda_version_supported
         description: "Maximum CUDA version supported"
       - name: market_ask_usd_per_hr
-        description: "Median current market ask price for this GPU model in USD/hr"
+        description: "Median per-GPU ask of this GPU model's machines in the latest census x number_of_machine_gpus, in USD/hr"
         tests:
           - not_null
       - name: forecast_ask_usd_per_hr
@@ -617,14 +598,14 @@ models:
       - name: profit_per_tflop_usd
         description: "Profit per TFLOP in USD"
       - name: total_system_kwh_per_hr
-        description: "Estimated total system power draw in kWh/hr (gpu_tdp_watts * number_of_gpus / 1000)"
+        description: "Estimated total system power draw in kWh/hr (gpu_tdp_watts * number_of_machine_gpus / 1000)"
         tests:
           - not_null
           - dbt_utils.expression_is_true:
               arguments:
                 expression: "> 0"
       - name: total_system_tflops
-        description: "Total compute across all GPUs in the machine (tflops_per_gpu * number_of_gpus)"
+        description: "Total compute across all GPUs in the machine (tflops_per_gpu * number_of_machine_gpus)"
         tests:
           - not_null
           - dbt_utils.expression_is_true:

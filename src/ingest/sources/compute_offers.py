@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, UTC
 from http import HTTPStatus
 from typing import Any
@@ -8,7 +8,7 @@ from typing import Any
 from aiohttp import ClientError, ClientSession, ClientTimeout
 from pydantic import ValidationError
 
-from common.classes import Dataset
+from common.classes import AskContractIdRange, Dataset
 from common.enums import OfferType, DatasetType, DatasetName
 from config.apis.vast_ai import VastAIConfig
 from config.loader import ConfigLoader
@@ -18,9 +18,17 @@ from ingest.schemas.compute_offers import COMPUTE_OFFERS_BRONZE_SCHEMA
 from ingest.scheduling import is_backfill, resolve_snapshot_at
 from ingest.write_strategy import AppendByHour, BronzeTable
 
+
+class CensusIncompleteError(Exception):
+    """A range of the market could not be fetched, so the census is not the whole market (ADR-020)."""
+
+
 @dataclass
 class ComputeOffersIngestor(AsyncIngestor):
     snapshot_at: datetime
+    # Vast.ai's daily quota counts returned rows, including those of ranges that had to be split.
+    rows_used: int = field(init=False, default=0)
+    requests: int = field(init=False, default=0)
 
     async def run(self) -> None:
         if is_backfill(self.snapshot_at):
@@ -32,32 +40,47 @@ class ComputeOffersIngestor(AsyncIngestor):
         await super().run()
 
     async def load(self) -> list[VastAIOffer]:
+        # On-demand only: its rows carry the bid price (min_bid), and reserved prices equal on-demand (ADR-020).
         async with ClientSession() as session:
-            offers = []
             ingested_at: datetime = datetime.now(UTC)
-            for offer_type in OfferType:
+            rows = await self.fetch_complete_range(session, AskContractIdRange(start=0))
+            self.logger.info(f"Census of {len(rows)} offers used {self.rows_used} rows in {self.requests} requests")
+            offers = [self.parse(data=row, timestamp=ingested_at, offer_type=OfferType.ON_DEMAND) for row in rows]
+            return [offer for offer in offers if offer]
 
-                response = await self.fetch_async(
-                    (ClientError, asyncio.TimeoutError),
-                    session.get,
-                    self.config.url,
-                    headers=self.config.header,
-                    params=self.config.params(offer_type=offer_type),
-                    timeout=ClientTimeout(total=self.http_config.timeout_seconds),
-                )
-                if response.status != HTTPStatus.OK:
-                    self.logger.error(f"Vast.AI API returned HTTP {response.status}")
-                    return []
-                try:
-                    data: dict[str, Any] = await response.json(encoding="utf-8")
-                    for row in data.get("offers", []):
-                        offer = self.parse(data=row, timestamp=ingested_at, offer_type=offer_type)
-                        if offer:
-                            offers.append(offer)
-                finally:
-                    response.close()
-
+    async def fetch_complete_range(self, session: ClientSession, id_range: AskContractIdRange) -> list[dict[str, Any]]:
+        # /bundles returns a random sample when more offers match than the limit (ADR-020). A range returning fewer
+        # than split_at is complete; a fuller one is split at its sample's quantiles and each part fetched the same way.
+        offers = await self.request_range(session, id_range)
+        if len(offers) < self.config.split_at:
             return offers
+        complete = []
+        for part in id_range.split([o["ask_contract_id"] for o in offers], self.config.census_parts):
+            complete += await self.fetch_complete_range(session, part)
+        return complete
+
+    async def request_range(self, session: ClientSession, id_range: AskContractIdRange) -> list[dict[str, Any]]:
+        response = await self.fetch_async(
+            (ClientError, asyncio.TimeoutError),
+            session.get,
+            self.config.url,
+            headers=self.config.header,
+            params=self.config.params(id_range),
+            timeout=ClientTimeout(total=self.http_config.timeout_seconds),
+        )
+        if response.status != HTTPStatus.OK:
+            self.logger.error(f"Vast.AI API returned HTTP {response.status}")
+            raise CensusIncompleteError(f"range {id_range} failed with HTTP {response.status}")
+        try:
+            data: dict[str, Any] = await response.json(encoding="utf-8")
+        finally:
+            response.close()
+        await asyncio.sleep(self.config.request_interval_seconds)
+        offers = data.get("offers", [])
+        self.requests += 1
+        self.rows_used += len(offers)
+        self.logger.info(f"Range {id_range}: {len(offers)} offers; {self.rows_used} rows used in {self.requests} requests")
+        return offers
 
     def parse(self, **kwargs) -> VastAIOffer | None:
         data: dict[str, Any] = kwargs.get("data")
@@ -82,7 +105,9 @@ class ComputeOffersIngestor(AsyncIngestor):
                 gpu_model_name=data.get("gpu_name"),
                 gpu_memory_mb=data.get("gpu_ram"),
                 gpu_tdp_watts=data.get("gpu_max_power"),
-                number_of_gpus=data.get("num_gpus", 1),
+                number_of_offer_gpus=data.get("num_gpus", 1),
+                gpu_fraction_of_machine=data.get("gpu_frac"),
+                gpu_ids=data.get("gpu_ids"),
                 gpu_max_cuda_version_supported=data.get("cuda_max_good"),
                 gpu_tflops=data.get("total_flops"),
                 gpu_bandwidth_gbytes_per_sec=data.get("gpu_mem_bw"),

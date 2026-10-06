@@ -28,7 +28,9 @@ class VastAIOffer(BaseRecord):
     gpu_model_name: str
     gpu_memory_mb: float
     gpu_tdp_watts: float | None = None
-    number_of_gpus: int = 1
+    number_of_offer_gpus: int = 1
+    gpu_fraction_of_machine: float | None = None
+    gpu_ids: list[int] | None = None
     gpu_max_cuda_version_supported: float | None = None
     gpu_tflops: float | None = None
     gpu_bandwidth_gbytes_per_sec: float | None = None
