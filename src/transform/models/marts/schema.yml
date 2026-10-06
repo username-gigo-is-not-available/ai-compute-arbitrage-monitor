@@ -49,7 +49,7 @@ models:
         tests:
           - not_null
 
-      - name: number_of_gpus
+      - name: number_of_machine_gpus
         description: "Number of GPUs in the offer"
         tests:
           - not_null
@@ -180,7 +180,7 @@ models:
   - name: mart_best_offers_by_gpu
     description: >
       Best available machine per (GPU variant, tariff tier), from the latest census.
-      Filtered to verified, available machines. Selection is by profit_usd_per_hr / number_of_gpus
+      Filtered to verified, available machines. Selection is by profit_usd_per_hr / number_of_machine_gpus
       within each (gpu_architecture, gpu_model_name, gpu_memory_gb, tariff_tier_skey) group.
       One row per (gpu_architecture, gpu_model_name, gpu_memory_gb, tariff_tier_skey).
     tests:
@@ -287,7 +287,7 @@ models:
       to hours where the tariff tier's window matches the EVN schedule. Metrics are raw offer-level averages
       (not per-GPU normalized) - use mart_best_offers_by_gpu or mart_gpu_model_summary for per-GPU comparisons.
       One row per (hour_bucket, gpu_architecture, gpu_model_name, gpu_memory_gb, gpu_tdp_watts,
-      gpu_bandwidth_gbytes_per_sec, gpu_max_cuda_version_supported, number_of_gpus, scheduled_tariff_window_type,
+      gpu_bandwidth_gbytes_per_sec, gpu_max_cuda_version_supported, number_of_machine_gpus, scheduled_tariff_window_type,
       consumer_category, tariff_block_number, tariff_tier_skey).
     tests:
       - dbt_utils.unique_combination_of_columns:
@@ -300,7 +300,7 @@ models:
               - gpu_tdp_watts
               - gpu_bandwidth_gbytes_per_sec
               - gpu_max_cuda_version_supported
-              - number_of_gpus
+              - number_of_machine_gpus
               - tariff_tier_skey
               - consumer_category
               - scheduled_tariff_window_type
@@ -340,7 +340,7 @@ models:
         description: "GPU memory bandwidth in GB/s - part of grain"
       - name: gpu_max_cuda_version_supported
         description: "Maximum CUDA version supported - part of grain"
-      - name: number_of_gpus
+      - name: number_of_machine_gpus
         description: "Number of GPUs - part of grain"
       - name: machine_count
         description: "Number of machines in this group (ADR-020)"
@@ -552,7 +552,7 @@ models:
           - dbt_utils.expression_is_true:
               arguments:
                 expression: "> 0"
-      - name: number_of_gpus
+      - name: number_of_machine_gpus
         description: "Number of GPUs in the machine"
         tests:
           - not_null
@@ -574,7 +574,7 @@ models:
       - name: gpu_max_cuda_version_supported
         description: "Maximum CUDA version supported"
       - name: market_ask_usd_per_hr
-        description: "Median per-GPU ask of this GPU model's machines in the latest census x number_of_gpus, in USD/hr"
+        description: "Median per-GPU ask of this GPU model's machines in the latest census x number_of_machine_gpus, in USD/hr"
         tests:
           - not_null
       - name: forecast_ask_usd_per_hr
@@ -598,14 +598,14 @@ models:
       - name: profit_per_tflop_usd
         description: "Profit per TFLOP in USD"
       - name: total_system_kwh_per_hr
-        description: "Estimated total system power draw in kWh/hr (gpu_tdp_watts * number_of_gpus / 1000)"
+        description: "Estimated total system power draw in kWh/hr (gpu_tdp_watts * number_of_machine_gpus / 1000)"
         tests:
           - not_null
           - dbt_utils.expression_is_true:
               arguments:
                 expression: "> 0"
       - name: total_system_tflops
-        description: "Total compute across all GPUs in the machine (tflops_per_gpu * number_of_gpus)"
+        description: "Total compute across all GPUs in the machine (tflops_per_gpu * number_of_machine_gpus)"
         tests:
           - not_null
           - dbt_utils.expression_is_true:

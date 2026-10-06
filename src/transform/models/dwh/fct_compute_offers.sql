@@ -147,8 +147,8 @@ joined as (
 calculations as (
     select
         *,
-        (gpu_tdp_watts * number_of_gpus) / 1000.0                as total_system_kwh_per_hr,
-        (gpu_tdp_watts * number_of_gpus) / 1000.0
+        (gpu_tdp_watts * number_of_machine_gpus) / 1000.0        as total_system_kwh_per_hr,
+        (gpu_tdp_watts * number_of_machine_gpus) / 1000.0
             / nullif(total_system_tflops, 0)                     as kwh_per_tflop,
         total_price_usd_per_hr                                   as revenue_usd_per_hr
     from joined
@@ -183,7 +183,7 @@ select
     -- gpu specs
     gpu_architecture,
     gpu_model_name,
-    number_of_gpus,
+    number_of_machine_gpus,
     tflops_per_gpu,
     gpu_tdp_watts,
     gpu_memory_gb,

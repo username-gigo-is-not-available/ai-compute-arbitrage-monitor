@@ -46,7 +46,7 @@ select
     -- gpu
     gpu_architecture,
     gpu_model_name,
-    number_of_gpus,
+    number_of_machine_gpus,
     tflops_per_gpu,
     total_system_tflops,
     gpu_memory_gb,

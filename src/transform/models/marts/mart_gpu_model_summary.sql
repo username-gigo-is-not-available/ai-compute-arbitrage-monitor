@@ -18,16 +18,16 @@ select
 
     -- supply
     count(*)                                                                     as machine_count,
-    sum(number_of_gpus)                                                          as gpu_count,
+    sum(number_of_machine_gpus)                                                  as gpu_count,
 
     -- efficiency
     avg(kwh_per_tflop)                                                           as avg_kwh_per_tflop,
 
     -- revenue / profitability (USD/hr)
-    avg(revenue_usd_per_hr / nullif(number_of_gpus, 0))                          as avg_revenue_per_gpu_usd_per_hr,
-    avg(case when rentable_flag then revenue_usd_per_hr / nullif(number_of_gpus, 0) end)
+    avg(revenue_usd_per_hr / nullif(number_of_machine_gpus, 0))                  as avg_revenue_per_gpu_usd_per_hr,
+    avg(case when rentable_flag then revenue_usd_per_hr / nullif(number_of_machine_gpus, 0) end)
                                                                                  as avg_available_revenue_per_gpu_usd_per_hr,
-    avg(case when not rentable_flag then revenue_usd_per_hr / nullif(number_of_gpus, 0) end)
+    avg(case when not rentable_flag then revenue_usd_per_hr / nullif(number_of_machine_gpus, 0) end)
                                                                                  as avg_taken_revenue_per_gpu_usd_per_hr,
 
     round(100.0 * countif(profit_usd_per_hr > 0) / nullif(count(*), 0), 2)      as pct_profitable,

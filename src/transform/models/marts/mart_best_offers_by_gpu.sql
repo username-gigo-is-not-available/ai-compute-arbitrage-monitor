@@ -23,7 +23,7 @@ normalized_offers as (
         *,
         row_number() over (
             partition by gpu_architecture, gpu_model_name, gpu_memory_gb, tariff_tier_skey
-            order by valid_from desc, (profit_usd_per_hr / nullif(number_of_gpus, 0)) desc
+            order by valid_from desc, (profit_usd_per_hr / nullif(number_of_machine_gpus, 0)) desc
         ) as rn
     from available_offers
 )
@@ -48,9 +48,9 @@ select
     country_code,
 
     -- revenue / cost / profit (USD/hr per GPU)
-    revenue_usd_per_hr / nullif(number_of_gpus, 0)                  as revenue_per_gpu_usd_per_hr,
-    cost_usd_per_hr / nullif(number_of_gpus, 0)                     as cost_per_gpu_usd_per_hr,
-    profit_usd_per_hr / nullif(number_of_gpus, 0)                   as profit_per_gpu_usd_per_hr,
+    revenue_usd_per_hr / nullif(number_of_machine_gpus, 0)          as revenue_per_gpu_usd_per_hr,
+    cost_usd_per_hr / nullif(number_of_machine_gpus, 0)             as cost_per_gpu_usd_per_hr,
+    profit_usd_per_hr / nullif(number_of_machine_gpus, 0)           as profit_per_gpu_usd_per_hr,
 
     -- per TFLOP (USD)
     cost_per_tflop_usd,

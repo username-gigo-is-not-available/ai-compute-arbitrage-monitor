@@ -114,7 +114,7 @@ models:
               config:
                 severity: warn
 
-      - name: number_of_gpus
+      - name: number_of_offer_gpus
         description: "Number of GPUs in the offer"
         tests:
           - not_null
@@ -123,7 +123,7 @@ models:
                 expression: "> 0"
 
       - name: gpu_fraction_of_machine
-        description: "Share of its machine's GPUs this offer rents (gpu_frac); machine size = number_of_gpus / gpu_fraction_of_machine (ADR-020)"
+        description: "Share of its machine's GPUs this offer rents (gpu_frac); machine size = number_of_offer_gpus / gpu_fraction_of_machine (ADR-020)"
         tests:
           - not_null
           - dbt_utils.expression_is_true:

@@ -484,7 +484,7 @@ models:
         tests:
           - not_null
 
-      - name: number_of_gpus
+      - name: number_of_machine_gpus
         description: "Machine size: GPUs in the machine, rented or not"
         tests:
           - not_null
@@ -705,7 +705,7 @@ models:
       # derived power / compute
       # -----------------------------------------------------------------------
       - name: total_system_kwh_per_hr
-        description: "Estimated total system power draw in kWh per hour (gpu_tdp_watts * number_of_gpus / 1000)"
+        description: "Estimated total system power draw in kWh per hour (gpu_tdp_watts * number_of_machine_gpus / 1000)"
         tests:
           - not_null:
               config:
@@ -717,7 +717,7 @@ models:
                 severity: warn
 
       - name: total_system_tflops
-        description: "Total compute capacity across all GPUs in the offer (gpu_tflops * number_of_gpus)"
+        description: "Total compute capacity across all GPUs in the machine (tflops_per_gpu * number_of_machine_gpus)"
         tests:
           - not_null:
               config:

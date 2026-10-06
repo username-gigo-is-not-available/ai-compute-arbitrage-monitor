@@ -51,7 +51,7 @@ gpu_specs as (
     select
         gpu_model_name,
         gpu_tdp_watts,
-        number_of_gpus,
+        number_of_machine_gpus,
         tflops_per_gpu,
         gpu_memory_gb,
         gpu_bandwidth_gbytes_per_sec,
@@ -67,10 +67,10 @@ gpu_specs as (
 
 market_revenue as (
     -- Median per-GPU ask across the latest census's machines, scaled to gpu_specs' GPU count below (ADR-020):
-    -- machines differ in size, so a median of whole-machine prices would not match gpu_specs.number_of_gpus.
+    -- machines differ in size, so a median of whole-machine prices would not match gpu_specs.number_of_machine_gpus.
     select
         gpu_model_name,
-        approx_quantiles(revenue_usd_per_hr / number_of_gpus, 100)[offset(50)] as market_ask_usd_per_gpu_hr
+        approx_quantiles(revenue_usd_per_hr / number_of_machine_gpus, 100)[offset(50)] as market_ask_usd_per_gpu_hr
     from {{ ref('fct_compute_offers') }}
     where cast(valid_to as date) = date '9999-12-31'
       and revenue_usd_per_hr > 0
@@ -119,12 +119,12 @@ combined as (
         sw.tariff_window_type,
         gs.gpu_model_name,
         gs.gpu_tdp_watts,
-        gs.number_of_gpus,
+        gs.number_of_machine_gpus,
         gs.tflops_per_gpu,
         gs.gpu_memory_gb,
         gs.gpu_bandwidth_gbytes_per_sec,
         gs.gpu_max_cuda_version_supported,
-        mr.market_ask_usd_per_gpu_hr * gs.number_of_gpus                  as market_ask_usd_per_hr,
+        mr.market_ask_usd_per_gpu_hr * gs.number_of_machine_gpus          as market_ask_usd_per_hr,
         tt.tariff_tier_skey,
         tt.tariff_value,
         tt.tariff_block_number,
@@ -146,14 +146,14 @@ combined as (
 metrics as (
     select
         *,
-        (gpu_tdp_watts * number_of_gpus) / 1000.0 as total_system_kwh_per_hr,
+        (gpu_tdp_watts * number_of_machine_gpus) / 1000.0 as total_system_kwh_per_hr,
         {% if ask_override is not none %}
             cast({{ ask_override }} as float64) as forecast_ask_usd_per_hr,
         {% else %}
             market_ask_usd_per_hr as forecast_ask_usd_per_hr,
         {% endif %}
-        tflops_per_gpu * number_of_gpus as total_system_tflops,
-        ((gpu_tdp_watts * number_of_gpus) / 1000.0
+        tflops_per_gpu * number_of_machine_gpus as total_system_tflops,
+        ((gpu_tdp_watts * number_of_machine_gpus) / 1000.0
             * (tariff_value + coalesce(distribution_fee, 0)))
             / nullif(usd_to_mkd_rate, 0) as cost_usd_per_hr
     from combined
@@ -167,7 +167,7 @@ select
 
     gpu_model_name,
     gpu_tdp_watts,
-    number_of_gpus,
+    number_of_machine_gpus,
     tflops_per_gpu,
     gpu_memory_gb,
     gpu_bandwidth_gbytes_per_sec,

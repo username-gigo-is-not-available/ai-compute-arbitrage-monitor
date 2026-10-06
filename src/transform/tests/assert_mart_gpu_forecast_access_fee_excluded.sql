@@ -14,7 +14,7 @@ with expected_cost as (
         consumer_category,
         cost_usd_per_hr,
         -- electricity-only cost: kwh * (tariff_value + distribution_fee) / rate
-        ((gpu_tdp_watts * number_of_gpus) / 1000.0
+        ((gpu_tdp_watts * number_of_machine_gpus) / 1000.0
             * (tariff_value + coalesce(distribution_fee, 0)))
             / nullif(usd_to_mkd_rate, 0) as expected_cost_no_access_fee
     from {{ ref('mart_gpu_forecast') }}

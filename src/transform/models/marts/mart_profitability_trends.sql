@@ -16,7 +16,7 @@ with joined as (
         f.gpu_tdp_watts,
         f.gpu_bandwidth_gbytes_per_sec,
         f.gpu_max_cuda_version_supported,
-        f.number_of_gpus,
+        f.number_of_machine_gpus,
         f.valid_from,
         f.revenue_usd_per_hr,
         f.profit_usd_per_hr,
@@ -48,7 +48,7 @@ select
     gpu_tdp_watts,
     gpu_bandwidth_gbytes_per_sec,
     gpu_max_cuda_version_supported,
-    number_of_gpus,
+    number_of_machine_gpus,
     count(*)                                                      as machine_count,
 
     -- revenue (USD/hr)
