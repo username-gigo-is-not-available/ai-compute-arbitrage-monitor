@@ -2,7 +2,11 @@
 
 ## Status
 
-Accepted
+Accepted. _Amended by ADR-021_:
+- **`cost_usd_per_hr` below becomes `average_cost_usd_per_hr`.** It sits beside
+  `marginal_cost_usd_per_hr`, which excludes the access fee.
+- **Household costs include VAT (18%).**
+- **The kWh input is resolved in the app,** not in a mart.
 
 ## Context
 
