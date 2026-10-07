@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted. The dbt part is implemented on `feat/tariff-block-resolution`; the app part (Track B) is not yet built. Amends ADR-007 (forecast inputs, grain and framing) and the cost
+Accepted. The dbt part is implemented in #42; the app part (Track B) is not yet built. Amends ADR-007 (forecast inputs, grain and framing) and the cost
 model of ADR-005 (marginal vs. average cost, VAT). Restores the intent of ADR-005's
 `kwh_consumed_so_far` input without restoring `mart_user_profitability_scenario`.
 
