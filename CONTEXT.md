@@ -53,27 +53,27 @@ A charge component in the EVN electricity bill. Two types: `distribution` (per-k
 _Avoid_: Tariff charge, fee
 
 **Tariff block**:
-A consumption boundary range that determines which per-kWh price tier applies. EVN publishes the bounds for a 30-day billing period; for any other period length they scale in proportion to its days (e.g. block 1 is 0–210 kWh over 30 days, 0–196 kWh over 28). Blocks are progressive, like tax brackets: each kWh is priced by the block it falls into, not by the period's total. Blocks count only high-tariff consumption and exist only for household tiers; low-tariff and business tiers have no block.
+A progressive range of a household's high-tariff consumption within a billing period, each priced at its own per-kWh rate, like a tax bracket. Its kWh bounds scale with the billing period's length; low-tariff and business tiers have no blocks.
 _Avoid_: Consumption tier, usage band
 
 **Billing period**:
-The interval between two consecutive EVN meter readings of one household. Its dates differ per household and its length varies around 30 days. Tariff block consumption resets to zero when a new billing period starts.
+The interval between two consecutive EVN meter readings of one household, about 30 days long, on dates that differ per household. Tariff block consumption resets to zero when a new one starts.
 _Avoid_: Month, calendar month, billing cycle
 
 **Billing-period consumption**:
-The high-tariff kWh the host's household has already consumed in the current billing period. It locates the host in a tariff block, and so sets the **marginal tariff rate**. It is the host's own meter reading, not a renter's consumption.
+The high-tariff kWh the host's household has consumed so far in the current billing period, read from the host's own meter. It places the host in a tariff block.
 _Avoid_: kWh consumed, monthly consumption, expected consumption
 
 **Marginal tariff rate**:
-The per-kWh price of the next high-tariff kWh the host's GPU consumes: the price of the tariff block that contains the billing-period consumption. Profitability is judged at this rate, not at a month's blended average.
+The per-kWh price of the next high-tariff kWh the host consumes: the rate of the tariff block that contains the billing-period consumption.
 _Avoid_: Average rate, effective rate, blended rate
 
 **Marginal cost**:
-The hourly cost of running the host's GPU: its electricity at the tariff rate plus the per-kWh distribution fee, plus VAT for household hosts (a VAT-registered business host reclaims it). It excludes the access fee and the public-lighting tax, which the host pays whether or not the GPU runs. Profitability shown to a host is judged on marginal cost.
+The hourly cost of running the host's GPU: its electricity at the tariff rate plus the per-kWh distribution fee, with VAT for household hosts. It excludes charges paid whether or not the GPU runs (the access fee and the public-lighting tax).
 _Avoid_: Cost, running cost, variable cost
 
 **Average cost**:
-Marginal cost plus the monthly access fee spread evenly over the month's hours. A full-month analysis figure, not the cost of a decision to run the GPU now.
+Marginal cost plus the monthly access fee (with VAT for household hosts) spread evenly over the month's hours: a full-month figure, not the cost of running the GPU now.
 _Avoid_: Cost, total cost, full cost
 
 **Valid from / Valid to**:

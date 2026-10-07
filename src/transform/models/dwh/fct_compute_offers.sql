@@ -156,7 +156,7 @@ calculations as (
     from joined
 ),
 
-vat as (
+with_vat_rate as (
     select
         *,
         {{ vat_rate('consumer_category') }} as vat_rate
@@ -167,12 +167,9 @@ vat as (
 cost_metrics as (
     select
         *,
-        (total_system_kwh_per_hr * (tariff_value + coalesce(distribution_fee, 0)))
-            * (1 + vat_rate) / nullif(usd_to_mkd_rate, 0)                     as marginal_cost_usd_per_hr,
-        (total_system_kwh_per_hr * (tariff_value + coalesce(distribution_fee, 0))
-            + coalesce(access_fee, 0) / 730.0)
-            * (1 + vat_rate) / nullif(usd_to_mkd_rate, 0)                     as average_cost_usd_per_hr
-    from vat
+        {{ cost_usd_per_hr('total_system_kwh_per_hr') }}                     as marginal_cost_usd_per_hr,
+        {{ cost_usd_per_hr('total_system_kwh_per_hr', 'access_fee') }}       as average_cost_usd_per_hr
+    from with_vat_rate
 )
 
 select

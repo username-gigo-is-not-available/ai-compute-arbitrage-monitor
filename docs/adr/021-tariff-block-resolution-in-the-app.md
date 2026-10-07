@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted; not yet implemented. Amends ADR-007 (forecast inputs, grain and framing) and the cost
+Accepted. The dbt part is implemented on `feat/tariff-block-resolution`; the app part (Track B) is not yet built. Amends ADR-007 (forecast inputs, grain and framing) and the cost
 model of ADR-005 (marginal vs. average cost, VAT). Restores the intent of ADR-005's
 `kwh_consumed_so_far` input without restoring `mart_user_profitability_scenario`.
 
@@ -58,12 +58,14 @@ How EVN prices household electricity ([tariff system](https://www.evn.mk/AboutIn
   - At the next reading date the total resets to 0, and the following period uses 30-day bounds.
 - **Hosts are shown marginal cost.** Replace `cost_usd_per_hr` and the profit and per-TFLOP columns
   derived from it with two explicit sets:
-  - **`marginal_*`:** tariff plus distribution fee, plus VAT for households.
-  - **`average_*`:** marginal plus the access fee spread over 730 hours.
+  - **`marginal_*`:** (tariff + distribution fee) × kWh, plus VAT for households.
+  - **`average_*`:** marginal plus the access fee spread over 730 hours, with VAT on the access fee too
+    (VAT applies to the whole bill).
 
   `fct_compute_offers` and the market marts carry both. Market ranking uses marginal profit per
   TFLOP. The forecast carries marginal only.
-- **VAT (18%) applies to household costs only.** A VAT-registered business reclaims it.
+- **VAT (18%) applies to household costs only**, to every charge it covers on the bill (energy,
+  distribution and access fee). A VAT-registered business reclaims it.
 - **The forecast's hours are converted to `Europe/Skopje`** before joining the EVN time-of-use
   schedule. The schedule's hours are local, and the spine was UTC.
 

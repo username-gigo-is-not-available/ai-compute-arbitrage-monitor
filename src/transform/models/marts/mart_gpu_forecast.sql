@@ -7,8 +7,7 @@
 -- A per-GPU grid of GPU model x future hour x tariff tier (ADR-021). It carries every consumer category and tariff
 -- block, and no per-user input: the app picks the user's category, walks the blocks with a running total from
 -- their billing-period consumption, and scales by their GPU count and ask price.
--- forecast_days covers the app's 30-day window plus the gap between rebuilds.
-{% set forecast_days = var('forecast_days', 32) %}
+{% set forecast_days = var('forecast_days') %}
 
 
 with hours_spine as (
@@ -167,8 +166,7 @@ metrics as (
     select
         *,
         gpu_tdp_watts / 1000.0 as kwh_per_gpu_per_hr,
-        (gpu_tdp_watts / 1000.0 * (tariff_value + coalesce(distribution_fee, 0)))
-            * (1 + vat_rate) / nullif(usd_to_mkd_rate, 0) as marginal_cost_per_gpu_usd_per_hr
+        {{ cost_usd_per_hr('gpu_tdp_watts / 1000.0') }} as marginal_cost_per_gpu_usd_per_hr
     from combined
 )
 

@@ -7,3 +7,7 @@
 {% macro evn_hour(ts) %}
     extract(hour from {{ ts }} at time zone '{{ var("evn_timezone") }}')
 {% endmacro %}
+
+{% macro evn_date(ts) %}
+    date({{ ts }}, '{{ var("evn_timezone") }}')
+{% endmacro %}

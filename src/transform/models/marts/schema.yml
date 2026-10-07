@@ -377,30 +377,30 @@ models:
         description: "Average machine revenue in USD/hr"
 
       # profit aggregates (tier-scoped): marginal excludes the access fee, average includes it (ADR-021)
-      - name: avg_marginal_profit_usd_per_hr
+      - name: avg_profit_at_marginal_cost_usd_per_hr
         description: "Average machine profit in USD/hr at marginal cost for this tariff tier"
-      - name: min_marginal_profit_usd_per_hr
+      - name: min_profit_at_marginal_cost_usd_per_hr
         description: "Minimum machine profit in USD/hr at marginal cost for this tariff tier"
-      - name: max_marginal_profit_usd_per_hr
+      - name: max_profit_at_marginal_cost_usd_per_hr
         description: "Maximum machine profit in USD/hr at marginal cost for this tariff tier"
-      - name: avg_average_profit_usd_per_hr
+      - name: avg_profit_at_average_cost_usd_per_hr
         description: "Average machine profit in USD/hr at average cost for this tariff tier"
-      - name: min_average_profit_usd_per_hr
+      - name: min_profit_at_average_cost_usd_per_hr
         description: "Minimum machine profit in USD/hr at average cost for this tariff tier"
-      - name: max_average_profit_usd_per_hr
+      - name: max_profit_at_average_cost_usd_per_hr
         description: "Maximum machine profit in USD/hr at average cost for this tariff tier"
 
-      - name: avg_marginal_profit_per_tflop_usd
+      - name: avg_profit_per_tflop_at_marginal_cost_usd
         description: "Average profit per TFLOP in USD at marginal cost for this tariff tier"
-      - name: min_marginal_profit_per_tflop_usd
+      - name: min_profit_per_tflop_at_marginal_cost_usd
         description: "Minimum profit per TFLOP in USD at marginal cost for this tariff tier"
-      - name: max_marginal_profit_per_tflop_usd
+      - name: max_profit_per_tflop_at_marginal_cost_usd
         description: "Maximum profit per TFLOP in USD at marginal cost for this tariff tier"
-      - name: avg_average_profit_per_tflop_usd
+      - name: avg_profit_per_tflop_at_average_cost_usd
         description: "Average profit per TFLOP in USD at average cost for this tariff tier"
-      - name: min_average_profit_per_tflop_usd
+      - name: min_profit_per_tflop_at_average_cost_usd
         description: "Minimum profit per TFLOP in USD at average cost for this tariff tier"
-      - name: max_average_profit_per_tflop_usd
+      - name: max_profit_per_tflop_at_average_cost_usd
         description: "Maximum profit per TFLOP in USD at average cost for this tariff tier"
 
       # tariff tier context

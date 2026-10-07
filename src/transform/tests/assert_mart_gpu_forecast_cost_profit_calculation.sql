@@ -4,7 +4,7 @@
 --   2. marginal_cost_per_tflop = marginal_cost_per_gpu / tflops_per_gpu
 --   3. marginal_profit_per_tflop = marginal_profit_per_gpu / tflops_per_gpu
 --   4. marginal_cost_per_gpu >= 0 (electricity cost is non-negative)
--- If any row violates these invariants, it will be returned.
+-- Floats are compared within 1e-9. If any row violates these invariants, it will be returned.
 
 select
     gpu_model_name,
@@ -17,7 +17,7 @@ select
     marginal_cost_per_tflop_usd,
     marginal_profit_per_tflop_usd
 from {{ ref('mart_gpu_forecast') }}
-where marginal_profit_per_gpu_usd_per_hr != market_ask_per_gpu_usd_per_hr - marginal_cost_per_gpu_usd_per_hr
-   or marginal_cost_per_tflop_usd        != marginal_cost_per_gpu_usd_per_hr / nullif(tflops_per_gpu, 0)
-   or marginal_profit_per_tflop_usd      != marginal_profit_per_gpu_usd_per_hr / nullif(tflops_per_gpu, 0)
+where abs(marginal_profit_per_gpu_usd_per_hr - (market_ask_per_gpu_usd_per_hr - marginal_cost_per_gpu_usd_per_hr)) > 1e-9
+   or abs(marginal_cost_per_tflop_usd - (marginal_cost_per_gpu_usd_per_hr / nullif(tflops_per_gpu, 0))) > 1e-9
+   or abs(marginal_profit_per_tflop_usd - (marginal_profit_per_gpu_usd_per_hr / nullif(tflops_per_gpu, 0))) > 1e-9
    or marginal_cost_per_gpu_usd_per_hr < 0

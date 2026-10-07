@@ -814,10 +814,10 @@ models:
       # block boundaries (from dim_electricity_tariff_blocks)
       # -----------------------------------------------------------------------
       - name: lower_bound_kwh
-        description: "Lower bound of the tariff block in kWh/month"
+        description: "Lower bound of the tariff block in kWh for a 30-day billing period; scales with the period's length (ADR-021)"
 
       - name: upper_bound_kwh
-        description: "Upper bound of the tariff block in kWh/month (null for last block)"
+        description: "Upper bound of the tariff block in kWh for a 30-day billing period (null for last block); scales with the period's length (ADR-021)"
 
       # -----------------------------------------------------------------------
       # VAT (ADR-021)

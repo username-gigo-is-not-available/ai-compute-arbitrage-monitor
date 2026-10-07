@@ -32,8 +32,8 @@ with joined as (
     join {{ ref('dim_electricity_tariff_window_schedule') }} ts
         on  {{ evn_day_of_week('f.valid_from') }} = ts.day_of_week
         and {{ evn_hour('f.valid_from') }}        = ts.hour
-        and cast(f.valid_from as date) >= ts.valid_from
-        and cast(f.valid_from as date) <  ts.valid_to
+        and {{ evn_date('f.valid_from') }} >= ts.valid_from
+        and {{ evn_date('f.valid_from') }} <  ts.valid_to
         and f.tariff_window_type = ts.tariff_window_type
 )
 
@@ -57,20 +57,20 @@ select
     avg(revenue_usd_per_hr)                                       as avg_revenue_usd_per_hr,
 
     -- profitability (USD/hr): marginal excludes the access fee, average includes it (ADR-021)
-    avg(marginal_profit_usd_per_hr)                               as avg_marginal_profit_usd_per_hr,
-    min(marginal_profit_usd_per_hr)                               as min_marginal_profit_usd_per_hr,
-    max(marginal_profit_usd_per_hr)                               as max_marginal_profit_usd_per_hr,
-    avg(average_profit_usd_per_hr)                                as avg_average_profit_usd_per_hr,
-    min(average_profit_usd_per_hr)                                as min_average_profit_usd_per_hr,
-    max(average_profit_usd_per_hr)                                as max_average_profit_usd_per_hr,
+    avg(marginal_profit_usd_per_hr)                               as avg_profit_at_marginal_cost_usd_per_hr,
+    min(marginal_profit_usd_per_hr)                               as min_profit_at_marginal_cost_usd_per_hr,
+    max(marginal_profit_usd_per_hr)                               as max_profit_at_marginal_cost_usd_per_hr,
+    avg(average_profit_usd_per_hr)                                as avg_profit_at_average_cost_usd_per_hr,
+    min(average_profit_usd_per_hr)                                as min_profit_at_average_cost_usd_per_hr,
+    max(average_profit_usd_per_hr)                                as max_profit_at_average_cost_usd_per_hr,
 
     -- profitability per TFLOP (USD)
-    avg(marginal_profit_per_tflop_usd)                            as avg_marginal_profit_per_tflop_usd,
-    min(marginal_profit_per_tflop_usd)                            as min_marginal_profit_per_tflop_usd,
-    max(marginal_profit_per_tflop_usd)                            as max_marginal_profit_per_tflop_usd,
-    avg(average_profit_per_tflop_usd)                             as avg_average_profit_per_tflop_usd,
-    min(average_profit_per_tflop_usd)                             as min_average_profit_per_tflop_usd,
-    max(average_profit_per_tflop_usd)                             as max_average_profit_per_tflop_usd,
+    avg(marginal_profit_per_tflop_usd)                            as avg_profit_per_tflop_at_marginal_cost_usd,
+    min(marginal_profit_per_tflop_usd)                            as min_profit_per_tflop_at_marginal_cost_usd,
+    max(marginal_profit_per_tflop_usd)                            as max_profit_per_tflop_at_marginal_cost_usd,
+    avg(average_profit_per_tflop_usd)                             as avg_profit_per_tflop_at_average_cost_usd,
+    min(average_profit_per_tflop_usd)                             as min_profit_per_tflop_at_average_cost_usd,
+    max(average_profit_per_tflop_usd)                             as max_profit_per_tflop_at_average_cost_usd,
 
     -- tariff tier context
     tariff_tier_skey,

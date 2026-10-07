@@ -44,3 +44,5 @@ vars:
   household_vat_rate: 0.18
   # The EVN time-of-use schedule's day_of_week/hour are local time (ADR-021).
   evn_timezone: 'Europe/Skopje'
+  # mart_gpu_forecast's horizon: the app's 30-day window plus the gap between rebuilds (ADR-021).
+  forecast_days: 32
