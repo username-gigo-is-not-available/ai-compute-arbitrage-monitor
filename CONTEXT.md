@@ -53,8 +53,28 @@ A charge component in the EVN electricity bill. Two types: `distribution` (per-k
 _Avoid_: Tariff charge, fee
 
 **Tariff block**:
-A consumption boundary range (in kWh/month) that determines which per-kWh price tier applies. Stored in `dim_electricity_tariff_blocks` with `lower_bound_kwh` and `upper_bound_kwh`.
+A progressive range of a household's high-tariff consumption within a billing period, each priced at its own per-kWh rate, like a tax bracket. Its kWh bounds scale with the billing period's length; low-tariff and business tiers have no blocks.
 _Avoid_: Consumption tier, usage band
+
+**Billing period**:
+The interval between two consecutive EVN meter readings of one household, about 30 days long, on dates that differ per household. Tariff block consumption resets to zero when a new one starts.
+_Avoid_: Month, calendar month, billing cycle
+
+**Billing-period consumption**:
+The high-tariff kWh the host's household has consumed so far in the current billing period, read from the host's own meter. It places the host in a tariff block.
+_Avoid_: kWh consumed, monthly consumption, expected consumption
+
+**Marginal tariff rate**:
+The per-kWh price of the next high-tariff kWh the host consumes: the rate of the tariff block that contains the billing-period consumption.
+_Avoid_: Average rate, effective rate, blended rate
+
+**Marginal cost**:
+The hourly cost of running the host's GPU: its electricity at the tariff rate plus the per-kWh distribution fee, with VAT for household hosts. It excludes charges paid whether or not the GPU runs (the access fee and the public-lighting tax).
+_Avoid_: Cost, running cost, variable cost
+
+**Average cost**:
+Marginal cost plus the monthly access fee (with VAT for household hosts) spread evenly over the month's hours: a full-month figure, not the cost of running the GPU now.
+_Avoid_: Cost, total cost, full cost
 
 **Valid from / Valid to**:
 SCD Type 2 validity endpoints. Provenance is per-entity: for the four EVN tariff

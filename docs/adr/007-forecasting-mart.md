@@ -2,7 +2,15 @@
 
 ## Status
 
-Accepted
+Accepted. _Amended by ADR-021_:
+- **The removal reason below is wrong.** `kwh_consumed_so_far` is not renter framing: the host
+  pays their own household EVN bill, so their billing-period consumption is a host-side input.
+  It returns as a per-request app input, not a dbt var.
+- **The forecast has no per-user vars.** It carries every consumer category and tariff block
+  (no block-1 default), with per-GPU values. The ask-price override and GPU count are applied
+  in the app.
+- **Hours are in `Europe/Skopje`,** the horizon is 32 days, and cost is named
+  `marginal_cost_usd_per_hr` (household VAT included).
 
 ## Context
 

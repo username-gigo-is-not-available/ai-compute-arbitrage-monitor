@@ -156,12 +156,20 @@ calculations as (
     from joined
 ),
 
+with_vat_rate as (
+    select
+        *,
+        {{ vat_rate('consumer_category') }} as vat_rate
+    from calculations
+),
+
+-- Marginal cost is what running the GPU costs; average cost adds the access fee spread over the month (ADR-021).
 cost_metrics as (
     select
         *,
-        ((total_system_kwh_per_hr * (tariff_value + coalesce(distribution_fee, 0))) / nullif(usd_to_mkd_rate, 0))
-        + (coalesce(access_fee, 0) / 730.0 / nullif(usd_to_mkd_rate, 0)) as cost_usd_per_hr
-    from calculations
+        {{ cost_usd_per_hr('total_system_kwh_per_hr') }}                     as marginal_cost_usd_per_hr,
+        {{ cost_usd_per_hr('total_system_kwh_per_hr', 'access_fee') }}       as average_cost_usd_per_hr
+    from with_vat_rate
 )
 
 select
@@ -241,16 +249,25 @@ select
     tariff_window_type,
     tariff_block_number,
 
+    -- cost inputs
+    distribution_fee,
+    access_fee,
+    vat_rate,
+
     -- costs (USD/hr)
-    cost_usd_per_hr,
+    marginal_cost_usd_per_hr,
+    average_cost_usd_per_hr,
 
     -- profits (USD/hr)
-    revenue_usd_per_hr - cost_usd_per_hr as profit_usd_per_hr,
+    revenue_usd_per_hr - marginal_cost_usd_per_hr as marginal_profit_usd_per_hr,
+    revenue_usd_per_hr - average_cost_usd_per_hr  as average_profit_usd_per_hr,
 
     -- cost per TFLOP (USD)
-    cost_usd_per_hr / nullif(total_system_tflops, 0) as cost_per_tflop_usd,
+    marginal_cost_usd_per_hr / nullif(total_system_tflops, 0) as marginal_cost_per_tflop_usd,
+    average_cost_usd_per_hr  / nullif(total_system_tflops, 0) as average_cost_per_tflop_usd,
 
     -- profit per TFLOP (USD)
-    (revenue_usd_per_hr - cost_usd_per_hr) / nullif(total_system_tflops, 0) as profit_per_tflop_usd
+    (revenue_usd_per_hr - marginal_cost_usd_per_hr) / nullif(total_system_tflops, 0) as marginal_profit_per_tflop_usd,
+    (revenue_usd_per_hr - average_cost_usd_per_hr)  / nullif(total_system_tflops, 0) as average_profit_per_tflop_usd
 
 from cost_metrics
