@@ -3,7 +3,7 @@ version: 2
 models:
   - name: mart_arbitrage_opportunities
     description: >
-      Current arbitrage opportunities ranked by profit per TFLOP within each tariff tier.
+      Current arbitrage opportunities ranked by marginal profit per TFLOP within each tariff tier (ADR-021).
       Filtered to verified, available machines with valid compute metrics (ADR-020).
       One row per (machine, tariff tier). Partitioned rank per tariff_tier_skey.
     tests:
@@ -15,7 +15,7 @@ models:
               - tariff_tier_skey
     columns:
       - name: arbitrage_rank
-        description: "Rank by profit_per_tflop_usd descending within tariff_tier_skey - rank 1 is the best opportunity for that tier"
+        description: "Rank by marginal_profit_per_tflop_usd descending within tariff_tier_skey - rank 1 is the best opportunity for that tier"
         tests:
           - not_null
 
@@ -159,18 +159,30 @@ models:
       - name: tariff_block_number
         description: "Tariff block number within the consumer category (1-4 for household high, null for low/business)"
 
-      # generic cost / profit columns (tier-scoped)
-      - name: cost_usd_per_hr
-        description: "Electricity cost in USD/hr for this tariff tier"
+      # cost / profit columns (tier-scoped): marginal excludes the access fee, average includes it (ADR-021)
+      - name: marginal_cost_usd_per_hr
+        description: "Marginal cost in USD/hr for this tariff tier - electricity + distribution fee (+ household VAT)"
 
-      - name: profit_usd_per_hr
-        description: "Profit in USD/hr for this tariff tier"
+      - name: average_cost_usd_per_hr
+        description: "Average cost in USD/hr for this tariff tier - marginal cost + access fee spread over 730 hours"
 
-      - name: cost_per_tflop_usd
-        description: "Electricity cost per TFLOP in USD for this tariff tier"
+      - name: marginal_profit_usd_per_hr
+        description: "Profit in USD/hr at marginal cost for this tariff tier"
 
-      - name: profit_per_tflop_usd
-        description: "Profit per TFLOP in USD for this tariff tier - used for ranking"
+      - name: average_profit_usd_per_hr
+        description: "Profit in USD/hr at average cost for this tariff tier"
+
+      - name: marginal_cost_per_tflop_usd
+        description: "Marginal cost per TFLOP in USD for this tariff tier"
+
+      - name: average_cost_per_tflop_usd
+        description: "Average cost per TFLOP in USD for this tariff tier"
+
+      - name: marginal_profit_per_tflop_usd
+        description: "Profit per TFLOP in USD at marginal cost for this tariff tier - used for ranking"
+
+      - name: average_profit_per_tflop_usd
+        description: "Profit per TFLOP in USD at average cost for this tariff tier"
 
       - name: valid_from
         description: "Scheduled hour of the census this machine row comes from"
@@ -180,7 +192,7 @@ models:
   - name: mart_best_offers_by_gpu
     description: >
       Best available machine per (GPU variant, tariff tier), from the latest census.
-      Filtered to verified, available machines. Selection is by profit_usd_per_hr / number_of_machine_gpus
+      Filtered to verified, available machines. Selection is by marginal_profit_usd_per_hr / number_of_machine_gpus
       within each (gpu_architecture, gpu_model_name, gpu_memory_gb, tariff_tier_skey) group.
       One row per (gpu_architecture, gpu_model_name, gpu_memory_gb, tariff_tier_skey).
     tests:
@@ -240,18 +252,30 @@ models:
       - name: revenue_per_gpu_usd_per_hr
         description: "Revenue per GPU in USD/hr"
 
-      # generic per-GPU cost / profit columns (tier-scoped)
-      - name: cost_per_gpu_usd_per_hr
-        description: "Electricity cost per GPU in USD/hr for this tariff tier"
+      # per-GPU cost / profit columns (tier-scoped): marginal excludes the access fee, average includes it (ADR-021)
+      - name: marginal_cost_per_gpu_usd_per_hr
+        description: "Marginal cost per GPU in USD/hr for this tariff tier"
 
-      - name: profit_per_gpu_usd_per_hr
-        description: "Profit per GPU in USD/hr for this tariff tier - used for best-offer selection"
+      - name: average_cost_per_gpu_usd_per_hr
+        description: "Average cost per GPU in USD/hr for this tariff tier"
 
-      - name: cost_per_tflop_usd
-        description: "Electricity cost per TFLOP in USD for this tariff tier"
+      - name: marginal_profit_per_gpu_usd_per_hr
+        description: "Profit per GPU in USD/hr at marginal cost for this tariff tier - used for best-offer selection"
 
-      - name: profit_per_tflop_usd
-        description: "Profit per TFLOP in USD for this tariff tier"
+      - name: average_profit_per_gpu_usd_per_hr
+        description: "Profit per GPU in USD/hr at average cost for this tariff tier"
+
+      - name: marginal_cost_per_tflop_usd
+        description: "Marginal cost per TFLOP in USD for this tariff tier"
+
+      - name: average_cost_per_tflop_usd
+        description: "Average cost per TFLOP in USD for this tariff tier"
+
+      - name: marginal_profit_per_tflop_usd
+        description: "Profit per TFLOP in USD at marginal cost for this tariff tier"
+
+      - name: average_profit_per_tflop_usd
+        description: "Profit per TFLOP in USD at average cost for this tariff tier"
 
       # tariff tier context
       - name: tariff_tier_skey
@@ -284,7 +308,7 @@ models:
     description: >
       Hourly aggregated machine-level profitability metrics grouped by GPU variant, scheduled tariff window type,
       and tariff tier context. Joins fct_compute_offers to dim_electricity_tariff_window_schedule to filter
-      to hours where the tariff tier's window matches the EVN schedule. Metrics are raw machine-level averages
+      to hours where the tariff tier's window matches the EVN schedule, in Macedonian local time (ADR-021). Metrics are raw machine-level averages
       (not per-GPU normalized) - use mart_best_offers_by_gpu or mart_gpu_model_summary for per-GPU comparisons.
       One row per (hour_bucket, gpu_architecture, gpu_model_name, gpu_memory_gb, gpu_tdp_watts,
       gpu_bandwidth_gbytes_per_sec, gpu_max_cuda_version_supported, number_of_machine_gpus, scheduled_tariff_window_type,
@@ -311,14 +335,14 @@ models:
         tests:
           - not_null
       - name: day_of_week
-        description: "ISO day of week - 1=Monday through 7=Sunday"
+        description: "ISO day of week in Macedonian local time - 1=Monday through 7=Sunday"
         tests:
           - not_null
           - dbt_utils.expression_is_true:
               arguments:
                 expression: ">= 1 and day_of_week <= 7"
       - name: hour_of_day
-        description: "Hour of day (0-23)"
+        description: "Hour of day in Macedonian local time (0-23)"
         tests:
           - not_null
           - dbt_utils.expression_is_true:
@@ -352,20 +376,32 @@ models:
       - name: avg_revenue_usd_per_hr
         description: "Average machine revenue in USD/hr"
 
-      # generic profit aggregates (tier-scoped)
-      - name: avg_profit_usd_per_hr
-        description: "Average machine profit in USD/hr for this tariff tier"
-      - name: min_profit_usd_per_hr
-        description: "Minimum machine profit in USD/hr for this tariff tier"
-      - name: max_profit_usd_per_hr
-        description: "Maximum machine profit in USD/hr for this tariff tier"
+      # profit aggregates (tier-scoped): marginal excludes the access fee, average includes it (ADR-021)
+      - name: avg_marginal_profit_usd_per_hr
+        description: "Average machine profit in USD/hr at marginal cost for this tariff tier"
+      - name: min_marginal_profit_usd_per_hr
+        description: "Minimum machine profit in USD/hr at marginal cost for this tariff tier"
+      - name: max_marginal_profit_usd_per_hr
+        description: "Maximum machine profit in USD/hr at marginal cost for this tariff tier"
+      - name: avg_average_profit_usd_per_hr
+        description: "Average machine profit in USD/hr at average cost for this tariff tier"
+      - name: min_average_profit_usd_per_hr
+        description: "Minimum machine profit in USD/hr at average cost for this tariff tier"
+      - name: max_average_profit_usd_per_hr
+        description: "Maximum machine profit in USD/hr at average cost for this tariff tier"
 
-      - name: avg_profit_per_tflop_usd
-        description: "Average profit per TFLOP in USD for this tariff tier"
-      - name: min_profit_per_tflop_usd
-        description: "Minimum profit per TFLOP in USD for this tariff tier"
-      - name: max_profit_per_tflop_usd
-        description: "Maximum profit per TFLOP in USD for this tariff tier"
+      - name: avg_marginal_profit_per_tflop_usd
+        description: "Average profit per TFLOP in USD at marginal cost for this tariff tier"
+      - name: min_marginal_profit_per_tflop_usd
+        description: "Minimum profit per TFLOP in USD at marginal cost for this tariff tier"
+      - name: max_marginal_profit_per_tflop_usd
+        description: "Maximum profit per TFLOP in USD at marginal cost for this tariff tier"
+      - name: avg_average_profit_per_tflop_usd
+        description: "Average profit per TFLOP in USD at average cost for this tariff tier"
+      - name: min_average_profit_per_tflop_usd
+        description: "Minimum profit per TFLOP in USD at average cost for this tariff tier"
+      - name: max_average_profit_per_tflop_usd
+        description: "Maximum profit per TFLOP in USD at average cost for this tariff tier"
 
       # tariff tier context
       - name: tariff_tier_skey
@@ -392,8 +428,8 @@ models:
   - name: mart_gpu_model_summary
     description: >
       Summary statistics per GPU variant and tariff tier over the latest census, counting machines, not their
-      overlapping offers (ADR-020). Includes pct_profitable (share of machines with profit_usd_per_hr > 0 for
-      that tier), pct_available, host quality metrics, and per-GPU averages split by available and taken
+      overlapping offers (ADR-020). Includes marginal_pct_profitable and average_pct_profitable (share of
+      machines with positive profit at marginal / average cost for that tier, ADR-021), pct_available, host quality metrics, and per-GPU averages split by available and taken
       machines. One row per (gpu_architecture, gpu_model_name, tflops_per_gpu, gpu_memory_gb, tariff_tier_skey).
     tests:
       - dbt_utils.unique_combination_of_columns:
@@ -443,12 +479,21 @@ models:
       - name: avg_taken_revenue_per_gpu_usd_per_hr
         description: "Average ask per GPU in USD/hr of taken machines - prices being paid, or of switched-off machines"
 
-      - name: pct_profitable
-        description: "Percentage of machines with profit_usd_per_hr > 0 for this tariff tier"
+      - name: marginal_pct_profitable
+        description: "Percentage of machines with marginal_profit_usd_per_hr > 0 for this tariff tier"
         tests:
           - dbt_utils.expression_is_true:
               arguments:
-                expression: ">= 0 and pct_profitable <= 100"
+                expression: ">= 0 and marginal_pct_profitable <= 100"
+              config:
+                severity: warn
+
+      - name: average_pct_profitable
+        description: "Percentage of machines with average_profit_usd_per_hr > 0 for this tariff tier"
+        tests:
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: ">= 0 and average_pct_profitable <= 100"
               config:
                 severity: warn
 
@@ -502,33 +547,35 @@ models:
 
   - name: mart_gpu_forecast
     description: >
-      Forward-looking forecast of electricity cost and profit per GPU model per future hour,
-      aligned to the EVN tariff window schedule. Answers the host-side question: given a specific
-      GPU over a future window, what is the tariff-schedule-aware electricity cost and profit?
-      Revenue defaults to the current market ask (median on_demand ask) for that GPU model, overridable by an ask price.
-      Cost is electricity-only (tariff_value + distribution_fee), excluding the fixed access fee.
-      One row per (gpu_model_name, forecast_hour, consumer_category).
+      Forward-looking, per-GPU grid of marginal electricity cost and profit per GPU model, future hour and tariff
+      tier, aligned to the EVN tariff window schedule in Macedonian local time (ADR-007, ADR-021). It carries every
+      consumer category and tariff block and no per-user input: the app picks the user's category, walks the
+      blocks with a running total from their billing-period consumption, and scales by their GPU count and ask
+      price. Revenue is the current market ask (median per-GPU ask of the latest census). Cost is marginal:
+      kWh x (tariff_value + distribution_fee) x (1 + household VAT), excluding the fixed access fee.
+      Covers the next forecast_days (default 32) days.
+      One row per (gpu_model_name, forecast_hour, tariff_tier_skey).
     tests:
       - dbt_utils.unique_combination_of_columns:
           arguments:
             combination_of_columns:
               - gpu_model_name
               - forecast_hour
-              - consumer_category
+              - tariff_tier_skey
     columns:
       - name: forecast_hour
-        description: "The forecast hour (timestamp)"
+        description: "The forecast hour (UTC timestamp)"
         tests:
           - not_null
       - name: day_of_week
-        description: "ISO day of week - 1=Monday through 7=Sunday"
+        description: "ISO day of week in Macedonian local time - 1=Monday through 7=Sunday"
         tests:
           - not_null
           - dbt_utils.expression_is_true:
               arguments:
                 expression: ">= 1 and day_of_week <= 7"
       - name: hour_of_day
-        description: "Hour of day (0-23)"
+        description: "Hour of day in Macedonian local time (0-23)"
         tests:
           - not_null
           - dbt_utils.expression_is_true:
@@ -552,13 +599,6 @@ models:
           - dbt_utils.expression_is_true:
               arguments:
                 expression: "> 0"
-      - name: number_of_machine_gpus
-        description: "Number of GPUs in the machine"
-        tests:
-          - not_null
-          - dbt_utils.expression_is_true:
-              arguments:
-                expression: "> 0"
       - name: tflops_per_gpu
         description: "TFLOPS per GPU"
         tests:
@@ -573,65 +613,57 @@ models:
         description: "GPU memory bandwidth in GB/s"
       - name: gpu_max_cuda_version_supported
         description: "Maximum CUDA version supported"
-      - name: market_ask_usd_per_hr
-        description: "Median per-GPU ask of this GPU model's machines in the latest census x number_of_machine_gpus, in USD/hr"
-        tests:
-          - not_null
-      - name: forecast_ask_usd_per_hr
-        description: "Forecast ask price in USD/hr - the market ask, or the user override if provided"
-        tests:
-          - not_null
-          - dbt_utils.expression_is_true:
-              arguments:
-                expression: ">= 0"
-      - name: cost_usd_per_hr
-        description: "Electricity cost in USD/hr - tariff_value + distribution_fee, access fee excluded"
-        tests:
-          - not_null
-          - dbt_utils.expression_is_true:
-              arguments:
-                expression: ">= 0"
-      - name: profit_usd_per_hr
-        description: "Profit in USD/hr (forecast_ask - cost)"
-      - name: cost_per_tflop_usd
-        description: "Electricity cost per TFLOP in USD"
-      - name: profit_per_tflop_usd
-        description: "Profit per TFLOP in USD"
-      - name: total_system_kwh_per_hr
-        description: "Estimated total system power draw in kWh/hr (gpu_tdp_watts * number_of_machine_gpus / 1000)"
+      - name: kwh_per_gpu_per_hr
+        description: "Power draw of one GPU at TDP in kWh/hr (gpu_tdp_watts / 1000) - the app's running block total adds this x GPU count per high-tariff hour"
         tests:
           - not_null
           - dbt_utils.expression_is_true:
               arguments:
                 expression: "> 0"
-      - name: total_system_tflops
-        description: "Total compute across all GPUs in the machine (tflops_per_gpu * number_of_machine_gpus)"
+      - name: market_ask_per_gpu_usd_per_hr
+        description: "Median per-GPU ask of this GPU model's machines in the latest census, in USD/hr"
+        tests:
+          - not_null
+      - name: marginal_cost_per_gpu_usd_per_hr
+        description: "Marginal cost of one GPU in USD/hr - kWh x (tariff_value + distribution_fee) x (1 + VAT), access fee excluded"
         tests:
           - not_null
           - dbt_utils.expression_is_true:
               arguments:
-                expression: "> 0"
-              config:
-                severity: warn
+                expression: ">= 0"
+      - name: marginal_profit_per_gpu_usd_per_hr
+        description: "Profit of one GPU in USD/hr at the market ask (market_ask_per_gpu - marginal_cost_per_gpu); the app recomputes it for a user's own ask"
+      - name: marginal_cost_per_tflop_usd
+        description: "Marginal cost per TFLOP in USD"
+      - name: marginal_profit_per_tflop_usd
+        description: "Profit per TFLOP in USD at the market ask and marginal cost"
       - name: tariff_tier_skey
-        description: "Surrogate key of the tariff tier applied at this hour"
+        description: "Surrogate key of the tariff tier this row prices"
         tests:
           - not_null
       - name: consumer_category
-        description: "Consumer category for the forecast (household or business)"
+        description: "Consumer category of the tier (household or business)"
         tests:
           - not_null
           - accepted_values:
               arguments:
                 values: [ 'household', 'business' ]
       - name: tariff_block_number
-        description: "Tariff block number of the applied tier"
+        description: "Tariff block number of the tier (1-4 for household high tariff, null for low/business)"
+      - name: lower_bound_kwh
+        description: "Lower bound of the tariff block in kWh for a 30-day billing period; the app scales it to the user's period length (ADR-021). Null for tiers without blocks"
+      - name: upper_bound_kwh
+        description: "Upper bound of the tariff block in kWh for a 30-day billing period (null for the last block and for tiers without blocks)"
       - name: tariff_value
-        description: "Tariff price per unit in MKD for the applied tier"
+        description: "Tariff price per kWh in MKD for the tier, before VAT"
         tests:
           - not_null
       - name: distribution_fee
-        description: "Per-kWh distribution fee in MKD"
+        description: "Per-kWh distribution fee in MKD, before VAT"
+      - name: vat_rate
+        description: "VAT rate added on top - household_vat_rate for households, 0 for business"
+        tests:
+          - not_null
       - name: usd_to_mkd_rate
         description: "USD to MKD exchange rate used in the forecast"
         tests:
@@ -641,4 +673,3 @@ models:
                 expression: "> 0"
               config:
                 severity: warn
-

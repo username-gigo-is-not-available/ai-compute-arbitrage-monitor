@@ -820,10 +820,28 @@ models:
         description: "Upper bound of the tariff block in kWh/month (null for last block)"
 
       # -----------------------------------------------------------------------
-      # costs (USD/hr)
+      # VAT (ADR-021)
       # -----------------------------------------------------------------------
-      - name: cost_usd_per_hr
-        description: "Electricity cost per hour in USD for this tariff tier"
+      - name: vat_rate
+        description: "VAT rate added on top of EVN prices - household_vat_rate for households, 0 for business (a VAT-registered business reclaims it)"
+
+      # -----------------------------------------------------------------------
+      # costs (USD/hr) - marginal excludes the access fee, average includes it (ADR-021)
+      # -----------------------------------------------------------------------
+      - name: marginal_cost_usd_per_hr
+        description: "Marginal cost in USD/hr for this tariff tier - kWh x (tariff + distribution fee) x (1 + VAT); what running the machine costs"
+        tests:
+          - not_null:
+              config:
+                severity: warn
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: "> 0"
+              config:
+                severity: warn
+
+      - name: average_cost_usd_per_hr
+        description: "Average cost in USD/hr for this tariff tier - marginal cost plus the access fee spread over 730 hours, x (1 + VAT)"
         tests:
           - not_null:
               config:
@@ -837,14 +855,26 @@ models:
       # -----------------------------------------------------------------------
       # profits (USD/hr)
       # -----------------------------------------------------------------------
-      - name: profit_usd_per_hr
-        description: "Hourly profit in USD for this tariff tier - negative means unprofitable"
+      - name: marginal_profit_usd_per_hr
+        description: "Hourly profit in USD at marginal cost for this tariff tier - negative means unprofitable"
+
+      - name: average_profit_usd_per_hr
+        description: "Hourly profit in USD at average cost for this tariff tier - negative means unprofitable"
 
       # -----------------------------------------------------------------------
       # cost per TFLOP (USD)
       # -----------------------------------------------------------------------
-      - name: cost_per_tflop_usd
-        description: "Electricity cost per TFLOP in USD for this tariff tier"
+      - name: marginal_cost_per_tflop_usd
+        description: "Marginal cost per TFLOP in USD for this tariff tier"
+        tests:
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: "> 0"
+              config:
+                severity: warn
+
+      - name: average_cost_per_tflop_usd
+        description: "Average cost per TFLOP in USD for this tariff tier"
         tests:
           - dbt_utils.expression_is_true:
               arguments:
@@ -855,8 +885,11 @@ models:
       # -----------------------------------------------------------------------
       # profit per TFLOP (USD)
       # -----------------------------------------------------------------------
-      - name: profit_per_tflop_usd
-        description: "Hourly profit per TFLOP in USD for this tariff tier - negative means unprofitable"
+      - name: marginal_profit_per_tflop_usd
+        description: "Hourly profit per TFLOP in USD at marginal cost for this tariff tier - negative means unprofitable"
+
+      - name: average_profit_per_tflop_usd
+        description: "Hourly profit per TFLOP in USD at average cost for this tariff tier - negative means unprofitable"
 
     tests:
       - dbt_utils.unique_combination_of_columns:

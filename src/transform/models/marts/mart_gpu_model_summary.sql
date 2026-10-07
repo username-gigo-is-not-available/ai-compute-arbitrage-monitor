@@ -28,7 +28,10 @@ select
     avg(if(rentable_flag, revenue_per_gpu_usd_per_hr, null))                     as avg_available_revenue_per_gpu_usd_per_hr,
     avg(if(not rentable_flag, revenue_per_gpu_usd_per_hr, null))                 as avg_taken_revenue_per_gpu_usd_per_hr,
 
-    round(100.0 * countif(profit_usd_per_hr > 0) / nullif(count(*), 0), 2)      as pct_profitable,
+    round(100.0 * countif(marginal_profit_usd_per_hr > 0) / nullif(count(*), 0), 2)
+                                                                                 as marginal_pct_profitable,
+    round(100.0 * countif(average_profit_usd_per_hr > 0) / nullif(count(*), 0), 2)
+                                                                                 as average_pct_profitable,
 
     -- host / flags
     round(100.0 * countif(verification_flag = 'verified') / nullif(count(*), 0), 2)

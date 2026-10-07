@@ -19,8 +19,10 @@ with joined as (
         f.number_of_machine_gpus,
         f.valid_from,
         f.revenue_usd_per_hr,
-        f.profit_usd_per_hr,
-        f.profit_per_tflop_usd,
+        f.marginal_profit_usd_per_hr,
+        f.average_profit_usd_per_hr,
+        f.marginal_profit_per_tflop_usd,
+        f.average_profit_per_tflop_usd,
         f.tariff_tier_skey,
         f.consumer_category,
         f.tariff_window_type,
@@ -28,8 +30,8 @@ with joined as (
 
     from {{ ref('fct_compute_offers') }} f
     join {{ ref('dim_electricity_tariff_window_schedule') }} ts
-        on  mod(extract(dayofweek from f.valid_from) + 5, 7) + 1 = ts.day_of_week
-        and extract(hour from f.valid_from)                       = ts.hour
+        on  {{ evn_day_of_week('f.valid_from') }} = ts.day_of_week
+        and {{ evn_hour('f.valid_from') }}        = ts.hour
         and cast(f.valid_from as date) >= ts.valid_from
         and cast(f.valid_from as date) <  ts.valid_to
         and f.tariff_window_type = ts.tariff_window_type
@@ -38,8 +40,8 @@ with joined as (
 select
     -- time bucket
     timestamp_trunc(valid_from, hour)                             as hour_bucket,
-    mod(extract(dayofweek from valid_from) + 5, 7) + 1           as day_of_week,
-    extract(hour from valid_from)                                 as hour_of_day,
+    {{ evn_day_of_week('valid_from') }}                           as day_of_week,
+    {{ evn_hour('valid_from') }}                                  as hour_of_day,
 
     -- gpu
     gpu_architecture,
@@ -54,15 +56,21 @@ select
     -- revenue (USD/hr)
     avg(revenue_usd_per_hr)                                       as avg_revenue_usd_per_hr,
 
-    -- profitability (USD/hr)
-    avg(profit_usd_per_hr)                                        as avg_profit_usd_per_hr,
-    min(profit_usd_per_hr)                                        as min_profit_usd_per_hr,
-    max(profit_usd_per_hr)                                        as max_profit_usd_per_hr,
+    -- profitability (USD/hr): marginal excludes the access fee, average includes it (ADR-021)
+    avg(marginal_profit_usd_per_hr)                               as avg_marginal_profit_usd_per_hr,
+    min(marginal_profit_usd_per_hr)                               as min_marginal_profit_usd_per_hr,
+    max(marginal_profit_usd_per_hr)                               as max_marginal_profit_usd_per_hr,
+    avg(average_profit_usd_per_hr)                                as avg_average_profit_usd_per_hr,
+    min(average_profit_usd_per_hr)                                as min_average_profit_usd_per_hr,
+    max(average_profit_usd_per_hr)                                as max_average_profit_usd_per_hr,
 
     -- profitability per TFLOP (USD)
-    avg(profit_per_tflop_usd)                                     as avg_profit_per_tflop_usd,
-    min(profit_per_tflop_usd)                                     as min_profit_per_tflop_usd,
-    max(profit_per_tflop_usd)                                     as max_profit_per_tflop_usd,
+    avg(marginal_profit_per_tflop_usd)                            as avg_marginal_profit_per_tflop_usd,
+    min(marginal_profit_per_tflop_usd)                            as min_marginal_profit_per_tflop_usd,
+    max(marginal_profit_per_tflop_usd)                            as max_marginal_profit_per_tflop_usd,
+    avg(average_profit_per_tflop_usd)                             as avg_average_profit_per_tflop_usd,
+    min(average_profit_per_tflop_usd)                             as min_average_profit_per_tflop_usd,
+    max(average_profit_per_tflop_usd)                             as max_average_profit_per_tflop_usd,
 
     -- tariff tier context
     tariff_tier_skey,

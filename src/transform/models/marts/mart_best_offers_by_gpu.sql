@@ -23,7 +23,7 @@ normalized_offers as (
         *,
         row_number() over (
             partition by gpu_architecture, gpu_model_name, gpu_memory_gb, tariff_tier_skey
-            order by valid_from desc, (profit_usd_per_hr / nullif(number_of_machine_gpus, 0)) desc
+            order by valid_from desc, (marginal_profit_usd_per_hr / nullif(number_of_machine_gpus, 0)) desc
         ) as rn
     from available_offers
 )
@@ -47,14 +47,18 @@ select
     reliability_score,
     country_code,
 
-    -- revenue / cost / profit (USD/hr per GPU)
+    -- revenue / cost / profit (USD/hr per GPU): marginal excludes the access fee, average includes it (ADR-021)
     revenue_per_gpu_usd_per_hr,
-    cost_usd_per_hr / nullif(number_of_machine_gpus, 0)             as cost_per_gpu_usd_per_hr,
-    profit_usd_per_hr / nullif(number_of_machine_gpus, 0)           as profit_per_gpu_usd_per_hr,
+    marginal_cost_usd_per_hr / nullif(number_of_machine_gpus, 0)    as marginal_cost_per_gpu_usd_per_hr,
+    average_cost_usd_per_hr / nullif(number_of_machine_gpus, 0)     as average_cost_per_gpu_usd_per_hr,
+    marginal_profit_usd_per_hr / nullif(number_of_machine_gpus, 0)  as marginal_profit_per_gpu_usd_per_hr,
+    average_profit_usd_per_hr / nullif(number_of_machine_gpus, 0)   as average_profit_per_gpu_usd_per_hr,
 
     -- per TFLOP (USD)
-    cost_per_tflop_usd,
-    profit_per_tflop_usd,
+    marginal_cost_per_tflop_usd,
+    average_cost_per_tflop_usd,
+    marginal_profit_per_tflop_usd,
+    average_profit_per_tflop_usd,
 
     -- tariff tier context
     tariff_tier_skey,
