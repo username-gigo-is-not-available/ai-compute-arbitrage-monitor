@@ -41,7 +41,7 @@ gcp:
   cloud_run:
     job_name: "ai-compute-arbitrage-monitor-dbt-job"
   composer:
-    runtime_packages: ["common", "config", "ingest", "serializers"]
+    runtime_packages: ["common", "config", "ingest"]
   big_lake:
     catalog_id: "ai_compute_arbitrage_monitor_catalog"
 

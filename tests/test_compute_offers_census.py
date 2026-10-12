@@ -19,15 +19,15 @@ import aiohttp
 from pyiceberg.schema import Schema
 from pyiceberg.types import NestedField, StringType
 
-from common.classes import Dataset
+from common.classes import Dataset, Snapshot
 from common.enums import DatasetName, DatasetType
 from config.apis.vast_ai import VastAIConfig
 from config.http import HttpConfig
 from config.lakehouse import GCPLakehouseConfig
 from config.loader import ConfigLoader
 from ingest.schemas.compute_offers import COMPUTE_OFFERS_BRONZE_SCHEMA
-from ingest.sources.compute_offers import CensusIncompleteError, ComputeOffersIngestor
-from ingest.write_strategy import AppendByHour, BronzeTable
+from ingest.sources.compute_offers import ComputeOffersIngestor
+from ingest.write_strategy import AppendByDay, BronzeTable
 
 OFFER = {
     "ask_contract_id": 8_936_325, "machine_id": 15_489, "host_id": 333,
@@ -47,6 +47,10 @@ class FakeResponse:
 
     def close(self) -> None:
         pass
+
+    def raise_for_status(self) -> None:
+        if self.status != 200:
+            raise aiohttp.ClientResponseError(mock.Mock(real_url="https://console.vast.test"), (), status=self.status)
 
     async def json(self, **kwargs) -> dict:
         return {"offers": self.offers}
@@ -71,14 +75,14 @@ def _ingestor() -> ComputeOffersIngestor:
     return ComputeOffersIngestor(
         dataset=Dataset(dataset_name=DatasetName.COMPUTE_OFFERS, dataset_type=DatasetType.SOURCES),
         config=VastAIConfig(enabled=True, base_url="https://console.vast.test/api/v0", limit=512, split_at=500,
-                            census_parts=4, request_interval_seconds=0),
+                            census_parts=32, request_interval_seconds=0),
         lakehouse_config=GCPLakehouseConfig(catalog_id="test", project_id="test", warehouse="gs://test"),
         bronze_table=BronzeTable(
             Schema(NestedField(field_id=1, name="id", field_type=StringType(), required=False)),
-            AppendByHour(column="snapshot_at"),
+            AppendByDay(column="snapshot_at"),
         ),
         http_config=HttpConfig(timeout_seconds=30, retry_count=1, retry_delay_seconds=0),
-        snapshot_at=datetime.now(UTC).replace(minute=0, second=0, microsecond=0),
+        snapshot=Snapshot(at=datetime.now(UTC).replace(hour=0, minute=0, second=0, microsecond=0)),
     )
 
 
@@ -102,6 +106,14 @@ class TestComputeOffersCensus(unittest.TestCase):
         returned = [o.offer_id for o in offers]
         self.assertEqual(len(returned), 3_000)
         self.assertEqual(set(returned), set(ids))
+
+    def test_a_range_that_comes_back_full_fails_the_run(self):
+        # 3,000 offers in 4 ranges is ~750 per range: over the limit, so a range would only be a sample
+        ingestor = _ingestor()
+        ingestor.config = ingestor.config.model_copy(update={"census_parts": 4})
+        ids = random.Random(1).sample(range(7_000_000, 54_000_000), 3_000)
+        with mock.patch.object(aiohttp.ClientSession, "get", new=FakeMarket(ids).get),                 self.assertRaisesRegex(RuntimeError, "raise census_parts"):
+            asyncio.run(ingestor.load())
 
     def test_configured_census_costs_about_the_market_size(self):
         # The daily quota counts returned rows, and a full range's rows are thrown away when it is split; the
@@ -131,9 +143,10 @@ class TestComputeOffersCensus(unittest.TestCase):
         with mock.patch.object(aiohttp.ClientSession, "get", new=get_mock), \
                 mock.patch.object(ingestor, "ensure_bronze_table"), \
                 mock.patch.object(ingestor, "store") as store_mock, \
-                self.assertRaises(CensusIncompleteError):
+                self.assertRaises(aiohttp.ClientResponseError) as raised:
             asyncio.run(ingestor.run())
         store_mock.assert_not_called()
+        self.assertEqual(raised.exception.status, 429)
 
 
 if __name__ == "__main__":

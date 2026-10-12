@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Any
 
 from pydantic import field_validator
 
@@ -7,7 +8,7 @@ from common.enums import VerificationStatusType, OfferType
 
 
 class VastAIOffer(BaseRecord):
-    # SNAPSHOT: scheduled hour this offer snapshot represents (ADR-019); ingested_at is the fetch moment
+    # SNAPSHOT: scheduled day this offer snapshot represents; ingested_at is the fetch moment
     snapshot_at: datetime
     # IDs
     offer_id: int
@@ -63,7 +64,7 @@ class VastAIOffer(BaseRecord):
 
     @field_validator("*", mode="before")
     @classmethod
-    def empty_string_to_none(cls, v):
+    def empty_string_to_none(cls, v: Any) -> Any:
         if isinstance(v, str) and v.strip() == "":
             return None
         return v

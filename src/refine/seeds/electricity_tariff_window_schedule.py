@@ -1,15 +1,16 @@
 import re
 from dataclasses import field, dataclass
+from functools import reduce
 from typing import Callable
 
-from pyspark.sql import DataFrame, SparkSession
+from pyspark.sql import DataFrame, Row, SparkSession
 from pyspark.sql import functions as F
 
 from common.classes import Dataset
 from common.enums import DatasetType, DatasetName, TariffWindowType
 from config.apis.evn import EVNConfig
 from config.loader import ConfigLoader
-from refine.write_strategy import OverwriteByPartition, SilverTable
+from refine.load_strategy import OverwriteByPartition, SilverTable
 from refine.assets.cleaning import trim_whitespace, empty_to_null
 from refine.assets.extraction import extract_valid_from_date
 from refine.assets.patterns import SCHEDULE_LOW_TARIFF_HOUR_PAIR_PATTERN, WEEKDAY_WEEKEND_SPLIT
@@ -39,13 +40,12 @@ class ElectricityTariffWindowSchedulePipeline(Pipeline):
     ])
 
     def generate(self, df: DataFrame) -> DataFrame | None:
-        row = df.first()
-        schedule_text = row['schedule_text']
-        ingested_at = row['ingested_at']
-        valid_from = extract_valid_from_date(df).first()['valid_from']
+        # One hourly grid per tariff version: Bronze keeps every schedule EVN has published, and dbt needs them all
+        versions = extract_valid_from_date(df).select("schedule_text", "valid_from", "ingested_at").collect()
+        return reduce(DataFrame.unionByName, [self.hourly_grid(version) for version in versions])
 
-        parts = schedule_text.split(WEEKDAY_WEEKEND_SPLIT)
-        weekday_text, _ = parts
+    def hourly_grid(self, version: Row) -> DataFrame:
+        weekday_text, _ = version["schedule_text"].split(WEEKDAY_WEEKEND_SPLIT)
         low_hours = extract_low_tariff_window_hours(weekday_text)
 
         days = self.session.range(1, 8).withColumnRenamed("id", "day_of_week")
@@ -57,8 +57,8 @@ class ElectricityTariffWindowSchedulePipeline(Pipeline):
                 (F.col("day_of_week") == 7) | F.col("start_hour").isin(list(low_hours)),
                 TariffWindowType.LOW.value,
             ).otherwise(TariffWindowType.HIGH.value))
-            .withColumn("valid_from", F.lit(valid_from))
-            .withColumn("ingested_at", F.lit(ingested_at))
+            .withColumn("valid_from", F.lit(version["valid_from"]))
+            .withColumn("ingested_at", F.lit(version["ingested_at"]))
             .select("tariff_window_type", "day_of_week", "start_hour", "end_hour", "valid_from", "ingested_at")
         )
 

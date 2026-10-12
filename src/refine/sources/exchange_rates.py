@@ -7,7 +7,7 @@ from common.classes import Dataset
 from common.enums import DatasetName, DatasetType
 from config.loader import ConfigLoader
 from config.apis.exchange_rate import ExchangeRateConfig
-from refine.write_strategy import OverwriteByPartition, SilverTable
+from refine.load_strategy import OverwriteByPartition, SilverTable
 from refine.assets.filtering import deduplicate_keep_latest
 from refine.init import initialize_spark
 from refine.assets.cleaning import trim_whitespace, empty_to_null

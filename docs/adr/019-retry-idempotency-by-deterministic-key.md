@@ -6,6 +6,11 @@ Accepted. Supersedes the retry-safety reasoning of ADR-015 and ADR-017; amends t
 snapshot key of ADR-008 and the Silver write-strategy table of ADR-016.
 _Amended by ADR-020_: for `compute_offers` a census is written to Bronze only once every range
 is in, so a failed attempt leaves nothing behind; a retry fetches the whole census again.
+_Amended 2026-10-11_ (`compute_offers` is `@daily`, ADR-020): a snapshot is a **UTC day**, not an
+hour. `snapshot_at` is floored to the day, the backfill tolerance is 24h, and Bronze and Silver
+are partitioned by `day(snapshot_at)`. Every run on a day — the scheduled 00:00 run, a failed
+run cleared in Airflow, or a new manual trigger — gets the same `snapshot_at`, so a day has
+exactly one snapshot in Silver. The body below reads with these values.
 
 ## Context
 
@@ -38,23 +43,24 @@ unchanged.
 
 **Event logs append, keyed on a deterministic snapshot time.** For `compute_offers`:
 
-- An **offer snapshot** is the market *as of the scheduled hour*, not the moment of fetch.
+- An **offer snapshot** is the market *as of the scheduled day*, not the moment of fetch.
   A new required column `snapshot_at` carries it in Bronze and Silver. `ingested_at`
   keeps its meaning (actual fetch time) in all six datasets. `valid_from` is not used
   before `int_compute_offers`, which maps `snapshot_at as valid_from`; it stays an SCD2
   term.
-- `snapshot_at = floor_to_hour(scheduled_at or now())`. Every ingest task receives
+- `snapshot_at = floor_to_day(scheduled_at or now())`, in UTC. Every ingest task receives
   `op_kwargs={"scheduled_at": "{{ data_interval_end }}"}`; every ingest `run()` accepts
   it, only `compute_offers` uses it. `data_interval_end` is the fire time under both
   Airflow 3 trigger timetables and Airflow 2-style interval timetables. `None`, `""` and
   `"None"` count as absent. Flooring always applies, so manual triggers and standalone
-  runs land on the hourly grid. Explicit `op_kwargs` was chosen over Airflow's
+  runs land on the daily grid, whichever `data_interval_end` Airflow renders for them. Explicit `op_kwargs` was chosen over Airflow's
   context-by-parameter-name injection because the latter fails silently (a renamed
   parameter falls back to `now()`, reintroducing this bug).
-- **Backfill guard**: if `now() - snapshot_at > 1h`, the ingest skips the write, logs why,
-  and succeeds. A live-only API cannot be backfilled; this keeps Bronze from storing
+- **Backfill guard**: if `now() - snapshot_at > 24h`, the ingest skips the write, logs why,
+  and succeeds. 24h lets any run on the snapshot's own day write, including a failed run
+  rerun later that day. A live-only API cannot be backfilled; this keeps Bronze from storing
   today's market under an old label.
-- **Bronze stays true append**, partitioned by `hour(snapshot_at)`. Retry duplicates are
+- **Bronze stays true append**, partitioned by `day(snapshot_at)`. Retry duplicates are
   kept as the raw log (ADR-017's principle stands; its justification is replaced by this
   ADR).
 - **Silver is idempotent**: watermark `snapshot_at > max(snapshot_at)`. Within a batch,
@@ -64,8 +70,8 @@ unchanged.
   returns a different offer set on each call (verified 2026-10-01: two fetches 50 s apart,
   1,536 offers each, 2,570 distinct keys combined), so per-key dedup would merge two
   market views into one snapshot. A retry lands in the same refine batch as the failed
-  attempt and replaces it; a rerun of an already-refined hour equals the watermark and is
-  ignored, so the first successfully refined snapshot of an hour wins.
+  attempt and replaces it; a rerun of an already-refined day equals the watermark and is
+  ignored, so the first successfully refined snapshot of a day wins.
 - **dbt**: `stg_compute_offers.unique_key = (offer_id, snapshot_at, offer_type)` with an
   incremental filter on `snapshot_at`. `fct_compute_offers` already keys on `valid_from`
   and is unchanged.
@@ -76,8 +82,10 @@ unchanged.
 - The `compute_offers` Bronze and Silver tables are dropped and recreated (project in
   testing; raw history discarded deliberately), followed by `dbt --full-refresh` for
   `tag:compute_offers` and the marts.
-- A run delayed by Composer up to an hour is labelled with its scheduled hour although it
-  shows a later market; `ingested_at` records the gap.
-- An extra mid-hour snapshot cannot be taken by design.
-- To verify on deploy: Airflow 3.1 renders `data_interval_end` equal to the fire time for
-  `@hourly`, and what a manual trigger renders for it (the floor + fallback covers both).
+- A run later in the day (delayed, cleared after a failure, or triggered manually) is
+  labelled with the day's 00:00 although it shows a later market; `ingested_at` records
+  the gap.
+- A second snapshot in one day cannot be taken by design: Bronze keeps the extra run's
+  rows as raw log, Silver ignores them.
+- What Airflow 3.1 renders as `data_interval_end` for a manual trigger no longer matters:
+  any value on the same UTC day floors to the same `snapshot_at`.

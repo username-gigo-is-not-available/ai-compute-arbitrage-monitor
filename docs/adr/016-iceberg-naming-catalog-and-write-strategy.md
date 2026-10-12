@@ -9,8 +9,15 @@ Accepted. Amended — read these before relying on the Decision below:
 
 - **Catalog id** is `ai_compute_arbitrage_monitor_catalog` (underscores),
   per ADR-018's correction; the hyphenated id below was never created.
-- **Bronze sources** are true append (ADR-017), partitioned by
-  `hour(ingested_at)`; `compute_offers` by `hour(snapshot_at)` (ADR-019).
+- **Bronze sources** are true append (ADR-017), partitioned by the day the data is about,
+  not the fetch day: `compute_offers` by `day(snapshot_at)` (ADR-019), `exchange_rates` by
+  `day(timestamp)`, the provider's `time_last_update_utc`, so a rate fetched just after
+  midnight is filed under the day it is valid for. Silver
+  `compute_offers` likewise by `day(snapshot_at)`. The strategy is `AppendByDay(column)`
+  with no default column: each source names its time axis. Day, not hour, because every
+  source now runs `@daily`, and `snapshot_at` is floored to the UTC day (ADR-019), so one
+  day partition holds one snapshot. Bronze tables created before this change are moved to the day spec,
+  old files included, by the next ingest run (ADR-022); an existing Silver table keeps its hour spec.
 - **Bronze seeds** overwrite by **identity partition on `valid_from_text`**
   (`OverwriteByPartition(column="valid_from_text")`), not by hour partition:
   the overwrite filter is scoped to the incoming `valid_from_text` values

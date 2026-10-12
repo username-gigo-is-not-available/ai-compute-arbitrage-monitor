@@ -6,7 +6,7 @@ from common.classes import Dataset
 from common.enums import DatasetType, DatasetName
 from config.loader import ConfigLoader
 from config.apis.vast_ai import VastAIConfig
-from refine.write_strategy import AppendByHour, SilverTable
+from refine.load_strategy import AppendByDay, SilverTable
 from refine.assets.filtering import deduplicate_keep_latest, keep_latest_per_group
 from refine.init import initialize_spark
 from refine.base import Pipeline
@@ -19,8 +19,6 @@ def strip_cpu_core_suffix(df: DataFrame) -> DataFrame:
 
 
 def deduplicate_compute_offers(df: DataFrame) -> DataFrame:
-    # A retried ingest replaces its earlier attempt for the same snapshot_at wholesale (each attempt has one
-    # ingested_at); merging per key would union two different market views into one snapshot (ADR-019).
     df = keep_latest_per_group(df, group_by="snapshot_at", order_by="ingested_at")
     return deduplicate_keep_latest(df, columns=["offer_id", "snapshot_at"], order_by="ingested_at")
 
@@ -49,7 +47,7 @@ def run():
         dataset=compute_offers,
         config=vast_ai_config,
         lakehouse_config=loader.get_lakehouse(),
-        silver_table=SilverTable(COMPUTE_OFFERS_SILVER_SCHEMA, AppendByHour(column="snapshot_at")),
+        silver_table=SilverTable(COMPUTE_OFFERS_SILVER_SCHEMA, AppendByDay(column="snapshot_at")),
     )
     compute_offers_pipeline.run()
 

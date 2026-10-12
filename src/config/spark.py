@@ -1,5 +1,7 @@
+from pyspark.sql import SparkSession
+
 from common.enums import ExecutionType
-from config.gcp_auth import access_token
+from config.auth import GCPAuthentication
 from config.lakehouse import GCPLakehouseConfig
 
 
@@ -10,7 +12,8 @@ _ICEBERG_PACKAGES = (
 )
 
 
-def configure_spark(builder, lakehouse: GCPLakehouseConfig, execution_type: ExecutionType):
+def configure_spark(builder: SparkSession.Builder, lakehouse: GCPLakehouseConfig,
+                    execution_type: ExecutionType) -> SparkSession.Builder:
     catalog_id = lakehouse.catalog_id
     builder = (
         builder
@@ -23,7 +26,7 @@ def configure_spark(builder, lakehouse: GCPLakehouseConfig, execution_type: Exec
         builder = (
             builder
             .config("spark.jars.packages", _ICEBERG_PACKAGES)
-            .config(f"spark.sql.catalog.{catalog_id}.token", access_token())
+            .config(f"spark.sql.catalog.{catalog_id}.token", GCPAuthentication().access_token)
             .config("spark.driver.memory", "4g")
         )
     elif execution_type == ExecutionType.GCP:

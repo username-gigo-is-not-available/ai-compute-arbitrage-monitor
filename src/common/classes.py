@@ -1,3 +1,6 @@
+from datetime import datetime, timedelta, UTC
+from typing import ClassVar
+
 from pydantic import BaseModel, ConfigDict
 
 from common.enums import DatasetName, DatasetType
@@ -8,23 +11,25 @@ class Dataset(BaseModel):
     dataset_type: DatasetType
 
 
-class AskContractIdRange(BaseModel):
-    """Vast.ai offers whose ask_contract_id is in [start, end); no end means no upper bound (ADR-020)."""
+class Snapshot(BaseModel):
+    """The scheduled day an ingest run's data represents, not the fetch moment (ADR-019)."""
     model_config = ConfigDict(frozen=True)
 
-    start: int
-    end: int | None = None
+    # A day: a failed daily run cleared in Airflow keeps its 00:00 label and must still write (ADR-019)
+    BACKFILL_TOLERANCE: ClassVar[timedelta] = timedelta(hours=24)
 
-    def query(self) -> dict[str, int]:
-        return {"gte": self.start} if self.end is None else {"gte": self.start, "lt": self.end}
+    at: datetime
 
-    def split(self, sample_ids: list[int], parts: int) -> list["AskContractIdRange"]:
-        # Cut at the sample's quantiles: a random sample is densest where offers are, so the parts hold similar
-        # numbers of offers. Cuts start after the sample's smallest id, so every part is non-empty and narrower.
-        ids = sorted(sample_ids)
-        cuts = sorted({ids[len(ids) * i // parts] for i in range(1, parts)})
-        bounds = [self.start, *cuts, self.end]
-        return [AskContractIdRange(start=start, end=end) for start, end in zip(bounds, bounds[1:])]
+    @classmethod
+    def from_scheduled_at(cls, scheduled_at: str | None, now: datetime | None = None) -> "Snapshot":
+        # Airflow's data_interval_end floored to the UTC day; None, "" and "None" mean no Airflow, so now() is used
+        if scheduled_at is None or scheduled_at.strip() in ("", "None"):
+            moment = now or datetime.now(UTC)
+        else:
+            moment = datetime.fromisoformat(scheduled_at.strip())
+            if moment.tzinfo is None:
+                moment = moment.replace(tzinfo=UTC)
+        return cls(at=moment.astimezone(UTC).replace(hour=0, minute=0, second=0, microsecond=0))
 
-    def __str__(self) -> str:
-        return f"[{self.start}, {self.end})"
+    def is_backfill(self, now: datetime | None = None) -> bool:
+        return (now or datetime.now(UTC)) - self.at > self.BACKFILL_TOLERANCE

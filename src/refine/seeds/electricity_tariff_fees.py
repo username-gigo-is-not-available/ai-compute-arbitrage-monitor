@@ -7,7 +7,7 @@ from common.classes import Dataset
 from common.enums import DatasetName, DatasetType
 from config.apis.evn import EVNConfig
 from config.loader import ConfigLoader
-from refine.write_strategy import OverwriteByPartition, SilverTable
+from refine.load_strategy import OverwriteByPartition, SilverTable
 from refine.assets.cleaning import trim_whitespace, replace_substring, empty_to_null
 from refine.assets.extraction import extract_valid_from_date
 from refine.init import initialize_spark

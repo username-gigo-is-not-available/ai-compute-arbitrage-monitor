@@ -1,6 +1,7 @@
 import logging
 from dataclasses import dataclass
 from datetime import datetime, UTC
+from typing import Any
 
 from bs4 import Tag
 
@@ -19,8 +20,6 @@ class ElectricityTariffBlocksIngestor(EVNBaseIngestor):
 
     def load(self) -> list[ElectricityTariffBlock]:
         parser = self.fetch_soup(self.config.tariff_system_url)
-        if parser is None:
-            return []
         ingested_at: datetime = datetime.now(UTC)
         valid_from_text: str = parser.select_one(self.config.tariff_blocks_valid_from_selector).text.strip()
 
@@ -34,32 +33,27 @@ class ElectricityTariffBlocksIngestor(EVNBaseIngestor):
                 data=row,
                 valid_from_text=valid_from_text
             )
-            if electricity_tariff_block:
-                electricity_tariff_blocks.append(electricity_tariff_block)
+            electricity_tariff_blocks.append(electricity_tariff_block)
 
         return electricity_tariff_blocks
 
 
-    def parse(self, **kwargs) -> ElectricityTariffBlock | None:
+    def parse(self, **kwargs: Any) -> ElectricityTariffBlock:
         row: Tag = kwargs.get('data')
         valid_from_text: str = kwargs.get('valid_from_text')
         ingested_at: datetime = kwargs.get('timestamp')
-        try:
-            return ElectricityTariffBlock(
-                ingested_at=ingested_at,
-                consumer_category=ConsumerCategoryType.HOUSEHOLD,
-                tariff_window_type=TariffWindowType.HIGH,
-                tariff_block_number_text=row.text,
-                kwh_boundaries_text=row.next_sibling.text,
-                valid_from_text=valid_from_text,
+        return ElectricityTariffBlock(
+            ingested_at=ingested_at,
+            consumer_category=ConsumerCategoryType.HOUSEHOLD,
+            tariff_window_type=TariffWindowType.HIGH,
+            tariff_block_number_text=row.text,
+            kwh_boundaries_text=row.next_sibling.text,
+            valid_from_text=valid_from_text,
 
-            )
-        except (KeyError, ValueError, TypeError) as e:
-            self.logger.warning(f"Could not parse electricity tariff block: {row} {e}")
-            return None
+        )
 
 
-def main():
+def main() -> None:
     loader: ConfigLoader = ConfigLoader()
     evn_config: EVNConfig = loader.get_evn()
     electricity_tariff_blocks: Dataset = Dataset(dataset_name=DatasetName.ELECTRICITY_TARIFF_BLOCKS,
@@ -78,7 +72,7 @@ def main():
     electricity_tariff_blocks_ingestor.run()
 
 
-def run(scheduled_at: str | None = None):  # unused: effective date comes from the source (ADR-019)
+def run(scheduled_at: str | None = None) -> None:
     main()
 
 

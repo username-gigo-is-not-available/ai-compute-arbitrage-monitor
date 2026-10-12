@@ -14,13 +14,13 @@ from unittest import mock
 from pyiceberg.schema import Schema
 from pyiceberg.types import NestedField, StringType
 
-from common.classes import Dataset
+from common.classes import Dataset, Snapshot
 from common.enums import DatasetName, DatasetType, OfferType
 from config.apis.vast_ai import VastAIConfig
 from config.http import HttpConfig
 from config.lakehouse import GCPLakehouseConfig
 from ingest.sources.compute_offers import ComputeOffersIngestor
-from ingest.write_strategy import AppendByHour, BronzeTable
+from ingest.write_strategy import AppendByDay, BronzeTable
 
 OFFER = {
     "ask_contract_id": 111, "machine_id": 222, "host_id": 333,
@@ -39,10 +39,10 @@ def _ingestor(snapshot_at: datetime) -> ComputeOffersIngestor:
         lakehouse_config=GCPLakehouseConfig(catalog_id="test", project_id="test", warehouse="gs://test"),
         bronze_table=BronzeTable(
             Schema(NestedField(field_id=1, name="id", field_type=StringType(), required=False)),
-            AppendByHour(column="snapshot_at"),
+            AppendByDay(column="snapshot_at"),
         ),
         http_config=HttpConfig(timeout_seconds=30, retry_count=1, retry_delay_seconds=0),
-        snapshot_at=snapshot_at,
+        snapshot=Snapshot(at=snapshot_at),
     )
 
 
@@ -57,21 +57,24 @@ class TestSnapshotAt(unittest.TestCase):
         self.assertEqual(offer.to_row()["snapshot_at"], snapshot_at)
 
     def test_backfill_is_skipped_without_touching_the_catalog(self):
-        ingestor = _ingestor(datetime.now(UTC).replace(minute=0, second=0, microsecond=0) - timedelta(hours=3))
+        ingestor = _ingestor(datetime.now(UTC).replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(hours=25))
         with mock.patch.object(ingestor, "ensure_bronze_table") as ensure_mock, mock.patch.object(ingestor, "load") as load_mock:
             asyncio.run(ingestor.run())
         ensure_mock.assert_not_called()
         load_mock.assert_not_called()
 
-    def test_current_hour_runs(self):
-        ingestor = _ingestor(datetime.now(UTC).replace(minute=0, second=0, microsecond=0))
+    def test_today_runs(self):
+        ingestor = _ingestor(datetime.now(UTC).replace(hour=0, minute=0, second=0, microsecond=0))
 
         async def no_offers():
             return []
 
-        with mock.patch.object(ingestor, "ensure_bronze_table") as ensure_mock, mock.patch.object(ingestor, "load", side_effect=no_offers):
+        with mock.patch.object(ingestor, "ensure_bronze_table") as ensure_mock, \
+                mock.patch.object(ingestor, "load", side_effect=no_offers), \
+                mock.patch.object(ingestor, "handle_result") as handle_mock:
             asyncio.run(ingestor.run())
         ensure_mock.assert_called_once()
+        handle_mock.assert_called_once_with([])
 
 
 if __name__ == "__main__":

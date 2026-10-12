@@ -2,75 +2,78 @@ import asyncio
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime, UTC
-from http import HTTPStatus
 from typing import Any
 
 from aiohttp import ClientError, ClientSession, ClientTimeout
 from pydantic import ValidationError
 
-from common.classes import AskContractIdRange, Dataset
+from common.classes import Dataset, Snapshot
 from common.enums import OfferType, DatasetType, DatasetName
 from config.apis.vast_ai import VastAIConfig
 from config.loader import ConfigLoader
 from ingest.base import AsyncIngestor
 from ingest.models.vast_ai_offer import VastAIOffer
 from ingest.schemas.compute_offers import COMPUTE_OFFERS_BRONZE_SCHEMA
-from ingest.scheduling import is_backfill, resolve_snapshot_at
-from ingest.write_strategy import AppendByHour, BronzeTable
-
-
-class CensusIncompleteError(Exception):
-    """A range of the market could not be fetched, so the census is not the whole market (ADR-020)."""
+from ingest.write_strategy import AppendByDay, BronzeTable
 
 
 @dataclass
 class ComputeOffersIngestor(AsyncIngestor):
-    snapshot_at: datetime
-    # Vast.ai's daily quota counts returned rows, including those of ranges that had to be split.
+    snapshot: Snapshot
     rows_used: int = field(init=False, default=0)
     requests: int = field(init=False, default=0)
 
     async def run(self) -> None:
-        if is_backfill(self.snapshot_at):
+        if self.snapshot.is_backfill():
             self.logger.warning(
-                f"Skipping {self.name}: snapshot_at {self.snapshot_at.isoformat()} is in the past and "
+                f"Skipping {self.name}: snapshot_at {self.snapshot.at.isoformat()} is in the past and "
                 f"Vast.ai only serves the current market, so it cannot be backfilled (ADR-019)."
             )
             return
         await super().run()
 
     async def load(self) -> list[VastAIOffer]:
-        # On-demand only: its rows carry the bid price (min_bid), and reserved prices equal on-demand (ADR-020).
         async with ClientSession() as session:
             ingested_at: datetime = datetime.now(UTC)
-            rows = await self.fetch_complete_range(session, AskContractIdRange(start=0))
+            rows = await self.fetch_census(session)
             self.logger.info(f"Census of {len(rows)} offers used {self.rows_used} rows in {self.requests} requests")
             offers = [self.parse(data=row, timestamp=ingested_at, offer_type=OfferType.ON_DEMAND) for row in rows]
             return [offer for offer in offers if offer]
 
-    async def fetch_complete_range(self, session: ClientSession, id_range: AskContractIdRange) -> list[dict[str, Any]]:
-        # /bundles returns a random sample when more offers match than the limit (ADR-020). A range returning fewer
-        # than split_at is complete; a fuller one is split at its sample's quantiles and each part fetched the same way.
-        offers = await self.request_range(session, id_range)
-        if len(offers) < self.config.split_at:
-            return offers
-        complete = []
-        for part in id_range.split([o["ask_contract_id"] for o in offers], self.config.census_parts):
-            complete += await self.fetch_complete_range(session, part)
-        return complete
+    async def fetch_census(self, session: ClientSession) -> list[dict[str, Any]]:
+        # /bundles returns a random sample when more offers match than the limit (ADR-020). One request for the whole
+        # market gives that sample; it is the map for splitting the market into ranges small enough to come back whole.
+        data = await self.request_range(session, start=0, end=None)
+        if len(data) < self.config.split_at:
+            return data
+        rows = []
+        sample_ids = [row["ask_contract_id"] for row in data]
+        for start, end in self.split_range(sample_ids):
+            data = await self.request_range(session, start, end)
+            if len(data) >= self.config.split_at:
+                raise RuntimeError(f"Range [{start}, {end}) came back full, so it may be a sample; raise census_parts")
+            rows += data
+        return rows
 
-    async def request_range(self, session: ClientSession, id_range: AskContractIdRange) -> list[dict[str, Any]]:
+    def split_range(self, sample_ids: list[int]) -> list[tuple[int, int | None]]:
+        # A cut after every step-th sampled id: the sample is densest where offers are, so each range holds about
+        # market size / census_parts offers. The first cut is after the smallest id, so no range is empty.
+        ids = sorted(sample_ids)
+        step = max(1, len(ids) // self.config.census_parts)
+        cuts = ids[step::step]
+        bounds = [0, *cuts, None]
+        return list(zip(bounds, bounds[1:]))
+
+    async def request_range(self, session: ClientSession, start: int, end: int | None) -> list[dict[str, Any]]:
         response = await self.fetch_async(
-            (ClientError, asyncio.TimeoutError),
-            session.get,
-            self.config.url,
+            exception_type=(ClientError, asyncio.TimeoutError),
+            http_get_function=session.get,
+            url=self.config.url,
             headers=self.config.header,
-            params=self.config.params(id_range),
+            params=self.config.params(start, end),
             timeout=ClientTimeout(total=self.http_config.timeout_seconds),
         )
-        if response.status != HTTPStatus.OK:
-            self.logger.error(f"Vast.AI API returned HTTP {response.status}")
-            raise CensusIncompleteError(f"range {id_range} failed with HTTP {response.status}")
+        response.raise_for_status()
         try:
             data: dict[str, Any] = await response.json(encoding="utf-8")
         finally:
@@ -79,16 +82,16 @@ class ComputeOffersIngestor(AsyncIngestor):
         offers = data.get("offers", [])
         self.requests += 1
         self.rows_used += len(offers)
-        self.logger.info(f"Range {id_range}: {len(offers)} offers; {self.rows_used} rows used in {self.requests} requests")
+        self.logger.info(f"Range [{start}, {end}): {len(offers)} offers; {self.rows_used} rows used in {self.requests} requests")
         return offers
 
-    def parse(self, **kwargs) -> VastAIOffer | None:
+    def parse(self, **kwargs: Any) -> VastAIOffer | None:
         data: dict[str, Any] = kwargs.get("data")
         ingested_at: datetime = kwargs.get("timestamp")
         offer_type: OfferType = kwargs.get("offer_type")
         try:
             return VastAIOffer(
-                snapshot_at=self.snapshot_at,
+                snapshot_at=self.snapshot.at,
                 ingested_at=ingested_at,
                 offer_id=data.get("ask_contract_id"),
                 machine_id=data.get("machine_id"),
@@ -135,7 +138,7 @@ class ComputeOffersIngestor(AsyncIngestor):
             return None
 
 
-async def main(scheduled_at: str | None = None):
+async def main(scheduled_at: str | None = None) -> None:
     loader: ConfigLoader = ConfigLoader()
     vast_ai_config: VastAIConfig = loader.get_vast_ai()
     compute_offers: Dataset = Dataset(dataset_name=DatasetName.COMPUTE_OFFERS, dataset_type=DatasetType.SOURCES)
@@ -146,15 +149,15 @@ async def main(scheduled_at: str | None = None):
         dataset=compute_offers,
         config=vast_ai_config,
         lakehouse_config=loader.get_lakehouse(),
-        bronze_table=BronzeTable(COMPUTE_OFFERS_BRONZE_SCHEMA, AppendByHour(column="snapshot_at")),
+        bronze_table=BronzeTable(COMPUTE_OFFERS_BRONZE_SCHEMA, AppendByDay(column="snapshot_at")),
         http_config=loader.get_http(),
-        snapshot_at=resolve_snapshot_at(scheduled_at),
+        snapshot=Snapshot.from_scheduled_at(scheduled_at),
     )
     logging.info(f"Starting source {compute_offers_ingestor.name}...")
     await compute_offers_ingestor.run()
 
 
-def run(scheduled_at: str | None = None):
+def run(scheduled_at: str | None = None) -> None:
     asyncio.run(main(scheduled_at))
 
 
