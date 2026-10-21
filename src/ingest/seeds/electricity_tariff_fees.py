@@ -1,7 +1,6 @@
 import logging
 from dataclasses import dataclass
 from datetime import datetime, UTC
-from typing import Any
 
 from bs4 import Tag
 
@@ -63,25 +62,22 @@ class ElectricityTariffFeesIngestor(EVNBaseIngestor):
         table_element: Tag = parser.select_one(self.config.tariff_fees_table_selector)
         cells: list[Tag] = table_element.select(self.config.table_cells_selector)
         for cell_specification in cell_specifications:
-            electricity_tariff_fee: ElectricityTariffFee = self.parse(data=cells,
-                                                                      timestamp=ingested_at,
+            electricity_tariff_fee: ElectricityTariffFee = self.parse(cells=cells,
                                                                       specification=cell_specification,
-                                                                      valid_from_text=valid_from_text)
+                                                                      valid_from_text=valid_from_text,
+                                                                      ingested_at=ingested_at)
             electricity_tariff_fees.append(electricity_tariff_fee)
 
         return electricity_tariff_fees
 
-    def parse(self, **kwargs: Any) -> ElectricityTariffFee:
-        row: list[Tag] = kwargs.get('data')
-        specification: CellSpecification = kwargs.get('specification')
-        valid_from_text: str = kwargs.get('valid_from_text')
-        ingested_at: datetime = kwargs.get('timestamp')
+    def parse(self, cells: list[Tag], specification: CellSpecification, valid_from_text: str,
+              ingested_at: datetime) -> ElectricityTariffFee:
         return ElectricityTariffFee(
             ingested_at=ingested_at,
             consumer_category=specification.consumer_category,
-            label=row[specification.label_idx].text.strip(),
-            metric=row[specification.metric_idx].text.strip(),
-            value=row[specification.value_idx].text.strip(),
+            label=cells[specification.label_idx].text.strip(),
+            metric=cells[specification.metric_idx].text.strip(),
+            value=cells[specification.value_idx].text.strip(),
             valid_from_text=valid_from_text
         )
 

@@ -1,6 +1,6 @@
 """ComputeOffersIngestor fetches the on-demand market as a census of ask_contract_id ranges (ADR-020).
 
-Mocks at the HTTP seam (aiohttp.ClientSession.get); no network, no quota.
+Mocks at the HTTP seam (requests.get); no network, no quota.
 
 Run directly:   uv run python tests/test_compute_offers_census.py
 Under pytest:   uv run --extra dev pytest tests/test_compute_offers_census.py
@@ -8,14 +8,13 @@ Under pytest:   uv run --extra dev pytest tests/test_compute_offers_census.py
 
 from __future__ import annotations
 
-import asyncio
 import json
 import random
 import unittest
 from datetime import datetime, UTC
 from unittest import mock
 
-import aiohttp
+import requests
 from pyiceberg.schema import Schema
 from pyiceberg.types import NestedField, StringType
 
@@ -41,7 +40,7 @@ OFFER = {
 
 class FakeResponse:
     def __init__(self, status: int = 200, offers: list[dict] | None = None) -> None:
-        self.status = status
+        self.status_code = status
         self.headers = {}
         self.offers = offers or []
 
@@ -49,10 +48,10 @@ class FakeResponse:
         pass
 
     def raise_for_status(self) -> None:
-        if self.status != 200:
-            raise aiohttp.ClientResponseError(mock.Mock(real_url="https://console.vast.test"), (), status=self.status)
+        if self.status_code != 200:
+            raise requests.HTTPError(f"{self.status_code} Error", response=self)
 
-    async def json(self, **kwargs) -> dict:
+    def json(self, **kwargs) -> dict:
         return {"offers": self.offers}
 
 
@@ -63,7 +62,7 @@ class FakeMarket:
         self.offers = [{**OFFER, "ask_contract_id": i} for i in offer_ids]
         self.random = random.Random(seed)
 
-    async def get(self, url: str, params: dict, **kwargs) -> FakeResponse:
+    def get(self, url: str, params: dict, **kwargs) -> FakeResponse:
         q = json.loads(params["q"])
         lo, hi = q["ask_contract_id"]["gte"], q["ask_contract_id"].get("lt")
         matches = [o for o in self.offers if o["ask_contract_id"] >= lo and (hi is None or o["ask_contract_id"] < hi)]
@@ -86,23 +85,23 @@ def _ingestor() -> ComputeOffersIngestor:
     )
 
 
-def _queries(get_mock: mock.AsyncMock) -> list[dict]:
-    return [json.loads(call.kwargs["params"]["q"]) for call in get_mock.await_args_list]
+def _queries(get_mock: mock.Mock) -> list[dict]:
+    return [json.loads(call.kwargs["params"]["q"]) for call in get_mock.call_args_list]
 
 
 class TestComputeOffersCensus(unittest.TestCase):
 
     def test_requests_on_demand_offers_by_ask_contract_id_range(self):
-        get_mock = mock.AsyncMock(side_effect=[FakeResponse(offers=[OFFER])])
-        with mock.patch.object(aiohttp.ClientSession, "get", new=get_mock):
-            offers = asyncio.run(_ingestor().load())
+        get_mock = mock.Mock(side_effect=[FakeResponse(offers=[OFFER])])
+        with mock.patch.object(requests, "get", new=get_mock):
+            offers = _ingestor().load()
         self.assertEqual(_queries(get_mock), [{"type": "on-demand", "limit": 512, "ask_contract_id": {"gte": 0}}])
         self.assertEqual([o.offer_id for o in offers], [8_936_325])
 
     def test_market_over_the_limit_returns_every_offer_exactly_once(self):
         ids = random.Random(1).sample(range(7_000_000, 54_000_000), 3_000)
-        with mock.patch.object(aiohttp.ClientSession, "get", new=FakeMarket(ids).get):
-            offers = asyncio.run(_ingestor().load())
+        with mock.patch.object(requests, "get", new=FakeMarket(ids).get):
+            offers = _ingestor().load()
         returned = [o.offer_id for o in offers]
         self.assertEqual(len(returned), 3_000)
         self.assertEqual(set(returned), set(ids))
@@ -112,8 +111,8 @@ class TestComputeOffersCensus(unittest.TestCase):
         ingestor = _ingestor()
         ingestor.config = ingestor.config.model_copy(update={"census_parts": 4})
         ids = random.Random(1).sample(range(7_000_000, 54_000_000), 3_000)
-        with mock.patch.object(aiohttp.ClientSession, "get", new=FakeMarket(ids).get),                 self.assertRaisesRegex(RuntimeError, "raise census_parts"):
-            asyncio.run(ingestor.load())
+        with mock.patch.object(requests, "get", new=FakeMarket(ids).get),                 self.assertRaisesRegex(RuntimeError, "raise census_parts"):
+            ingestor.load()
 
     def test_configured_census_costs_about_the_market_size(self):
         # The daily quota counts returned rows, and a full range's rows are thrown away when it is split; the
@@ -122,15 +121,15 @@ class TestComputeOffersCensus(unittest.TestCase):
         ingestor = _ingestor()
         ingestor.config = ingestor.config.model_copy(update={"census_parts": configured.census_parts})
         ids = random.Random(3).sample(range(7_000_000, 54_000_000), 10_000)
-        with mock.patch.object(aiohttp.ClientSession, "get", new=FakeMarket(ids).get):
-            offers = asyncio.run(ingestor.load())
+        with mock.patch.object(requests, "get", new=FakeMarket(ids).get):
+            offers = ingestor.load()
         self.assertEqual(len(offers), 10_000)
         self.assertLessEqual(ingestor.rows_used, 11_500)
 
     def test_bronze_rows_keep_the_slice_of_the_machine(self):
         # gpu_frac gives machine size (num_gpus / gpu_frac); gpu_ids shows which slices overlap (ADR-020).
-        with mock.patch.object(aiohttp.ClientSession, "get", new=mock.AsyncMock(side_effect=[FakeResponse(offers=[OFFER])])):
-            row = asyncio.run(_ingestor().load())[0].to_row()
+        with mock.patch.object(requests, "get", new=mock.Mock(side_effect=[FakeResponse(offers=[OFFER])])):
+            row = _ingestor().load()[0].to_row()
         self.assertEqual(row["gpu_fraction_of_machine"], 0.4)
         self.assertEqual(row["gpu_ids"], [55_783, 55_784])
         self.assertTrue({"gpu_fraction_of_machine", "gpu_ids"} <= set(COMPUTE_OFFERS_BRONZE_SCHEMA.column_names))
@@ -139,14 +138,14 @@ class TestComputeOffersCensus(unittest.TestCase):
         # The first range comes back full, so the census splits it; the second request is quota-exhausted.
         full_page = [{**OFFER, "ask_contract_id": i} for i in range(8_000_000, 8_000_512)]
         ingestor = _ingestor()
-        get_mock = mock.AsyncMock(side_effect=[FakeResponse(offers=full_page), FakeResponse(status=429)])
-        with mock.patch.object(aiohttp.ClientSession, "get", new=get_mock), \
+        get_mock = mock.Mock(side_effect=[FakeResponse(offers=full_page), FakeResponse(status=429)])
+        with mock.patch.object(requests, "get", new=get_mock), \
                 mock.patch.object(ingestor, "ensure_bronze_table"), \
                 mock.patch.object(ingestor, "store") as store_mock, \
-                self.assertRaises(aiohttp.ClientResponseError) as raised:
-            asyncio.run(ingestor.run())
+                self.assertRaises(requests.HTTPError) as raised:
+            ingestor.run()
         store_mock.assert_not_called()
-        self.assertEqual(raised.exception.status, 429)
+        self.assertEqual(raised.exception.response.status_code, 429)
 
 
 if __name__ == "__main__":

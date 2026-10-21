@@ -3,7 +3,7 @@
 The three ingestors wire tenacity's ``@retry`` decorator (driven by the shared
 ``HttpConfig.retry_count`` / ``retry_delay_seconds``) around their raw HTTP GETs.
 These tests mock at the HTTP seam — no network, no third-party test deps, no real
-sleeps (``time.sleep`` / ``asyncio.sleep`` are patched and asserted instead):
+sleeps (``time.sleep`` is patched and asserted instead):
 
   * transient failures (non-200 statuses OR transport errors) followed by a 200
     must produce a successful parse — not an empty list — for all three ingestors;
@@ -26,14 +26,12 @@ Run under pytest (optional, once the dev-extra is installed):
 
 from __future__ import annotations
 
-import asyncio
 import logging
 import sys
 import traceback
 from http import HTTPStatus
 from unittest import mock
 
-import aiohttp
 import pytest
 import requests
 
@@ -101,11 +99,10 @@ def _lakehouse() -> GCPLakehouseConfig:
 
 
 class FakeResponse:
-    """Stands in for both requests.Response and aiohttp.ClientResponse at the status level used here."""
+    """Stands in for requests.Response at the level the ingestors use."""
 
     def __init__(self, status: int = HTTPStatus.OK, text: str = "", json_data: dict | None = None,
                  headers: dict | None = None):
-        self.status = status
         self.status_code = status
         self.headers = headers or {}
         self.text = text
@@ -116,22 +113,11 @@ class FakeResponse:
         self.closed = True
 
     def raise_for_status(self) -> None:
-        if self.status != 200:
-            raise aiohttp.ClientResponseError(mock.Mock(real_url="https://console.vast.test"), (), status=self.status)
+        if self.status_code != 200:
+            raise requests.HTTPError(f"{self.status_code} Server Error", response=self)
 
-    async def release(self) -> None:
-        self.closed = True
-
-    async def json(self, **kwargs) -> dict:
+    def json(self, **kwargs) -> dict:
         return self._json_data
-
-
-class FakeRequestsResponse(FakeResponse):
-    """requests.Response raises its own HTTPError."""
-
-    def raise_for_status(self) -> None:
-        if self.status != 200:
-            raise requests.HTTPError(f"{self.status} Server Error")
 
 
 class _Capture(logging.Handler):
@@ -172,9 +158,6 @@ class _EVNTestIngestor(EVNBaseIngestor):
     def load(self):
         return []
 
-    def parse(self, **kwargs):
-        return None
-
 
 def _evn(retry_count: int) -> _EVNTestIngestor:
     return _EVNTestIngestor(
@@ -189,7 +172,7 @@ def _evn(retry_count: int) -> _EVNTestIngestor:
 def test_evn_transient_500_then_200_parses_soup() -> None:
     ingestor = _evn(retry_count=3)
     handler = _capture_logs(ingestor)
-    with mock.patch.object(requests, "get", side_effect=[FakeRequestsResponse(500), FakeRequestsResponse(500), FakeRequestsResponse(200, text=HTML)]) as get_mock, \
+    with mock.patch.object(requests, "get", side_effect=[FakeResponse(500), FakeResponse(500), FakeResponse(200, text=HTML)]) as get_mock, \
             mock.patch("time.sleep") as sleep_mock:
         soup = ingestor.fetch_soup("https://evn.test/")
 
@@ -203,7 +186,7 @@ def test_evn_transient_500_then_200_parses_soup() -> None:
 
 def test_evn_permanent_500_fails_the_run() -> None:
     ingestor = _evn(retry_count=3)
-    with mock.patch.object(requests, "get", side_effect=[FakeRequestsResponse(500), FakeRequestsResponse(500), FakeRequestsResponse(500)]) as get_mock, \
+    with mock.patch.object(requests, "get", side_effect=[FakeResponse(500), FakeResponse(500), FakeResponse(500)]) as get_mock, \
             mock.patch("time.sleep") as sleep_mock, pytest.raises(requests.HTTPError):
         ingestor.fetch_soup("https://evn.test/")
 
@@ -217,7 +200,7 @@ def test_evn_transport_exception_then_200_parses_soup() -> None:
     with mock.patch.object(
         requests,
         "get",
-        side_effect=[requests.exceptions.ConnectionError("connection refused"), FakeRequestsResponse(200, text=HTML)],
+        side_effect=[requests.exceptions.ConnectionError("connection refused"), FakeResponse(200, text=HTML)],
     ) as get_mock, mock.patch("time.sleep") as sleep_mock:
         soup = ingestor.fetch_soup("https://evn.test/")
 
@@ -252,7 +235,7 @@ def test_evn_permanent_transport_exception_reraises() -> None:
 def test_evn_long_retry_after_fails_without_retrying() -> None:
     # A Retry-After longer than the whole retry budget cannot be waited out, so the sync path stops too.
     ingestor = _evn(retry_count=3)
-    with mock.patch.object(requests, "get", side_effect=[FakeRequestsResponse(429, headers={"Retry-After": "3600"})]) as get_mock,             mock.patch("time.sleep") as sleep_mock, pytest.raises(requests.HTTPError):
+    with mock.patch.object(requests, "get", side_effect=[FakeResponse(429, headers={"Retry-After": "3600"})]) as get_mock,             mock.patch("time.sleep") as sleep_mock, pytest.raises(requests.HTTPError):
         ingestor.fetch_soup("https://evn.test/")
 
     assert get_mock.call_count == 1
@@ -262,7 +245,7 @@ def test_evn_long_retry_after_fails_without_retrying() -> None:
 def test_evn_short_retry_after_is_waited_out() -> None:
     # The server asks for longer than retry_delay_seconds but within the budget: wait what it asks, then retry.
     ingestor = _evn(retry_count=3)
-    side_effects = [FakeRequestsResponse(429, headers={"Retry-After": "90"}), FakeRequestsResponse(200, text=HTML)]
+    side_effects = [FakeResponse(429, headers={"Retry-After": "90"}), FakeResponse(200, text=HTML)]
     with mock.patch.object(requests, "get", side_effect=side_effects) as get_mock,             mock.patch("time.sleep") as sleep_mock:
         soup = ingestor.fetch_soup("https://evn.test/")
 
@@ -273,7 +256,7 @@ def test_evn_short_retry_after_is_waited_out() -> None:
 
 def test_evn_retry_count_1_single_attempt_no_sleep() -> None:
     ingestor = _evn(retry_count=1)
-    with mock.patch.object(requests, "get", side_effect=[FakeRequestsResponse(500)]) as get_mock, \
+    with mock.patch.object(requests, "get", side_effect=[FakeResponse(500)]) as get_mock, \
             mock.patch("time.sleep") as sleep_mock, pytest.raises(requests.HTTPError):
         ingestor.fetch_soup("https://evn.test/")
 
@@ -282,7 +265,7 @@ def test_evn_retry_count_1_single_attempt_no_sleep() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Exchange rates (async): ExchangeRateIngestor.load -> aiohttp + asyncio.sleep
+# Exchange rates: ExchangeRateIngestor.load -> requests.get + time.sleep
 # ---------------------------------------------------------------------------
 
 def _exchange(retry_count: int) -> ExchangeRateIngestor:
@@ -305,13 +288,12 @@ def test_exchange_transient_500_then_200_parses() -> None:
     ingestor = _exchange(retry_count=3)
     handler = _capture_logs(ingestor)
     side_effects = [FakeResponse(500), FakeResponse(500), FakeResponse(200, json_data=EXCHANGE_JSON)]
-    with mock.patch.object(aiohttp.ClientSession, "get", new=mock.AsyncMock(side_effect=side_effects)) as get_mock, \
-            mock.patch("asyncio.sleep", new=mock.AsyncMock()) as sleep_mock:
-        result = asyncio.run(ingestor.load())
+    with mock.patch.object(requests, "get", side_effect=side_effects) as get_mock,             mock.patch("time.sleep") as sleep_mock:
+        result = ingestor.load()
 
     assert len(result) == 1, "transient 500s should retry and parse the 200 response"
     assert result[0].value == 58.15
-    assert get_mock.await_count == 3
+    assert get_mock.call_count == 3
     assert _sleep_calls(sleep_mock) == [mock.call(60), mock.call(60)]
     assert _errors(handler) == []
     assert len(_warnings(handler)) == 2
@@ -320,35 +302,32 @@ def test_exchange_transient_500_then_200_parses() -> None:
 def test_exchange_permanent_500_fails_the_run() -> None:
     ingestor = _exchange(retry_count=3)
     side_effects = [FakeResponse(500), FakeResponse(500), FakeResponse(500)]
-    with mock.patch.object(aiohttp.ClientSession, "get", new=mock.AsyncMock(side_effect=side_effects)) as get_mock, \
-            mock.patch("asyncio.sleep", new=mock.AsyncMock()) as sleep_mock, pytest.raises(aiohttp.ClientResponseError):
-        asyncio.run(ingestor.load())
+    with mock.patch.object(requests, "get", side_effect=side_effects) as get_mock,             mock.patch("time.sleep") as sleep_mock, pytest.raises(requests.HTTPError):
+        ingestor.load()
 
-    assert get_mock.await_count == 3
+    assert get_mock.call_count == 3
     assert _sleep_calls(sleep_mock) == [mock.call(60), mock.call(60)]
 
 
 def test_exchange_timeout_transport_error_retried_then_success() -> None:
     ingestor = _exchange(retry_count=2)
     handler = _capture_logs(ingestor)
-    side_effects = [asyncio.TimeoutError("total timeout"), FakeResponse(200, json_data=EXCHANGE_JSON)]
-    with mock.patch.object(aiohttp.ClientSession, "get", new=mock.AsyncMock(side_effect=side_effects)) as get_mock, \
-            mock.patch("asyncio.sleep", new=mock.AsyncMock()) as sleep_mock:
-        result = asyncio.run(ingestor.load())
+    side_effects = [requests.exceptions.ReadTimeout("read timeout"), FakeResponse(200, json_data=EXCHANGE_JSON)]
+    with mock.patch.object(requests, "get", side_effect=side_effects) as get_mock,             mock.patch("time.sleep") as sleep_mock:
+        result = ingestor.load()
 
     assert len(result) == 1
-    assert get_mock.await_count == 2
+    assert get_mock.call_count == 2
     assert _sleep_calls(sleep_mock) == [mock.call(60)]
     assert _errors(handler) == []
 
 
 def test_exchange_retry_count_1_single_attempt_no_sleep() -> None:
     ingestor = _exchange(retry_count=1)
-    with mock.patch.object(aiohttp.ClientSession, "get", new=mock.AsyncMock(side_effect=[FakeResponse(500)])) as get_mock, \
-            mock.patch("asyncio.sleep", new=mock.AsyncMock()) as sleep_mock, pytest.raises(aiohttp.ClientResponseError):
-        asyncio.run(ingestor.load())
+    with mock.patch.object(requests, "get", side_effect=[FakeResponse(500)]) as get_mock,             mock.patch("time.sleep") as sleep_mock, pytest.raises(requests.HTTPError):
+        ingestor.load()
 
-    assert get_mock.await_count == 1
+    assert get_mock.call_count == 1
     assert _sleep_calls(sleep_mock) == []
 
 
@@ -380,11 +359,11 @@ def test_compute_transient_500_then_200_completes_census() -> None:
     ingestor = _compute(retry_count=3)
     handler = _capture_logs(ingestor)
     side_effects = [FakeResponse(500), FakeResponse(500), FakeResponse(200, json_data=OFFER_JSON)]
-    with mock.patch.object(aiohttp.ClientSession, "get", new=mock.AsyncMock(side_effect=side_effects)) as get_mock,             mock.patch("asyncio.sleep", new=mock.AsyncMock()) as sleep_mock:
-        result = asyncio.run(ingestor.load())
+    with mock.patch.object(requests, "get", side_effect=side_effects) as get_mock,             mock.patch("time.sleep") as sleep_mock:
+        result = ingestor.load()
 
     assert len(result) == 1, "the one census range needed retries, then parsed"
-    assert get_mock.await_count == 3
+    assert get_mock.call_count == 3
     assert _sleep_calls(sleep_mock) == [mock.call(60), mock.call(60), mock.call(1)], "two retry waits, then the request interval"
     assert _errors(handler) == []
     assert len(_warnings(handler)) == 2
@@ -393,27 +372,27 @@ def test_compute_transient_500_then_200_completes_census() -> None:
 def test_compute_permanent_500_fails_census() -> None:
     ingestor = _compute(retry_count=3)
     side_effects = [FakeResponse(500), FakeResponse(500), FakeResponse(500)]
-    with mock.patch.object(aiohttp.ClientSession, "get", new=mock.AsyncMock(side_effect=side_effects)) as get_mock,             mock.patch("asyncio.sleep", new=mock.AsyncMock()) as sleep_mock:
+    with mock.patch.object(requests, "get", side_effect=side_effects) as get_mock,             mock.patch("time.sleep") as sleep_mock:
         try:
-            asyncio.run(ingestor.load())
+            ingestor.load()
             raise AssertionError("an incomplete census must fail, not return a partial market (ADR-020)")
-        except aiohttp.ClientResponseError as e:
-            assert e.status == 500
+        except requests.HTTPError as e:
+            assert e.response.status_code == 500
 
-    assert get_mock.await_count == 3
+    assert get_mock.call_count == 3
     assert _sleep_calls(sleep_mock) == [mock.call(60), mock.call(60)]
 
 
 def test_compute_retry_count_1_single_attempt_no_sleep() -> None:
     ingestor = _compute(retry_count=1)
-    with mock.patch.object(aiohttp.ClientSession, "get", new=mock.AsyncMock(side_effect=[FakeResponse(500)])) as get_mock,             mock.patch("asyncio.sleep", new=mock.AsyncMock()) as sleep_mock:
+    with mock.patch.object(requests, "get", side_effect=[FakeResponse(500)]) as get_mock,             mock.patch("time.sleep") as sleep_mock:
         try:
-            asyncio.run(ingestor.load())
+            ingestor.load()
             raise AssertionError("an incomplete census must fail")
-        except aiohttp.ClientResponseError as e:
-            assert e.status == 500
+        except requests.HTTPError as e:
+            assert e.response.status_code == 500
 
-    assert get_mock.await_count == 1
+    assert get_mock.call_count == 1
     assert _sleep_calls(sleep_mock) == []
 
 
@@ -421,25 +400,25 @@ def test_compute_quota_exhausted_fails_without_retrying() -> None:
     # Vast.ai's daily row quota answers 429 with Retry-After of hours; waiting retry_delay_seconds cannot help.
     ingestor = _compute(retry_count=5)
     quota = FakeResponse(429, headers={"Retry-After": "30129"})
-    with mock.patch.object(aiohttp.ClientSession, "get", new=mock.AsyncMock(side_effect=[quota])) as get_mock,             mock.patch("asyncio.sleep", new=mock.AsyncMock()) as sleep_mock:
+    with mock.patch.object(requests, "get", side_effect=[quota]) as get_mock,             mock.patch("time.sleep") as sleep_mock:
         try:
-            asyncio.run(ingestor.load())
+            ingestor.load()
             raise AssertionError("an incomplete census must fail")
-        except aiohttp.ClientResponseError as e:
-            assert e.status == 429
+        except requests.HTTPError as e:
+            assert e.response.status_code == 429
 
-    assert get_mock.await_count == 1
+    assert get_mock.call_count == 1
     assert _sleep_calls(sleep_mock) == []
 
 
 def test_compute_short_retry_after_is_waited_out() -> None:
     ingestor = _compute(retry_count=3)
     side_effects = [FakeResponse(429, headers={"Retry-After": "90"}), FakeResponse(200, json_data=OFFER_JSON)]
-    with mock.patch.object(aiohttp.ClientSession, "get", new=mock.AsyncMock(side_effect=side_effects)) as get_mock,             mock.patch("asyncio.sleep", new=mock.AsyncMock()) as sleep_mock:
-        result = asyncio.run(ingestor.load())
+    with mock.patch.object(requests, "get", side_effect=side_effects) as get_mock,             mock.patch("time.sleep") as sleep_mock:
+        result = ingestor.load()
 
     assert len(result) == 1
-    assert get_mock.await_count == 2
+    assert get_mock.call_count == 2
     assert _sleep_calls(sleep_mock) == [mock.call(90), mock.call(1)], "the server's wait, then the request interval"
 
 

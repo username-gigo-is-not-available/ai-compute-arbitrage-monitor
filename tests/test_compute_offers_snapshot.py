@@ -6,7 +6,6 @@ Under pytest:   uv run --extra dev pytest tests/test_compute_offers_snapshot.py
 
 from __future__ import annotations
 
-import asyncio
 import unittest
 from datetime import datetime, timedelta, UTC
 from unittest import mock
@@ -51,7 +50,7 @@ class TestSnapshotAt(unittest.TestCase):
     def test_parse_stamps_scheduled_snapshot_at_and_real_ingested_at(self):
         snapshot_at = datetime(2026, 10, 1, 14, tzinfo=UTC)
         fetched = datetime(2026, 10, 1, 14, 0, 7, tzinfo=UTC)
-        offer = _ingestor(snapshot_at).parse(data=OFFER, timestamp=fetched, offer_type=OfferType.ON_DEMAND)
+        offer = _ingestor(snapshot_at).parse(data=OFFER, ingested_at=fetched, offer_type=OfferType.ON_DEMAND)
         self.assertEqual(offer.snapshot_at, snapshot_at)
         self.assertEqual(offer.ingested_at, fetched)
         self.assertEqual(offer.to_row()["snapshot_at"], snapshot_at)
@@ -59,20 +58,17 @@ class TestSnapshotAt(unittest.TestCase):
     def test_backfill_is_skipped_without_touching_the_catalog(self):
         ingestor = _ingestor(datetime.now(UTC).replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(hours=25))
         with mock.patch.object(ingestor, "ensure_bronze_table") as ensure_mock, mock.patch.object(ingestor, "load") as load_mock:
-            asyncio.run(ingestor.run())
+            ingestor.run()
         ensure_mock.assert_not_called()
         load_mock.assert_not_called()
 
     def test_today_runs(self):
         ingestor = _ingestor(datetime.now(UTC).replace(hour=0, minute=0, second=0, microsecond=0))
 
-        async def no_offers():
-            return []
-
         with mock.patch.object(ingestor, "ensure_bronze_table") as ensure_mock, \
-                mock.patch.object(ingestor, "load", side_effect=no_offers), \
+                mock.patch.object(ingestor, "load", return_value=[]), \
                 mock.patch.object(ingestor, "handle_result") as handle_mock:
-            asyncio.run(ingestor.run())
+            ingestor.run()
         ensure_mock.assert_called_once()
         handle_mock.assert_called_once_with([])
 

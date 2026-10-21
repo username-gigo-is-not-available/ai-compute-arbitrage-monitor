@@ -36,7 +36,7 @@ The marts DAG fires automatically (`AssetAny`) when any upstream source complete
 
 | Layer              | Technology                                             |
 |--------------------|--------------------------------------------------------|
-| Ingestion          | Python 3.12, aiohttp, requests, BeautifulSoup, PyArrow |
+| Ingestion          | Python 3.12, requests, BeautifulSoup, PyArrow          |
 | Processing         | PySpark 4.1 on GCP Dataproc                            |
 | Storage            | GCS, BigQuery                                          |
 | Transformation     | dbt-bigquery 1.11+                                     |
