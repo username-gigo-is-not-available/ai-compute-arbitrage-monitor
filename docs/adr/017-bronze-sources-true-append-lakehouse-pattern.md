@@ -8,6 +8,8 @@ is `now()` at fetch, so a retry gets a new `ingested_at` and passes both the
 dedup and the watermark. Retry idempotency now comes from a deterministic key:
 `compute_offers` is keyed and partitioned on `snapshot_at`, and
 `exchange_rates` Silver overwrites by its effective `timestamp`.
+_Amended 2026-10-21_: Bronze seeds are true append as well (see ADR-016 status); the seeds
+bullet below no longer holds.
 
 ## Context
 

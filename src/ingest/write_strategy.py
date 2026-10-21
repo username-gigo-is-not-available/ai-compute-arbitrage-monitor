@@ -2,11 +2,10 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 
 import pyarrow as pa
-from pyiceberg.expressions import In
 from pyiceberg.partitioning import PartitionField, PartitionSpec
 from pyiceberg.schema import Schema
 from pyiceberg.table import Table
-from pyiceberg.transforms import DayTransform, IdentityTransform
+from pyiceberg.transforms import DayTransform
 
 
 class BronzeWriteStrategy(ABC):
@@ -35,22 +34,6 @@ class AppendByDay(BronzeWriteStrategy):
 
     def write(self, table: Table, arrow_table: pa.Table) -> None:
         table.append(arrow_table)
-
-
-class OverwriteByPartition(BronzeWriteStrategy):
-
-    def __init__(self, column: str = "valid_from_text") -> None:
-        super().__init__(column)
-
-    def partition_spec(self, schema: Schema) -> PartitionSpec:
-        field_id = schema.find_field(self.column).field_id
-        return PartitionSpec(
-            PartitionField(source_id=field_id, field_id=1000, transform=IdentityTransform(), name=self.column)  # noqa
-        )
-
-    def write(self, table: Table, arrow_table: pa.Table) -> None:
-        values = set(arrow_table.column(self.column).to_pylist())
-        table.overwrite(arrow_table, overwrite_filter=In(self.column, values)) # noqa
 
 
 @dataclass(frozen=True)

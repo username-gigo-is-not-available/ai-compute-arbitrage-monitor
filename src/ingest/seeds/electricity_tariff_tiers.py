@@ -12,7 +12,7 @@ from config.loader import ConfigLoader
 from ingest.evn_base import EVNBaseIngestor
 from ingest.models.electricity_tariff_tier import ElectricityTariffTier
 from ingest.schemas.electricity_tariff_tiers import ELECTRICITY_TARIFF_TIERS_BRONZE_SCHEMA
-from ingest.write_strategy import OverwriteByPartition, BronzeTable
+from ingest.write_strategy import AppendByDay, BronzeTable
 
 
 @dataclass(frozen=True)
@@ -97,7 +97,7 @@ def main() -> None:
         dataset=electricity_tariff_tiers,
         config=evn_config,
         lakehouse_config=loader.get_lakehouse(),
-        bronze_table=BronzeTable(ELECTRICITY_TARIFF_TIERS_BRONZE_SCHEMA, OverwriteByPartition()),
+        bronze_table=BronzeTable(ELECTRICITY_TARIFF_TIERS_BRONZE_SCHEMA, AppendByDay(column="ingested_at")),
         http_config=loader.get_http(),
     )
     logging.info(f"Starting seed {electricity_tariff_tiers_ingestor.name}...")

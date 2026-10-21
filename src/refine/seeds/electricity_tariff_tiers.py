@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+from functools import partial
 from typing import Callable
 
 from pyspark.sql import DataFrame, SparkSession
@@ -9,6 +10,7 @@ from config.apis.evn import EVNConfig
 from config.loader import ConfigLoader
 from refine.load_strategy import OverwriteByPartition, SilverTable
 from refine.assets.cleaning import trim_whitespace, replace_substring, empty_to_null
+from refine.assets.filtering import keep_latest_per_group
 from refine.assets.extraction import extract_valid_from_date
 from refine.assets.imputation import fill_from_group
 from refine.init import initialize_spark
@@ -50,6 +52,7 @@ class ElectricityTariffTiersPipeline(Pipeline):
         empty_to_null,
         replace_decimal_separator,
         extract_valid_from_date,
+        partial(keep_latest_per_group, group_by="valid_from", order_by="ingested_at"),
         fill_label,
         fill_metric,
         normalize_tariff_tier

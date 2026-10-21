@@ -13,6 +13,7 @@ from config.loader import ConfigLoader
 from refine.load_strategy import OverwriteByPartition, SilverTable
 from refine.assets.cleaning import trim_whitespace, empty_to_null
 from refine.assets.extraction import extract_valid_from_date
+from refine.assets.filtering import keep_latest_per_group
 from refine.assets.patterns import SCHEDULE_LOW_TARIFF_HOUR_PAIR_PATTERN, WEEKDAY_WEEKEND_SPLIT
 from refine.base import Pipeline
 from refine.init import initialize_spark
@@ -41,7 +42,8 @@ class ElectricityTariffWindowSchedulePipeline(Pipeline):
 
     def generate(self, df: DataFrame) -> DataFrame | None:
         # One hourly grid per tariff version: Bronze keeps every schedule EVN has published, and dbt needs them all
-        versions = extract_valid_from_date(df).select("schedule_text", "valid_from", "ingested_at").collect()
+        latest = keep_latest_per_group(extract_valid_from_date(df), group_by="valid_from", order_by="ingested_at")
+        versions = latest.select("schedule_text", "valid_from", "ingested_at").collect()
         return reduce(DataFrame.unionByName, [self.hourly_grid(version) for version in versions])
 
     def hourly_grid(self, version: Row) -> DataFrame:

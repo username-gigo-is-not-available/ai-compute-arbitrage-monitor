@@ -18,10 +18,13 @@ Accepted. Amended — read these before relying on the Decision below:
   source now runs `@daily`, and `snapshot_at` is floored to the UTC day (ADR-019), so one
   day partition holds one snapshot. Bronze tables created before this change are moved to the day spec,
   old files included, by the next ingest run (ADR-022); an existing Silver table keeps its hour spec.
-- **Bronze seeds** overwrite by **identity partition on `valid_from_text`**
-  (`OverwriteByPartition(column="valid_from_text")`), not by hour partition:
-  the overwrite filter is scoped to the incoming `valid_from_text` values
-  (commit `9d1d314`).
+- **Bronze seeds are true append too**, like sources: `AppendByDay(column="ingested_at")`, one
+  copy of each tariff version per scrape. Silver keeps the latest fetch of each `valid_from`
+  (`keep_latest_per_group` on `valid_from` by `ingested_at`) before overwriting that version's partition. This replaces the overwrite
+  by identity partition on `valid_from_text` (commit `9d1d314`): the partition value is the whole
+  EVN sentence, and the blocks sentence (525 characters, 958 bytes) URL-encodes into a 2,834-character
+  GCS object name, past the 1,024 limit, so the first run under ADR-022 failed on BigLake
+  (2026-10-21). Bronze is now the same raw log for every dataset; Silver decides which copy counts.
 - **Silver `exchange_rates`** overwrites by its effective `timestamp`
   partition with a full Bronze read, not append (ADR-019).
 - `GCPStorageConfig.directory_path` was removed and `scripts/purge_data.py`

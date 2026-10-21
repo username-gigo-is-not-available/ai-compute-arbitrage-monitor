@@ -44,7 +44,7 @@ from config.apis.exchange_rate import ExchangeRateConfig
 from config.apis.vast_ai import VastAIConfig
 from config.http import HttpConfig
 from config.lakehouse import GCPLakehouseConfig
-from ingest.write_strategy import AppendByDay, BronzeTable, OverwriteByPartition
+from ingest.write_strategy import AppendByDay, BronzeTable
 from pyiceberg.schema import Schema
 from pyiceberg.types import NestedField, StringType
 from ingest.evn_base import EVNBaseIngestor
@@ -181,7 +181,7 @@ def _evn(retry_count: int) -> _EVNTestIngestor:
         dataset=Dataset(dataset_name=DatasetName.ELECTRICITY_TARIFF_TIERS, dataset_type=DatasetType.SEEDS),
         config=EVNConfig(enabled=True, tariff_tiers_url="https://evn.test/", tariff_system_url="https://evn.test/"),
         lakehouse_config=_lakehouse(),
-        bronze_table=BronzeTable(_DUMMY_BRONZE_SCHEMA, OverwriteByPartition()),
+        bronze_table=BronzeTable(_DUMMY_BRONZE_SCHEMA, AppendByDay(column="ingested_at")),
         http_config=_http(retry_count=retry_count),
     )
 

@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+from functools import partial
 from typing import Callable
 
 from pyspark.sql import DataFrame, SparkSession
@@ -9,6 +10,7 @@ from config.apis.evn import EVNConfig
 from config.loader import ConfigLoader
 from refine.load_strategy import OverwriteByPartition, SilverTable
 from refine.assets.cleaning import trim_whitespace, empty_to_null
+from refine.assets.filtering import keep_latest_per_group
 from refine.assets.extraction import extract_pattern, extract_valid_from_date
 from refine.assets.patterns import KWH_BOUNDS_PATTERN, TARIFF_BLOCK_NUMBER_PATTERN
 from refine.init import initialize_spark
@@ -47,7 +49,8 @@ class ElectricityTariffBlocksPipeline(Pipeline):
         extract_tariff_block_number,
         extract_lower_bound_kwh,
         extract_upper_bound_kwh,
-        extract_valid_from_date
+        extract_valid_from_date,
+        partial(keep_latest_per_group, group_by="valid_from", order_by="ingested_at")
     ])
 
 
