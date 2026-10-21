@@ -21,7 +21,7 @@ load_dotenv()
 
 
 class ConfigLoader:
-    def __init__(self, config_path: Path = Path(os.getenv("SETTINGS_PATH", "settings.yaml"))):
+    def __init__(self, config_path: Path = Path(os.getenv("SETTINGS_PATH", "settings.yaml"))) -> None:
         self._raw = self._load_yaml(config_path)
         self._setup_logging()
 

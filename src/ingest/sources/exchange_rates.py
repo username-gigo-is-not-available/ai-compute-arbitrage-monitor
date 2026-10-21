@@ -3,7 +3,6 @@ import logging
 import ssl
 from dataclasses import dataclass, field
 from datetime import datetime, UTC
-from http import HTTPStatus
 from typing import Any
 
 import certifi
@@ -16,7 +15,7 @@ from config.loader import ConfigLoader
 from ingest.base import AsyncIngestor
 from ingest.models.exchange_rate import ExchangeRate
 from ingest.schemas.exchange_rates import EXCHANGE_RATES_BRONZE_SCHEMA
-from ingest.write_strategy import AppendByHour, BronzeTable
+from ingest.write_strategy import AppendByDay, BronzeTable
 
 
 @dataclass
@@ -24,7 +23,7 @@ class ExchangeRateIngestor(AsyncIngestor):
     timestamp_format: str = field(init=False)
     ssl_context: ssl.SSLContext = field(init=False)
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         super().__post_init__()
         self.timestamp_format = "%a, %d %b %Y %H:%M:%S %z"
         self.ssl_context = ssl.create_default_context(cafile=certifi.where())
@@ -36,40 +35,32 @@ class ExchangeRateIngestor(AsyncIngestor):
         async with ClientSession() as session:
 
             response = await self.fetch_async(
-                (ClientError, asyncio.TimeoutError),
-                session.get,
-                url,
+                exception_type=(ClientError, asyncio.TimeoutError),
+                http_get_function=session.get,
+                url=url,
                 ssl=self.ssl_context,
                 timeout=ClientTimeout(total=timeout_seconds),
             )
-            status: int = response.status
-            if status != HTTPStatus.OK:
-                self.logger.error(f"Exchange Rate API poll returned HTTP status: {status}.")
-                return []
+            response.raise_for_status()
             try:
                 data: dict[str, Any] = await response.json(encoding="utf-8")
                 return [self.parse(data=data)]
             finally:
                 response.close()
 
-    def parse(self, **kwargs) -> ExchangeRate | None:
-        from_currency: str = self.config.from_currency
+    def parse(self, **kwargs: Any) -> ExchangeRate:
         to_currency: str = self.config.to_currency
         data: dict[str, Any] = kwargs.get('data')
-        try:
-            return ExchangeRate(
-                ingested_at=datetime.now(UTC),
-                from_currency=from_currency,
-                to_currency=to_currency,
-                value=float(data.get("conversion_rates").get(to_currency)),
-                timestamp=datetime.strptime(data.get("time_last_update_utc"), self.timestamp_format)
-            )
-        except (KeyError, ValueError, TypeError) as e:
-            self.logger.warning(f"Could not parse exchange rate: {from_currency}/{to_currency}: {e}")
-            return None
+        return ExchangeRate(
+            ingested_at=datetime.now(UTC),
+            from_currency=self.config.from_currency,
+            to_currency=to_currency,
+            value=float(data["conversion_rates"][to_currency]),
+            timestamp=datetime.strptime(data["time_last_update_utc"], self.timestamp_format)
+        )
 
 
-async def main():
+async def main() -> None:
     loader: ConfigLoader = ConfigLoader()
     exchange_rate_config: ExchangeRateConfig = loader.get_exchange_rate()
     exchange_rates: Dataset = Dataset(dataset_name=DatasetName.EXCHANGE_RATES, dataset_type=DatasetType.SOURCES)
@@ -80,14 +71,14 @@ async def main():
         dataset=exchange_rates,
         config=exchange_rate_config,
         lakehouse_config=loader.get_lakehouse(),
-        bronze_table=BronzeTable(EXCHANGE_RATES_BRONZE_SCHEMA, AppendByHour()),
+        bronze_table=BronzeTable(EXCHANGE_RATES_BRONZE_SCHEMA, AppendByDay(column="timestamp")),
         http_config=loader.get_http(),
     )
     logging.info(f"Starting source {exchange_rate_ingestor.name}...")
     await exchange_rate_ingestor.run()
 
 
-def run(scheduled_at: str | None = None):  # unused: effective date comes from the source (ADR-019)
+def run(scheduled_at: str | None = None) -> None:
     asyncio.run(main())
 
 

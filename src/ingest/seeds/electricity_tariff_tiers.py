@@ -1,6 +1,7 @@
 import logging
 from dataclasses import dataclass
 from datetime import datetime, UTC
+from typing import Any
 
 from bs4 import Tag
 
@@ -11,7 +12,7 @@ from config.loader import ConfigLoader
 from ingest.evn_base import EVNBaseIngestor
 from ingest.models.electricity_tariff_tier import ElectricityTariffTier
 from ingest.schemas.electricity_tariff_tiers import ELECTRICITY_TARIFF_TIERS_BRONZE_SCHEMA
-from ingest.write_strategy import OverwriteByPartition, BronzeTable
+from ingest.write_strategy import AppendByDay, BronzeTable
 
 
 @dataclass(frozen=True)
@@ -30,8 +31,6 @@ class ElectricityTariffTiersIngestor(EVNBaseIngestor):
 
     def load(self) -> list[ElectricityTariffTier]:
         parser = self.fetch_soup(self.config.tariff_tiers_url)
-        if parser is None:
-            return []
         ingested_at: datetime = datetime.now(UTC)
         valid_from_text: str = parser.select_one(self.config.tariff_tiers_valid_from_text_selector).text.strip()
 
@@ -66,32 +65,27 @@ class ElectricityTariffTiersIngestor(EVNBaseIngestor):
                                                                             timestamp=ingested_at,
                                                                             specification=table_specification,
                                                                             valid_from_text=valid_from_text)
-                if electricity_tariff_tier:
-                    electricity_tariff_tiers.append(electricity_tariff_tier)
+                electricity_tariff_tiers.append(electricity_tariff_tier)
 
         return electricity_tariff_tiers
 
-    def parse(self, **kwargs) -> ElectricityTariffTier | None:
+    def parse(self, **kwargs: Any) -> ElectricityTariffTier:
         row: list[Tag] = kwargs.get('data')
         specification: TableSpecification = kwargs.get('specification')
         valid_from_text: str = kwargs.get('valid_from_text')
         ingested_at: datetime = kwargs.get('timestamp')
-        try:
-            return ElectricityTariffTier(
-                ingested_at=ingested_at,
-                consumer_category=specification.consumer_category,
-                label=row[specification.label_idx].text.strip(),
-                metric=row[specification.metric_idx].text.strip(),
-                value=row[specification.value_idx].text.strip(),
-                tariff_tier=row[specification.tariff_tier_idx].text.strip(),
-                valid_from_text=valid_from_text
-            )
-        except (KeyError, ValueError, TypeError) as e:
-            self.logger.warning(f"Could not parse electricity tariff tier: {row} {e}")
-            return None
+        return ElectricityTariffTier(
+            ingested_at=ingested_at,
+            consumer_category=specification.consumer_category,
+            label=row[specification.label_idx].text.strip(),
+            metric=row[specification.metric_idx].text.strip(),
+            value=row[specification.value_idx].text.strip(),
+            tariff_tier=row[specification.tariff_tier_idx].text.strip(),
+            valid_from_text=valid_from_text
+        )
 
 
-def main():
+def main() -> None:
     loader: ConfigLoader = ConfigLoader()
     evn_config: EVNConfig = loader.get_evn()
     electricity_tariff_tiers: Dataset = Dataset(dataset_name=DatasetName.ELECTRICITY_TARIFF_TIERS,
@@ -103,14 +97,14 @@ def main():
         dataset=electricity_tariff_tiers,
         config=evn_config,
         lakehouse_config=loader.get_lakehouse(),
-        bronze_table=BronzeTable(ELECTRICITY_TARIFF_TIERS_BRONZE_SCHEMA, OverwriteByPartition()),
+        bronze_table=BronzeTable(ELECTRICITY_TARIFF_TIERS_BRONZE_SCHEMA, AppendByDay(column="ingested_at")),
         http_config=loader.get_http(),
     )
     logging.info(f"Starting seed {electricity_tariff_tiers_ingestor.name}...")
     electricity_tariff_tiers_ingestor.run()
 
 
-def run(scheduled_at: str | None = None):  # unused: effective date comes from the source (ADR-019)
+def run(scheduled_at: str | None = None) -> None:
     main()
 
 

@@ -1,6 +1,5 @@
 from abc import ABC
 from dataclasses import dataclass
-from http import HTTPStatus
 
 import certifi
 import requests
@@ -12,19 +11,16 @@ from ingest.base import SyncIngestor
 @dataclass
 class EVNBaseIngestor(SyncIngestor, ABC):
 
-    def fetch_soup(self, url: str) -> BeautifulSoup | None:
+    def fetch_soup(self, url: str) -> BeautifulSoup:
         timeout_seconds: int = self.http_config.timeout_seconds
 
         response = self.fetch_sync(
-            requests.RequestException,
-            requests.get,
-            url,
+            exception_type=requests.RequestException,
+            http_get_function=requests.get,
+            url=url,
             timeout=timeout_seconds,
             verify=certifi.where(),
         )
-        status: int = response.status_code
-        if status != HTTPStatus.OK:
-            self.logger.error(f"EVN tariff fetch returned HTTP status: {status}.")
-            return None
+        response.raise_for_status()
         return BeautifulSoup(response.text, "html.parser")
 

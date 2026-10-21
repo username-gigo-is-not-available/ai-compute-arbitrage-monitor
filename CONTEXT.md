@@ -25,7 +25,7 @@ One complete sweep of the Vast.ai on-demand market in which every listed machine
 _Avoid_: Scrape, pull, fetch, sample
 
 **Offer snapshot**:
-The market as of a scheduled hour, built from one complete census, one row per offer keyed by `(offer_id, snapshot_at)`. `snapshot_at` is the ingest run's scheduled time floored to the hour (ADR-019), not the fetch moment — that is `ingested_at`. `int_compute_offers` maps `snapshot_at` to `valid_from`.
+The market as of a scheduled day, built from one complete census, one row per offer keyed by `(offer_id, snapshot_at)`. `snapshot_at` is the ingest run's scheduled time floored to the UTC day (ADR-019), not the fetch moment — that is `ingested_at`. `int_compute_offers` maps `snapshot_at` to `valid_from`.
 _Avoid_: Record, row, version
 
 **Available / Taken**:

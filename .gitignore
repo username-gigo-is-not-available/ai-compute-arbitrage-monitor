@@ -23,3 +23,6 @@ infra/**/.terraform.tfstate.lock.info
 .cline
 .claude
 .scratch
+
+# Personal study notes
+docs/notes/

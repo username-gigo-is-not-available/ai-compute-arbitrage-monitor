@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from airflow import DAG
+from airflow import DAG  # noqa: F401  Airflow only parses files that mention "DAG"; the factory builds them
 
 from transform_strategy import TransformStrategy
 from marts_dag_factory import MartsDagFactory
@@ -17,7 +17,6 @@ PIPELINE_CONFIGS: list[PipelineConfig] = [
     PipelineConfig(
         dataset_name=DatasetName.COMPUTE_OFFERS,
         dataset_type=DatasetType.SOURCES,
-        # One census a day fits Vast.ai's 20k rows/day quota, which resets at 00:00 UTC (ADR-020).
         schedule="@daily",
         start_date=datetime(2026, 1, 1),
         description="Vast.ai compute offers → Bronze → Silver → Gold",
@@ -59,9 +58,6 @@ PIPELINE_CONFIGS: list[PipelineConfig] = [
     ),
 ]
 
-# ---------------------------------------------------------------------------
-# Register DAGs
-# ---------------------------------------------------------------------------
 
 for pipeline_config in PIPELINE_CONFIGS:
     globals()[pipeline_config.dag_id] = DagFactory(

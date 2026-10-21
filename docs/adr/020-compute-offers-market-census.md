@@ -4,6 +4,11 @@
 
 Accepted; implemented in #39. Supersedes ADR-008. Amends ADR-016 (`compute_offers` is daily)
 and ADR-019 (retry rule for `compute_offers`).
+_Amended 2026-10-11_: ranges are no longer split recursively. One request for the whole market
+gives the sample, the market is cut into `census_parts` ranges at every n-th sampled id, and each
+range is fetched once. A range that still comes back full fails the run ("raise census_parts")
+instead of being split again; with `census_parts` sized to ~100 offers per range that needs
+about 5x the expected offers in one range.
 
 ## Context
 

@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+from functools import partial
 from typing import Callable
 
 from pyspark.sql import DataFrame, SparkSession
@@ -7,10 +8,11 @@ from common.classes import Dataset
 from common.enums import DatasetName, DatasetType
 from config.apis.evn import EVNConfig
 from config.loader import ConfigLoader
-from refine.write_strategy import OverwriteByPartition, SilverTable
+from refine.load_strategy import OverwriteByPartition, SilverTable
 from refine.assets.cleaning import trim_whitespace, replace_substring, empty_to_null
+from refine.assets.filtering import keep_latest_per_group
 from refine.assets.extraction import extract_valid_from_date
-from refine.assets.imputation import forward_fill
+from refine.assets.imputation import fill_from_group
 from refine.init import initialize_spark
 from refine.base import Pipeline
 from refine.schemas.electricity_tariff_tiers import ELECTRICITY_TARIFF_TIERS_SILVER_SCHEMA
@@ -20,12 +22,13 @@ def replace_decimal_separator(df: DataFrame) -> DataFrame:
     return replace_substring(df, column="value", current=",", replacement=".")
 
 
-def forward_fill_label(df: DataFrame) -> DataFrame:
-    return forward_fill(df, order_by_column="consumer_category", fill_column="label")
+# EVN prints label and metric once per table (merged cells), so each tariff version and category has one of each
+def fill_label(df: DataFrame) -> DataFrame:
+    return fill_from_group(df, group_by=["valid_from", "consumer_category"], fill_column="label")
 
 
-def forward_fill_metric(df: DataFrame) -> DataFrame:
-    return forward_fill(df, order_by_column="consumer_category", fill_column="metric")
+def fill_metric(df: DataFrame) -> DataFrame:
+    return fill_from_group(df, group_by=["valid_from", "consumer_category"], fill_column="metric")
 
 def normalize_tariff_tier(df: DataFrame) -> DataFrame:
     """Normalize tariff_tier: collapse Cyrillic lookalikes to Latin, strip internal whitespace.
@@ -49,8 +52,9 @@ class ElectricityTariffTiersPipeline(Pipeline):
         empty_to_null,
         replace_decimal_separator,
         extract_valid_from_date,
-        forward_fill_label,
-        forward_fill_metric,
+        partial(keep_latest_per_group, group_by="valid_from", order_by="ingested_at"),
+        fill_label,
+        fill_metric,
         normalize_tariff_tier
     ])
 

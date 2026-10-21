@@ -16,7 +16,7 @@ from common.classes import Dataset
 from common.enums import DatasetName, DatasetType
 from refine.schemas.compute_offers import COMPUTE_OFFERS_SILVER_SCHEMA
 from refine.sources.compute_offers import ComputeOffersPipeline, deduplicate_compute_offers
-from refine.write_strategy import AppendByHour, SilverTable
+from refine.load_strategy import AppendByDay, SilverTable
 
 
 def _offers(session: SparkSession, rows: str):
@@ -37,11 +37,12 @@ class TestComputeOffersSilver(unittest.TestCase):
         _offers(cls.session, "(1, 'bid', 0.10, '2026-10-01 14:00:00', '2026-10-01 14:00:05')") \
             .createOrReplaceTempView("silver_offers")
 
-    def test_watermark_ignores_rerun_of_already_refined_hour(self):
+    def test_watermark_ignores_rerun_of_already_refined_snapshot(self):
         bronze = _offers(self.session,
                          "(1, 'bid', 0.11, '2026-10-01 14:00:00', '2026-10-01 14:40:00'), "
                          "(1, 'bid', 0.12, '2026-10-01 15:00:00', '2026-10-01 15:00:04')")
-        result = AppendByHour(column="snapshot_at").read_filter(bronze, self.session, "silver_offers")
+        bronze.createOrReplaceTempView("bronze_offers")
+        result = AppendByDay(column="snapshot_at").read(self.session, "bronze_offers", "silver_offers")
         self.assertEqual([r["price"] for r in result.collect()], [0.12])
 
     def test_retry_replaces_whole_earlier_attempt_not_merges(self):
@@ -69,7 +70,7 @@ class TestComputeOffersSilver(unittest.TestCase):
             dataset=Dataset(dataset_name=DatasetName.COMPUTE_OFFERS, dataset_type=DatasetType.SOURCES),
             config=None,
             lakehouse_config=None,
-            silver_table=SilverTable(COMPUTE_OFFERS_SILVER_SCHEMA, AppendByHour(column="snapshot_at")),
+            silver_table=SilverTable(COMPUTE_OFFERS_SILVER_SCHEMA, AppendByDay(column="snapshot_at")),
         )
         row = pipeline.transform(bronze).collect()[0]
         self.assertEqual(row["number_of_offer_gpus"], 2)

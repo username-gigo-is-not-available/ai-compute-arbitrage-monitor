@@ -30,24 +30,23 @@ import asyncio
 import logging
 import sys
 import traceback
-from datetime import datetime, UTC
 from http import HTTPStatus
 from unittest import mock
 
 import aiohttp
+import pytest
 import requests
 
-from common.classes import Dataset
+from common.classes import Dataset, Snapshot
 from common.enums import DatasetName, DatasetType
 from config.apis.evn import EVNConfig
 from config.apis.exchange_rate import ExchangeRateConfig
 from config.apis.vast_ai import VastAIConfig
 from config.http import HttpConfig
 from config.lakehouse import GCPLakehouseConfig
-from ingest.write_strategy import AppendByHour, BronzeTable, OverwriteByPartition
+from ingest.write_strategy import AppendByDay, BronzeTable
 from pyiceberg.schema import Schema
 from pyiceberg.types import NestedField, StringType
-from ingest.sources.compute_offers import CensusIncompleteError
 from ingest.evn_base import EVNBaseIngestor
 from ingest.sources.compute_offers import ComputeOffersIngestor
 from ingest.sources.exchange_rates import ExchangeRateIngestor
@@ -116,11 +115,23 @@ class FakeResponse:
     def close(self) -> None:
         self.closed = True
 
+    def raise_for_status(self) -> None:
+        if self.status != 200:
+            raise aiohttp.ClientResponseError(mock.Mock(real_url="https://console.vast.test"), (), status=self.status)
+
     async def release(self) -> None:
         self.closed = True
 
     async def json(self, **kwargs) -> dict:
         return self._json_data
+
+
+class FakeRequestsResponse(FakeResponse):
+    """requests.Response raises its own HTTPError."""
+
+    def raise_for_status(self) -> None:
+        if self.status != 200:
+            raise requests.HTTPError(f"{self.status} Server Error")
 
 
 class _Capture(logging.Handler):
@@ -170,7 +181,7 @@ def _evn(retry_count: int) -> _EVNTestIngestor:
         dataset=Dataset(dataset_name=DatasetName.ELECTRICITY_TARIFF_TIERS, dataset_type=DatasetType.SEEDS),
         config=EVNConfig(enabled=True, tariff_tiers_url="https://evn.test/", tariff_system_url="https://evn.test/"),
         lakehouse_config=_lakehouse(),
-        bronze_table=BronzeTable(_DUMMY_BRONZE_SCHEMA, OverwriteByPartition()),
+        bronze_table=BronzeTable(_DUMMY_BRONZE_SCHEMA, AppendByDay(column="ingested_at")),
         http_config=_http(retry_count=retry_count),
     )
 
@@ -178,7 +189,7 @@ def _evn(retry_count: int) -> _EVNTestIngestor:
 def test_evn_transient_500_then_200_parses_soup() -> None:
     ingestor = _evn(retry_count=3)
     handler = _capture_logs(ingestor)
-    with mock.patch.object(requests, "get", side_effect=[FakeResponse(500), FakeResponse(500), FakeResponse(200, text=HTML)]) as get_mock, \
+    with mock.patch.object(requests, "get", side_effect=[FakeRequestsResponse(500), FakeRequestsResponse(500), FakeRequestsResponse(200, text=HTML)]) as get_mock, \
             mock.patch("time.sleep") as sleep_mock:
         soup = ingestor.fetch_soup("https://evn.test/")
 
@@ -190,19 +201,14 @@ def test_evn_transient_500_then_200_parses_soup() -> None:
     assert len(_warnings(handler)) == 2
 
 
-def test_evn_permanent_500_returns_none_and_logs_error_once() -> None:
+def test_evn_permanent_500_fails_the_run() -> None:
     ingestor = _evn(retry_count=3)
-    handler = _capture_logs(ingestor)
-    with mock.patch.object(requests, "get", side_effect=[FakeResponse(500), FakeResponse(500), FakeResponse(500)]) as get_mock, \
-            mock.patch("time.sleep") as sleep_mock:
-        result = ingestor.fetch_soup("https://evn.test/")
+    with mock.patch.object(requests, "get", side_effect=[FakeRequestsResponse(500), FakeRequestsResponse(500), FakeRequestsResponse(500)]) as get_mock, \
+            mock.patch("time.sleep") as sleep_mock, pytest.raises(requests.HTTPError):
+        ingestor.fetch_soup("https://evn.test/")
 
-    assert result is None
     assert get_mock.call_count == 3
     assert _sleep_calls(sleep_mock) == [mock.call(60), mock.call(60)]
-    errors = _errors(handler)
-    assert len(errors) == 1
-    assert errors[0].getMessage() == "EVN tariff fetch returned HTTP status: 500."
 
 
 def test_evn_transport_exception_then_200_parses_soup() -> None:
@@ -211,7 +217,7 @@ def test_evn_transport_exception_then_200_parses_soup() -> None:
     with mock.patch.object(
         requests,
         "get",
-        side_effect=[requests.exceptions.ConnectionError("connection refused"), FakeResponse(200, text=HTML)],
+        side_effect=[requests.exceptions.ConnectionError("connection refused"), FakeRequestsResponse(200, text=HTML)],
     ) as get_mock, mock.patch("time.sleep") as sleep_mock:
         soup = ingestor.fetch_soup("https://evn.test/")
 
@@ -243,17 +249,36 @@ def test_evn_permanent_transport_exception_reraises() -> None:
     assert _errors(handler) == []
 
 
-def test_evn_retry_count_1_single_attempt_no_sleep() -> None:
-    ingestor = _evn(retry_count=1)
-    handler = _capture_logs(ingestor)
-    with mock.patch.object(requests, "get", side_effect=[FakeResponse(500)]) as get_mock, \
-            mock.patch("time.sleep") as sleep_mock:
-        result = ingestor.fetch_soup("https://evn.test/")
+def test_evn_long_retry_after_fails_without_retrying() -> None:
+    # A Retry-After longer than the whole retry budget cannot be waited out, so the sync path stops too.
+    ingestor = _evn(retry_count=3)
+    with mock.patch.object(requests, "get", side_effect=[FakeRequestsResponse(429, headers={"Retry-After": "3600"})]) as get_mock,             mock.patch("time.sleep") as sleep_mock, pytest.raises(requests.HTTPError):
+        ingestor.fetch_soup("https://evn.test/")
 
-    assert result is None
     assert get_mock.call_count == 1
     assert _sleep_calls(sleep_mock) == []
-    assert len(_errors(handler)) == 1
+
+
+def test_evn_short_retry_after_is_waited_out() -> None:
+    # The server asks for longer than retry_delay_seconds but within the budget: wait what it asks, then retry.
+    ingestor = _evn(retry_count=3)
+    side_effects = [FakeRequestsResponse(429, headers={"Retry-After": "90"}), FakeRequestsResponse(200, text=HTML)]
+    with mock.patch.object(requests, "get", side_effect=side_effects) as get_mock,             mock.patch("time.sleep") as sleep_mock:
+        soup = ingestor.fetch_soup("https://evn.test/")
+
+    assert soup is not None
+    assert get_mock.call_count == 2
+    assert _sleep_calls(sleep_mock) == [mock.call(90)]
+
+
+def test_evn_retry_count_1_single_attempt_no_sleep() -> None:
+    ingestor = _evn(retry_count=1)
+    with mock.patch.object(requests, "get", side_effect=[FakeRequestsResponse(500)]) as get_mock, \
+            mock.patch("time.sleep") as sleep_mock, pytest.raises(requests.HTTPError):
+        ingestor.fetch_soup("https://evn.test/")
+
+    assert get_mock.call_count == 1
+    assert _sleep_calls(sleep_mock) == []
 
 
 # ---------------------------------------------------------------------------
@@ -271,7 +296,7 @@ def _exchange(retry_count: int) -> ExchangeRateIngestor:
             api_key="test-key",
         ),
         lakehouse_config=_lakehouse(),
-        bronze_table=BronzeTable(_DUMMY_BRONZE_SCHEMA, AppendByHour()),
+        bronze_table=BronzeTable(_DUMMY_BRONZE_SCHEMA, AppendByDay(column="ingested_at")),
         http_config=_http(retry_count=retry_count),
     )
 
@@ -292,20 +317,15 @@ def test_exchange_transient_500_then_200_parses() -> None:
     assert len(_warnings(handler)) == 2
 
 
-def test_exchange_permanent_500_returns_empty_and_logs_error_once() -> None:
+def test_exchange_permanent_500_fails_the_run() -> None:
     ingestor = _exchange(retry_count=3)
-    handler = _capture_logs(ingestor)
     side_effects = [FakeResponse(500), FakeResponse(500), FakeResponse(500)]
     with mock.patch.object(aiohttp.ClientSession, "get", new=mock.AsyncMock(side_effect=side_effects)) as get_mock, \
-            mock.patch("asyncio.sleep", new=mock.AsyncMock()) as sleep_mock:
-        result = asyncio.run(ingestor.load())
+            mock.patch("asyncio.sleep", new=mock.AsyncMock()) as sleep_mock, pytest.raises(aiohttp.ClientResponseError):
+        asyncio.run(ingestor.load())
 
-    assert result == []
     assert get_mock.await_count == 3
     assert _sleep_calls(sleep_mock) == [mock.call(60), mock.call(60)]
-    errors = _errors(handler)
-    assert len(errors) == 1
-    assert errors[0].getMessage() == "Exchange Rate API poll returned HTTP status: 500."
 
 
 def test_exchange_timeout_transport_error_retried_then_success() -> None:
@@ -324,15 +344,20 @@ def test_exchange_timeout_transport_error_retried_then_success() -> None:
 
 def test_exchange_retry_count_1_single_attempt_no_sleep() -> None:
     ingestor = _exchange(retry_count=1)
-    handler = _capture_logs(ingestor)
     with mock.patch.object(aiohttp.ClientSession, "get", new=mock.AsyncMock(side_effect=[FakeResponse(500)])) as get_mock, \
-            mock.patch("asyncio.sleep", new=mock.AsyncMock()) as sleep_mock:
-        result = asyncio.run(ingestor.load())
+            mock.patch("asyncio.sleep", new=mock.AsyncMock()) as sleep_mock, pytest.raises(aiohttp.ClientResponseError):
+        asyncio.run(ingestor.load())
 
-    assert result == []
     assert get_mock.await_count == 1
     assert _sleep_calls(sleep_mock) == []
-    assert len(_errors(handler)) == 1
+
+
+def test_empty_fetch_fails_the_run_instead_of_storing_nothing() -> None:
+    ingestor = _evn(retry_count=1)
+    with mock.patch.object(ingestor, "store") as store_mock, pytest.raises(RuntimeError, match="fetched no records"):
+        ingestor.handle_result([])
+
+    store_mock.assert_not_called()
 
 
 # ---------------------------------------------------------------------------
@@ -345,9 +370,9 @@ def _compute(retry_count: int) -> ComputeOffersIngestor:
         config=VastAIConfig(enabled=True, base_url="https://console.vast.test/api/v0", limit=512, split_at=500,
                             census_parts=4, request_interval_seconds=1),
         lakehouse_config=_lakehouse(),
-        bronze_table=BronzeTable(_DUMMY_BRONZE_SCHEMA, AppendByHour()),
+        bronze_table=BronzeTable(_DUMMY_BRONZE_SCHEMA, AppendByDay(column="ingested_at")),
         http_config=_http(retry_count=retry_count),
-        snapshot_at=datetime.now(UTC),
+        snapshot=Snapshot.from_scheduled_at(None),
     )
 
 
@@ -365,37 +390,31 @@ def test_compute_transient_500_then_200_completes_census() -> None:
     assert len(_warnings(handler)) == 2
 
 
-def test_compute_permanent_500_fails_census_and_logs_error_once() -> None:
+def test_compute_permanent_500_fails_census() -> None:
     ingestor = _compute(retry_count=3)
-    handler = _capture_logs(ingestor)
     side_effects = [FakeResponse(500), FakeResponse(500), FakeResponse(500)]
     with mock.patch.object(aiohttp.ClientSession, "get", new=mock.AsyncMock(side_effect=side_effects)) as get_mock,             mock.patch("asyncio.sleep", new=mock.AsyncMock()) as sleep_mock:
         try:
             asyncio.run(ingestor.load())
             raise AssertionError("an incomplete census must fail, not return a partial market (ADR-020)")
-        except CensusIncompleteError:
-            pass
+        except aiohttp.ClientResponseError as e:
+            assert e.status == 500
 
     assert get_mock.await_count == 3
     assert _sleep_calls(sleep_mock) == [mock.call(60), mock.call(60)]
-    errors = _errors(handler)
-    assert len(errors) == 1
-    assert errors[0].getMessage() == "Vast.AI API returned HTTP 500"
 
 
 def test_compute_retry_count_1_single_attempt_no_sleep() -> None:
     ingestor = _compute(retry_count=1)
-    handler = _capture_logs(ingestor)
     with mock.patch.object(aiohttp.ClientSession, "get", new=mock.AsyncMock(side_effect=[FakeResponse(500)])) as get_mock,             mock.patch("asyncio.sleep", new=mock.AsyncMock()) as sleep_mock:
         try:
             asyncio.run(ingestor.load())
             raise AssertionError("an incomplete census must fail")
-        except CensusIncompleteError:
-            pass
+        except aiohttp.ClientResponseError as e:
+            assert e.status == 500
 
     assert get_mock.await_count == 1
     assert _sleep_calls(sleep_mock) == []
-    assert len(_errors(handler)) == 1
 
 
 def test_compute_quota_exhausted_fails_without_retrying() -> None:
@@ -406,11 +425,32 @@ def test_compute_quota_exhausted_fails_without_retrying() -> None:
         try:
             asyncio.run(ingestor.load())
             raise AssertionError("an incomplete census must fail")
-        except CensusIncompleteError:
-            pass
+        except aiohttp.ClientResponseError as e:
+            assert e.status == 429
 
     assert get_mock.await_count == 1
     assert _sleep_calls(sleep_mock) == []
+
+
+def test_compute_short_retry_after_is_waited_out() -> None:
+    ingestor = _compute(retry_count=3)
+    side_effects = [FakeResponse(429, headers={"Retry-After": "90"}), FakeResponse(200, json_data=OFFER_JSON)]
+    with mock.patch.object(aiohttp.ClientSession, "get", new=mock.AsyncMock(side_effect=side_effects)) as get_mock,             mock.patch("asyncio.sleep", new=mock.AsyncMock()) as sleep_mock:
+        result = asyncio.run(ingestor.load())
+
+    assert len(result) == 1
+    assert get_mock.await_count == 2
+    assert _sleep_calls(sleep_mock) == [mock.call(90), mock.call(1)], "the server's wait, then the request interval"
+
+
+def test_retry_after_shorter_than_the_delay_waits_the_delay() -> None:
+    assert _http().retry_wait_seconds({"Retry-After": "5"}) == HTTP_RETRY_DELAY_SECONDS
+
+
+def test_retry_after_missing_or_not_seconds_waits_the_delay() -> None:
+    for headers in ({}, {"Retry-After": "Wed, 21 Oct 2026 07:28:00 GMT"}):
+        assert _http().retry_wait_seconds(headers) == HTTP_RETRY_DELAY_SECONDS
+        assert not _http().retry_after_exceeds_budget(headers)
 
 
 # ---------------------------------------------------------------------------
@@ -419,18 +459,24 @@ def test_compute_quota_exhausted_fails_without_retrying() -> None:
 
 _TESTS = [
     test_evn_transient_500_then_200_parses_soup,
-    test_evn_permanent_500_returns_none_and_logs_error_once,
+    test_evn_permanent_500_fails_the_run,
     test_evn_transport_exception_then_200_parses_soup,
     test_evn_permanent_transport_exception_reraises,
+    test_evn_long_retry_after_fails_without_retrying,
+    test_evn_short_retry_after_is_waited_out,
     test_evn_retry_count_1_single_attempt_no_sleep,
     test_exchange_transient_500_then_200_parses,
-    test_exchange_permanent_500_returns_empty_and_logs_error_once,
+    test_exchange_permanent_500_fails_the_run,
     test_exchange_timeout_transport_error_retried_then_success,
     test_exchange_retry_count_1_single_attempt_no_sleep,
+    test_empty_fetch_fails_the_run_instead_of_storing_nothing,
     test_compute_transient_500_then_200_completes_census,
-    test_compute_permanent_500_fails_census_and_logs_error_once,
+    test_compute_permanent_500_fails_census,
     test_compute_retry_count_1_single_attempt_no_sleep,
     test_compute_quota_exhausted_fails_without_retrying,
+    test_compute_short_retry_after_is_waited_out,
+    test_retry_after_shorter_than_the_delay_waits_the_delay,
+    test_retry_after_missing_or_not_seconds_waits_the_delay,
 ]
 
 

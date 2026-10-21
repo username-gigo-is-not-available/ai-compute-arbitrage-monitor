@@ -3,7 +3,6 @@ from dataclasses import dataclass, field
 from typing import Callable
 
 from pyspark.sql import DataFrame, SparkSession
-from pyspark.sql.types import StructType
 
 from common.classes import Dataset
 from common.enums import DataStageType
@@ -11,8 +10,7 @@ from common.types import DatasetConfig
 from config.lakehouse import GCPLakehouseConfig
 from refine.assets.casting import cast_to_schema
 from refine.assets.extraction import add_processed_at_column
-from refine.schemas.base import SILVER_META_COLUMNS_SCHEMA
-from refine.write_strategy import SilverTable
+from refine.load_strategy import SilverTable
 
 
 @dataclass
@@ -29,17 +27,22 @@ class Pipeline:
         self.name = self.__class__.__name__
         self.logger = logging.getLogger(self.name)
 
-    def ensure_silver_namespace(self) -> None:
-        # Spark creates the Silver table on first write; only the namespace must exist beforehand.
-        catalog = self.lakehouse_config.open_catalog()
-        self.lakehouse_config.ensure_namespace(catalog, DataStageType.SILVER, self.dataset)
+    def ensure_silver_table(self) -> None:
+        self.lakehouse_config.ensure_table(
+            catalog=self.lakehouse_config.open_catalog(),
+            stage=DataStageType.SILVER,
+            dataset=self.dataset,
+            schema=self.silver_table.iceberg_schema(),
+            partition_spec=self.silver_table.partition_spec(),
+        )
 
     def read(self) -> DataFrame:
         bronze = self.lakehouse_config.spark_table(DataStageType.BRONZE, self.dataset)
-        self.logger.info(f"Reading from {bronze}")
-        df = self.session.table(bronze)
         silver = self.lakehouse_config.spark_table(DataStageType.SILVER, self.dataset)
-        return self.silver_table.read_filter(df, self.session, silver)
+        self.logger.info(f"Reading from {bronze}")
+        df = self.silver_table.read(self.session, bronze, silver)
+        self.logger.info("Read complete")
+        return df
 
     def save(self, df: DataFrame) -> DataFrame:
         silver = self.lakehouse_config.spark_table(DataStageType.SILVER, self.dataset)
@@ -55,7 +58,7 @@ class Pipeline:
             df = df.transform(step)
         self.logger.info("Applying cast_to_schema")
         df = df.transform(add_processed_at_column)
-        return cast_to_schema(df, StructType(self.silver_table.schema.fields + SILVER_META_COLUMNS_SCHEMA.fields))
+        return cast_to_schema(df, self.silver_table.table_schema())
 
     def generate(self, df: DataFrame) -> DataFrame | None:
         return None
@@ -63,7 +66,7 @@ class Pipeline:
     def run(self):
         name = self.__class__.__name__
         self.logger.info(f"{name} starting")
-        self.ensure_silver_namespace()
+        self.ensure_silver_table()
         df = self.read()
         generated_df = self.generate(df)
         if generated_df is not None:

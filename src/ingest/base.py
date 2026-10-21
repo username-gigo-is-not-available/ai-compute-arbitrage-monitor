@@ -2,6 +2,7 @@ import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from http import HTTPStatus
+from collections.abc import Callable
 from typing import Any, cast
 
 import pyarrow as pa
@@ -11,8 +12,8 @@ from tenacity import (
     retry,
     retry_if_exception_type,
     retry_if_result,
+    RetryCallState,
     stop_after_attempt,
-    wait_fixed,
 )
 
 from common.classes import Dataset
@@ -23,6 +24,8 @@ from config.lakehouse import GCPLakehouseConfig
 from ingest.models.types import IngestorRecord
 from ingest.write_strategy import BronzeTable
 
+ExceptionTypes = type[BaseException] | tuple[type[BaseException], ...]
+
 
 @dataclass
 class Ingestor(ABC):
@@ -30,37 +33,64 @@ class Ingestor(ABC):
     config: DatasetConfig
     lakehouse_config: GCPLakehouseConfig
     bronze_table: BronzeTable
+    http_config: HttpConfig
     name: str = field(init=False)
     logger: logging.Logger = field(init=False)
-    _catalog: Catalog | None = field(init=False, default=None)
+    catalog: Catalog | None = field(init=False, default=None)
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         self.name = self.__class__.__name__
         self.logger = logging.getLogger(self.name)
 
     @abstractmethod
-    def parse(self, **kwargs) -> IngestorRecord | None:
+    def parse(self, **kwargs: Any) -> IngestorRecord | None:
         raise NotImplementedError
 
+    @staticmethod
+    @abstractmethod
+    def status(resp: Any) -> int:
+        raise NotImplementedError
+
+    def should_retry(self, resp: Any) -> bool:
+        return self.status(resp) != HTTPStatus.OK and not self.http_config.retry_after_exceeds_budget(resp.headers)
+
+    def wait_before_retry(self, retry_state: RetryCallState) -> int:
+        if retry_state.outcome.failed:
+            return self.http_config.retry_delay_seconds
+        return self.http_config.retry_wait_seconds(retry_state.outcome.result().headers)
+
+    @staticmethod
+    def last_outcome(retry_state: RetryCallState) -> Any:
+        return retry_state.outcome.result()
+
+    def retry_policy(self, exception_type: ExceptionTypes) -> Any:
+        return retry(
+            stop=stop_after_attempt(self.http_config.retry_count),
+            wait=self.wait_before_retry,
+            retry=retry_if_exception_type(exception_type) | retry_if_result(self.should_retry),
+            retry_error_callback=self.last_outcome,
+            before_sleep=before_sleep_log(cast(Any, self.logger), logging.WARNING),
+        )
+
     def ensure_bronze_table(self) -> None:
-        self._catalog = self.lakehouse_config.open_catalog()
+        self.catalog = self.lakehouse_config.open_catalog()
         self.lakehouse_config.ensure_table(
-            self._catalog,
-            DataStageType.BRONZE,
-            self.dataset,
+            catalog=self.catalog,
+            stage=DataStageType.BRONZE,
+            dataset=self.dataset,
             schema=self.bronze_table.schema,
             partition_spec=self.bronze_table.partition_spec(),
         )
 
-    def _handle_result(self, data: list[IngestorRecord]) -> None:
-        if data:
-            self.logger.info(f"{self.name} fetched {len(data)} records")
-            self.store(data)
-        else:
-            self.logger.warning(f"{self.name} returned no data, skipping store.")
+    def handle_result(self, data: list[IngestorRecord]) -> None:
+        # Every source always has data; an empty fetch means the page or API changed, so the run must fail
+        if not data:
+            raise RuntimeError(f"{self.name} fetched no records")
+        self.logger.info(f"{self.name} fetched {len(data)} records")
+        self.store(data)
 
     def store(self, data: list[IngestorRecord]) -> None:
-        catalog = self._catalog or self.lakehouse_config.open_catalog()
+        catalog = self.catalog or self.lakehouse_config.open_catalog()
         arrow_table = pa.Table.from_pylist([r.to_row() for r in data])
         table = catalog.load_table(self.lakehouse_config.table_id(DataStageType.BRONZE, self.dataset))
         self.bronze_table.write(table, arrow_table)
@@ -69,70 +99,59 @@ class Ingestor(ABC):
 
 @dataclass
 class SyncIngestor(Ingestor):
-    http_config: HttpConfig
 
     @abstractmethod
     def load(self) -> list[IngestorRecord]:
         raise NotImplementedError
 
-    def retry_sync(self, exc_type):
-        return retry(
-            stop=stop_after_attempt(self.http_config.retry_count),
-            wait=wait_fixed(self.http_config.retry_delay_seconds),
-            retry=retry_if_exception_type(exc_type)
-            | retry_if_result(lambda resp: resp.status_code != HTTPStatus.OK),
-            retry_error_callback=lambda retry_state: retry_state.outcome.result(),
-            before_sleep=before_sleep_log(cast(Any, self.logger), logging.WARNING),
-        )
+    @staticmethod
+    def status(resp: Any) -> int:
+        return resp.status_code
 
-    def fetch_sync(self, exc_type, http_call_fn, *args, **kwargs):
-        @self.retry_sync(exc_type)
-        def fetch():
-            resp = http_call_fn(*args, **kwargs)
-            if resp.status_code != HTTPStatus.OK:
+    def fetch_sync(self, exception_type: ExceptionTypes,
+                   http_get_function: Callable,
+                   *args: Any,
+                   **kwargs: Any) -> Any:
+        @self.retry_policy(exception_type)
+        def fetch() -> Any:
+            resp = http_get_function(*args, **kwargs)
+            if self.status(resp) != HTTPStatus.OK:
                 resp.close()
             return resp
+
         return fetch()
 
     def run(self) -> None:
         self.logger.info(f"Starting load for {self.name}...")
         self.ensure_bronze_table()
-        self._handle_result(self.load())
+        self.handle_result(self.load())
 
 
 @dataclass
 class AsyncIngestor(Ingestor):
-    http_config: HttpConfig
 
     @abstractmethod
     async def load(self) -> list[IngestorRecord]:
         raise NotImplementedError
 
-    def outlasts_retries(self, resp) -> bool:
-        # A Retry-After longer than every retry wait combined (e.g. a daily quota) cannot be outwaited.
-        retry_after = resp.headers.get("Retry-After", "")
-        return retry_after.isdigit() and int(retry_after) > self.http_config.retry_budget_seconds
+    @staticmethod
+    def status(resp: Any) -> int:
+        return resp.status
 
-    def retry_async(self, exc_type):
-        return retry(
-            stop=stop_after_attempt(self.http_config.retry_count),
-            wait=wait_fixed(self.http_config.retry_delay_seconds),
-            retry=retry_if_exception_type(exc_type)
-            | retry_if_result(lambda resp: resp.status != HTTPStatus.OK and not self.outlasts_retries(resp)),
-            retry_error_callback=lambda retry_state: retry_state.outcome.result(),
-            before_sleep=before_sleep_log(cast(Any, self.logger), logging.WARNING),
-        )
-
-    async def fetch_async(self, exc_type, http_call_fn, *args, **kwargs):
-        @self.retry_async(exc_type)
-        async def fetch():
-            resp = await http_call_fn(*args, **kwargs)
-            if resp.status != HTTPStatus.OK:
+    async def fetch_async(self, exception_type: ExceptionTypes,
+                          http_get_function: Callable,
+                          *args: Any,
+                          **kwargs: Any) -> Any:
+        @self.retry_policy(exception_type)
+        async def fetch() -> Any:
+            resp = await http_get_function(*args, **kwargs)
+            if self.status(resp) != HTTPStatus.OK:
                 resp.close()
             return resp
+
         return await fetch()
 
     async def run(self) -> None:
         self.logger.info(f"Starting load for {self.name}...")
         self.ensure_bronze_table()
-        self._handle_result(data=await self.load())
+        self.handle_result(await self.load())
