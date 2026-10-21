@@ -1,7 +1,6 @@
 import logging
 from dataclasses import dataclass
 from datetime import datetime, UTC
-from typing import Any
 
 from bs4 import Tag
 
@@ -29,19 +28,16 @@ class ElectricityTariffBlocksIngestor(EVNBaseIngestor):
         rows: list[Tag] = paragraph_element.find_all(self.config.tariff_blocks_strong_selector)[:self.config.tariff_blocks_limit]
         for row in rows:
             electricity_tariff_block: ElectricityTariffBlock = self.parse(
-                timestamp=ingested_at,
-                data=row,
-                valid_from_text=valid_from_text
+                row=row,
+                valid_from_text=valid_from_text,
+                ingested_at=ingested_at,
             )
             electricity_tariff_blocks.append(electricity_tariff_block)
 
         return electricity_tariff_blocks
 
 
-    def parse(self, **kwargs: Any) -> ElectricityTariffBlock:
-        row: Tag = kwargs.get('data')
-        valid_from_text: str = kwargs.get('valid_from_text')
-        ingested_at: datetime = kwargs.get('timestamp')
+    def parse(self, row: Tag, valid_from_text: str, ingested_at: datetime) -> ElectricityTariffBlock:
         return ElectricityTariffBlock(
             ingested_at=ingested_at,
             consumer_category=ConsumerCategoryType.HOUSEHOLD,

@@ -1,7 +1,6 @@
 import logging
 from dataclasses import dataclass
 from datetime import datetime, UTC
-from typing import Any
 
 from common.classes import Dataset
 from common.enums import DatasetType, DatasetName
@@ -23,16 +22,13 @@ class ElectricityTariffWindowScheduleIngestor(EVNBaseIngestor):
         schedule_text: str = parser.select_one(self.config.schedule_text_selector).text.strip()
 
         electricity_tariff_window_schedule: ElectricityTariffWindowSchedule = self.parse(
-            timestamp=ingested_at,
             schedule_text=schedule_text,
             valid_from_text=valid_from_text,
+            ingested_at=ingested_at,
         )
         return [electricity_tariff_window_schedule]
 
-    def parse(self, **kwargs: Any) -> ElectricityTariffWindowSchedule:
-        ingested_at: datetime = kwargs.get("timestamp")
-        schedule_text: str = kwargs.get("schedule_text")
-        valid_from_text: str = kwargs.get("valid_from_text")
+    def parse(self, schedule_text: str, valid_from_text: str, ingested_at: datetime) -> ElectricityTariffWindowSchedule:
         return ElectricityTariffWindowSchedule(
             ingested_at=ingested_at,
             schedule_text=schedule_text,

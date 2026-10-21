@@ -1,7 +1,6 @@
 import logging
 from dataclasses import dataclass
 from datetime import datetime, UTC
-from typing import Any
 
 from bs4 import Tag
 
@@ -61,19 +60,16 @@ class ElectricityTariffTiersIngestor(EVNBaseIngestor):
             rows = [cells[i:i + table_specification.row_width] for i in
                     range(table_specification.row_width, len(cells), table_specification.row_width)]
             for row in rows:
-                electricity_tariff_tier: ElectricityTariffTier = self.parse(data=row,
-                                                                            timestamp=ingested_at,
+                electricity_tariff_tier: ElectricityTariffTier = self.parse(row=row,
                                                                             specification=table_specification,
-                                                                            valid_from_text=valid_from_text)
+                                                                            valid_from_text=valid_from_text,
+                                                                            ingested_at=ingested_at)
                 electricity_tariff_tiers.append(electricity_tariff_tier)
 
         return electricity_tariff_tiers
 
-    def parse(self, **kwargs: Any) -> ElectricityTariffTier:
-        row: list[Tag] = kwargs.get('data')
-        specification: TableSpecification = kwargs.get('specification')
-        valid_from_text: str = kwargs.get('valid_from_text')
-        ingested_at: datetime = kwargs.get('timestamp')
+    def parse(self, row: list[Tag], specification: TableSpecification, valid_from_text: str,
+              ingested_at: datetime) -> ElectricityTariffTier:
         return ElectricityTariffTier(
             ingested_at=ingested_at,
             consumer_category=specification.consumer_category,
