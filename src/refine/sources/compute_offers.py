@@ -1,12 +1,14 @@
 from dataclasses import dataclass, field
 from typing import Callable
+
+from pyiceberg.transforms import DayTransform
 from pyspark.sql import DataFrame, SparkSession
 
 from common.classes import Dataset
 from common.enums import DatasetType, DatasetName
 from config.loader import ConfigLoader
 from config.apis.vast_ai import VastAIConfig
-from refine.load_strategy import AppendByDay, SilverTable
+from refine.load_strategy import OverwriteByPartition, SilverTable
 from refine.assets.filtering import deduplicate_keep_latest, keep_latest_per_group
 from refine.init import initialize_spark
 from refine.base import Pipeline
@@ -47,7 +49,7 @@ def run():
         dataset=compute_offers,
         config=vast_ai_config,
         lakehouse_config=loader.get_lakehouse(),
-        silver_table=SilverTable(COMPUTE_OFFERS_SILVER_SCHEMA, AppendByDay(column="snapshot_at")),
+        silver_table=SilverTable(COMPUTE_OFFERS_SILVER_SCHEMA, OverwriteByPartition(column="snapshot_at", transform=DayTransform())),
     )
     compute_offers_pipeline.run()
 

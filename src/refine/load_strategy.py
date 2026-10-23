@@ -1,10 +1,9 @@
-from abc import ABC, abstractmethod
 from dataclasses import dataclass
 
 from pyiceberg.catalog import Catalog
 from pyiceberg.partitioning import PartitionField, PartitionSpec
 from pyiceberg.schema import Schema, assign_fresh_schema_ids
-from pyiceberg.transforms import DayTransform, IdentityTransform
+from pyiceberg.transforms import DayTransform, IdentityTransform, Transform
 from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql.functions import col, max as spark_max
 from pyspark.sql.pandas.types import to_arrow_schema
@@ -13,55 +12,24 @@ from pyspark.sql.types import StructField, StructType
 from refine.schemas.base import SILVER_META_COLUMNS_SCHEMA
 
 
-class LoadStrategy(ABC):
-    def __init__(self, column: str) -> None:
+# Every Silver table reads the Bronze fetches it has not seen yet and overwrites the partitions they touch, so
+# Silver is what a rebuild from Bronze would give. Assumes each fetch delivers whole partitions.
+class OverwriteByPartition:
+
+    def __init__(self, column: str = "valid_from", transform: Transform = IdentityTransform()) -> None:
         self.column = column
-
-    @abstractmethod
-    def read(self, session: SparkSession, bronze_table: str, silver_table: str) -> DataFrame:
-        raise NotImplementedError
-
-    @abstractmethod
-    def partition_spec(self, schema: Schema) -> PartitionSpec:
-        raise NotImplementedError
-
-    @abstractmethod
-    def write(self, df: DataFrame, table_name: str) -> None:
-        raise NotImplementedError
-
-
-class AppendByDay(LoadStrategy):
-
-    def __init__(self, column: str) -> None:
-        super().__init__(column)
+        self.transform = transform
 
     def read(self, session: SparkSession, bronze_table: str, silver_table: str) -> DataFrame:
         bronze = session.table(bronze_table)
-        watermark = session.table(silver_table).agg(spark_max(self.column)).collect()[0][0]
-        return bronze if watermark is None else bronze.filter(col(self.column) > watermark)
+        watermark = session.table(silver_table).agg(spark_max("ingested_at")).collect()[0][0]
+        return bronze if watermark is None else bronze.filter(col("ingested_at") > watermark)
 
     def partition_spec(self, schema: Schema) -> PartitionSpec:
         field_id = schema.find_field(self.column).field_id
+        name = f"{self.column}_day" if isinstance(self.transform, DayTransform) else self.column
         return PartitionSpec(
-            PartitionField(source_id=field_id, field_id=1000, transform=DayTransform(), name=f"{self.column}_day") # noqa
-        )
-
-    def write(self, df: DataFrame, table_name: str) -> None:
-        df.writeTo(table_name).append()
-
-
-class OverwriteByPartition(LoadStrategy):
-
-    def __init__(self, column: str = "valid_from") -> None:
-        super().__init__(column)
-
-    def read(self, session: SparkSession, bronze_table: str, silver_table: str) -> DataFrame:
-        return session.table(bronze_table)
-
-    def partition_spec(self, schema: Schema) -> PartitionSpec:
-        field_id = schema.find_field(self.column).field_id
-        return PartitionSpec(
-            PartitionField(source_id=field_id, field_id=1000, transform=IdentityTransform(), name=self.column) # noqa
+            PartitionField(source_id=field_id, field_id=1000, transform=self.transform, name=name) # noqa
         )
 
     def write(self, df: DataFrame, table_name: str) -> None:
@@ -71,7 +39,7 @@ class OverwriteByPartition(LoadStrategy):
 @dataclass(frozen=True)
 class SilverTable:
     schema: StructType
-    load_strategy: LoadStrategy
+    load_strategy: OverwriteByPartition
 
     def table_schema(self) -> StructType:
         return StructType(self.schema.fields + SILVER_META_COLUMNS_SCHEMA.fields)
