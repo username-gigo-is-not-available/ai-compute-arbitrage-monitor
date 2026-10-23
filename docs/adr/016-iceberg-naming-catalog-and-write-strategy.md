@@ -2,7 +2,9 @@
 
 ## Status
 
-Accepted. Amended — read these before relying on the Decision below:
+Accepted. _Silver write strategy superseded by ADR-023_: every Silver table reads the fetches it
+has not seen (`ingested_at` watermark) and overwrites the partitions they touch. Amended — read
+these before relying on the Decision below:
 
 - **`compute_offers` is `@daily`**, one complete census per day at 00:00 UTC, not `@hourly`
   (ADR-020); read "24 distinct snapshots/day" and "each hourly poll" below as one per day.

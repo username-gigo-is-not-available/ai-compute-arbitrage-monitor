@@ -60,12 +60,13 @@ Bronze only grows; nothing in it is changed or deleted. It is the raw history.
 
 **Goal:** the same rows, cleaned and reliable.
 
-1. **Read only what is new.** Bronze rows with a `snapshot_at` newer than anything already in Silver, so
-   running it twice does not duplicate data.
+1. **Read only what is new.** Bronze rows fetched (`ingested_at`) after anything already in Silver, so
+   running it twice does not duplicate data (ADR-023).
 2. **Clean the text:** remove non-ASCII characters, trim spaces, turn empty strings into nulls, shorten CPU
    names (`"AMD EPYC 7B13 64-Core Processor"` → `"AMD EPYC 7B13"`).
 3. **Deduplicate.** If a download was retried, keep only the latest attempt for that snapshot.
-4. **Fix the types** to the Silver schema and append to Silver.
+4. **Fix the types** to the Silver schema and overwrite that day in Silver, so a re-run of a day replaces
+   it.
 
 **Our machine in Silver:** the same 3 rows, clean. Silver is still one row per offer: the trustworthy copy
 of what Vast.ai said.

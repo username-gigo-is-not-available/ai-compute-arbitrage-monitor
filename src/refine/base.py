@@ -68,6 +68,9 @@ class Pipeline:
         self.logger.info(f"{name} starting")
         self.ensure_silver_table()
         df = self.read()
+        if df.isEmpty():
+            self.logger.info(f"{name}: no fetches Silver has not seen, nothing to write")
+            return None
         generated_df = self.generate(df)
         if generated_df is not None:
             self.logger.info(f"{name} generation complete")
