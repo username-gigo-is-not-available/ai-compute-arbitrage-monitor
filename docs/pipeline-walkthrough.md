@@ -28,13 +28,14 @@ way machines are built ever changes, Gold can be rebuilt from Silver without dow
 
 **Goal:** every offer on the Vast.ai on-demand market, stored exactly as Vast.ai sent it.
 
-1. **Label the snapshot.** The run gets the hour it was scheduled for, e.g. `2026-10-06 00:00` UTC.
-   Everything from this run carries that label (`snapshot_at`). The real fetch time is `ingested_at`.
+1. **Label the snapshot.** The run gets the UTC day it was scheduled for, e.g. `2026-10-06 00:00` UTC.
+   Everything from this run carries that label (`snapshot_at`), and so does any re-run that day. The real
+   fetch time is `ingested_at`.
 2. **Download the whole market in pieces.** Vast.ai returns at most 512 offers per request, a random
    sample when more match, so:
    - Ask for every offer ID → 512 come back → too many, so it is a sample. Use the sample's IDs to cut the
      ID range into 128 pieces (crowded ID stretches get narrower pieces).
-   - Ask for each piece → each returns fewer than 500 → that piece is complete.
+   - Ask for each piece → each returns fewer than 512 → that piece is complete.
    - A piece that still comes back full fails the run with "raise census_parts" (`fetch_census()`).
    - About 130 requests at one per second, using ~13–14k of the 20k rows/day quota.
 3. **All or nothing.** If any piece fails, the run stops and nothing is saved. If Vast.ai answers that the
@@ -109,10 +110,12 @@ On 2026-10-05: 13,069 offers → **7,357 machines**, 23,436 GPUs.
    access fees.
 3. **Calculate:**
    - power: TDP × GPUs, e.g. 450 W × 5 = 2.25 kWh per hour
-   - electricity cost per hour: kWh × (tariff + distribution fee) ÷ exchange rate, plus the monthly access
-     fee spread over 730 hours
+   - **marginal cost** per hour (what running the GPUs adds to the bill): kWh × (tariff + distribution
+     fee), plus 18% VAT for households, ÷ exchange rate
+   - **average cost** per hour: the same plus the monthly access fee spread over 730 hours. The host pays
+     that fee anyway, so marginal cost is the one that decides whether renting out pays (ADR-021)
    - revenue: the machine's price, $2.00/hr
-   - profit: revenue − cost, also per TFLOP
+   - profit: revenue − cost, for both costs, also per TFLOP
 4. **History:** when the next census arrives, the previous rows get an end (`valid_to`). Current rows have
    `valid_to = 9999-12-31`.
 
