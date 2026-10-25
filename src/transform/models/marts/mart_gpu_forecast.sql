@@ -161,12 +161,12 @@ combined as (
 ),
 
 
--- Marginal cost only: the access fee is paid whether or not the GPU runs (ADR-007, ADR-021).
+-- Electricity only: the access fee is paid whether or not the GPU runs (ADR-007, ADR-025).
 metrics as (
     select
         *,
         gpu_tdp_watts / 1000.0 as kwh_per_gpu_per_hr,
-        {{ cost_usd_per_hr('gpu_tdp_watts / 1000.0') }} as marginal_cost_per_gpu_usd_per_hr
+        {{ cost_usd_per_hr('gpu_tdp_watts / 1000.0') }} as cost_per_gpu_usd_per_hr
     from combined
 )
 
@@ -185,11 +185,11 @@ select
 
     kwh_per_gpu_per_hr,
     market_ask_per_gpu_usd_per_hr,
-    marginal_cost_per_gpu_usd_per_hr,
-    market_ask_per_gpu_usd_per_hr - marginal_cost_per_gpu_usd_per_hr as marginal_profit_per_gpu_usd_per_hr,
-    marginal_cost_per_gpu_usd_per_hr / nullif(tflops_per_gpu, 0)     as marginal_cost_per_tflop_usd,
-    (market_ask_per_gpu_usd_per_hr - marginal_cost_per_gpu_usd_per_hr)
-        / nullif(tflops_per_gpu, 0)                                  as marginal_profit_per_tflop_usd,
+    cost_per_gpu_usd_per_hr,
+    market_ask_per_gpu_usd_per_hr - cost_per_gpu_usd_per_hr as profit_per_gpu_usd_per_hr,
+    cost_per_gpu_usd_per_hr / nullif(tflops_per_gpu, 0)     as cost_per_tflop_usd,
+    (market_ask_per_gpu_usd_per_hr - cost_per_gpu_usd_per_hr)
+        / nullif(tflops_per_gpu, 0)                                  as profit_per_tflop_usd,
 
     tariff_tier_skey,
     consumer_category,
