@@ -2,7 +2,8 @@
 
 ## Status
 
-Accepted — amends ADR-008.
+Accepted — amends ADR-008. _Amended by ADR-024_: an open row is closed at the next census in the
+table, not the newest, so catch-up runs and full refreshes keep the history right.
 
 ## Context
 
@@ -72,7 +73,7 @@ instant it was observed to be gone) are both covered by the same predicate.
     _Resolved 2026-08-29_: the one-time backfill was applied to the dev warehouse;
     it re-derived `valid_to` for 13,601 legacy rows, after which all 12
     `assert_scd2_*` tests pass.
-  - Full-refresh of `fct_compute_offers` remains unsafe for history: a rebuild
+  - _Resolved by ADR-024_ (closes at the next census). Full-refresh of `fct_compute_offers` remains unsafe for history: a rebuild
     inserts every historical snapshot with `valid_to = 9999`, and the post-hook
     would then close them all at the same timestamp. Full refresh should continue
     to be avoided in favour of incremental builds.

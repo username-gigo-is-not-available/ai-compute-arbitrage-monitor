@@ -1,3 +1,5 @@
+{#- The post-hook closes every open row at the NEXT census in the table, not the newest one, so a run that adds
+    several censuses (a catch-up after a missed run, or a full refresh) closes each at the right date (ADR-024). -#}
 {{
     config(
         materialized     = 'incremental',
@@ -11,22 +13,17 @@
             },
         cluster_by       = ['gpu_model_name', 'machine_id'],
         post_hook = """
-            {% if execute %}
-                {% set latest_ts_query %}
-                    select max(valid_from) from {{ this }}
-                {% endset %}
-
-                {% set results = run_query(latest_ts_query) %}
-
-                {% if results and results.columns[0][0] %}
-                    {% set latest_ts = results.columns[0][0] %}
-
-                    update {{ this }} as fct
-                    set valid_to = '{{ latest_ts }}'
-                    where valid_to = timestamp '9999-12-31'
-                      and valid_from < '{{ latest_ts }}';
-                {% endif %}
-            {% endif %}
+            update {{ this }} as fct
+            set valid_to = census.next_valid_from
+            from (
+                select
+                    valid_from,
+                    lead(valid_from) over (order by valid_from) as next_valid_from
+                from (select distinct valid_from from {{ this }})
+            ) as census
+            where fct.valid_from = census.valid_from
+              and fct.valid_to = timestamp '9999-12-31'
+              and census.next_valid_from is not null;
     """
     )
 }}
