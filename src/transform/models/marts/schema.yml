@@ -282,7 +282,7 @@ models:
 
   - name: mart_gpu_history
     description: >
-      The past-facing pair of mart_gpu_forecast, at the same grain: per-GPU market ask and profit per GPU variant
+      The past-facing pair of mart_gpu_forecast (still per model; #53 brings it to this grain): per-GPU market ask and profit per GPU variant
       (model + memory), hour and tariff tier (#40). The census is daily (ADR-020), so each census's machines are
       priced at every local hour of their census date, matching each tier to the EVN schedule in Macedonian local
       time with the tariffs valid on that date (ADR-021). Every machine counts, available or taken. TDP, TFLOPS and
