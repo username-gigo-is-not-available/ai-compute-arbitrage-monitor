@@ -117,6 +117,21 @@ class TestTariffSeedsSilver(unittest.TestCase):
         self.assertEqual(monday_low, {("2025-01-01", h) for h in [*range(22, 24), *range(0, 7)]}
                          | {("2026-01-01", h) for h in range(13, 15)})
 
+    def test_run_with_no_unseen_fetches_writes_nothing(self):
+        # Most days Silver has seen every fetch (ADR-023), so the read is empty and there is no version to grid.
+        pipeline = self._pipeline(ElectricityTariffWindowSchedulePipeline,
+                                  DatasetName.ELECTRICITY_TARIFF_WINDOW_SCHEDULE,
+                                  ELECTRICITY_TARIFF_WINDOW_SCHEDULE_SILVER_SCHEMA)
+        empty = self.session.sql(
+            f"SELECT 'x' AS schedule_text, '{OLD}' AS valid_from_text, CAST(NULL AS TIMESTAMP) AS ingested_at"
+        ).filter("false")
+        saved = []
+        pipeline.ensure_silver_table = lambda: None
+        pipeline.read = lambda: empty
+        pipeline.save = saved.append
+        pipeline.run()
+        self.assertEqual(saved, [])
+
 
 if __name__ == "__main__":
     unittest.main()

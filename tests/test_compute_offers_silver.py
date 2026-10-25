@@ -16,7 +16,11 @@ from common.classes import Dataset
 from common.enums import DatasetName, DatasetType
 from refine.schemas.compute_offers import COMPUTE_OFFERS_SILVER_SCHEMA
 from refine.sources.compute_offers import ComputeOffersPipeline, deduplicate_compute_offers
-from refine.load_strategy import AppendByDay, SilverTable
+from pyiceberg.transforms import DayTransform
+
+from refine.load_strategy import OverwriteByPartition, SilverTable
+
+OVERWRITE_BY_DAY = OverwriteByPartition(column="snapshot_at", transform=DayTransform())
 
 
 def _offers(session: SparkSession, rows: str):
@@ -37,13 +41,26 @@ class TestComputeOffersSilver(unittest.TestCase):
         _offers(cls.session, "(1, 'bid', 0.10, '2026-10-01 14:00:00', '2026-10-01 14:00:05')") \
             .createOrReplaceTempView("silver_offers")
 
-    def test_watermark_ignores_rerun_of_already_refined_snapshot(self):
+    def test_watermark_reads_every_fetch_silver_has_not_seen(self):
+        # Silver holds the 14:00 snapshot fetched at 14:00:05. A re-run of the same snapshot at 14:40 is a newer
+        # fetch, so it is read and overwrites that day, as a rebuild from Bronze would.
         bronze = _offers(self.session,
+                         "(1, 'bid', 0.10, '2026-10-01 14:00:00', '2026-10-01 14:00:05'), "
                          "(1, 'bid', 0.11, '2026-10-01 14:00:00', '2026-10-01 14:40:00'), "
                          "(1, 'bid', 0.12, '2026-10-01 15:00:00', '2026-10-01 15:00:04')")
         bronze.createOrReplaceTempView("bronze_offers")
-        result = AppendByDay(column="snapshot_at").read(self.session, "bronze_offers", "silver_offers")
-        self.assertEqual([r["price"] for r in result.collect()], [0.12])
+        result = OVERWRITE_BY_DAY.read(self.session, "bronze_offers", "silver_offers")
+        self.assertEqual(sorted(r["price"] for r in result.collect()), [0.11, 0.12])
+
+    def test_empty_silver_reads_all_of_bronze(self):
+        _offers(self.session, "(1, 'bid', 0.10, '2026-10-01 14:00:00', '2026-10-01 14:00:05')") \
+            .filter("false").createOrReplaceTempView("empty_silver_offers")
+        bronze = _offers(self.session,
+                         "(1, 'bid', 0.10, '2026-10-01 14:00:00', '2026-10-01 14:00:05'), "
+                         "(1, 'bid', 0.12, '2026-10-01 15:00:00', '2026-10-01 15:00:04')")
+        bronze.createOrReplaceTempView("bronze_offers")
+        result = OVERWRITE_BY_DAY.read(self.session, "bronze_offers", "empty_silver_offers")
+        self.assertEqual(sorted(r["price"] for r in result.collect()), [0.10, 0.12])
 
     def test_retry_replaces_whole_earlier_attempt_not_merges(self):
         # Attempt 1 saw offers 1 and 2; the retry saw offers 1 and 3. The snapshot is the retry's view only.
@@ -70,7 +87,7 @@ class TestComputeOffersSilver(unittest.TestCase):
             dataset=Dataset(dataset_name=DatasetName.COMPUTE_OFFERS, dataset_type=DatasetType.SOURCES),
             config=None,
             lakehouse_config=None,
-            silver_table=SilverTable(COMPUTE_OFFERS_SILVER_SCHEMA, AppendByDay(column="snapshot_at")),
+            silver_table=SilverTable(COMPUTE_OFFERS_SILVER_SCHEMA, OVERWRITE_BY_DAY),
         )
         row = pipeline.transform(bronze).collect()[0]
         self.assertEqual(row["number_of_offer_gpus"], 2)

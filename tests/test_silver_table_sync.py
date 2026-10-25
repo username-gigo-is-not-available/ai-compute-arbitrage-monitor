@@ -11,17 +11,17 @@ import unittest
 from pyiceberg.catalog import Catalog
 from pyiceberg.partitioning import PartitionField, PartitionSpec
 from pyiceberg.schema import assign_fresh_schema_ids
-from pyiceberg.transforms import HourTransform
+from pyiceberg.transforms import DayTransform, HourTransform
 from pyspark.sql.pandas.types import to_arrow_schema
 
 from common.classes import Dataset
 from common.enums import DatasetName, DatasetType, DataStageType
 from refine.schemas.compute_offers import COMPUTE_OFFERS_SILVER_SCHEMA
 from refine.schemas.electricity_tariff_tiers import ELECTRICITY_TARIFF_TIERS_SILVER_SCHEMA
-from refine.load_strategy import AppendByDay, OverwriteByPartition, SilverTable
+from refine.load_strategy import OverwriteByPartition, SilverTable
 from test_lakehouse_config import _config, _FakeCatalog
 
-COMPUTE_OFFERS = SilverTable(COMPUTE_OFFERS_SILVER_SCHEMA, AppendByDay(column="snapshot_at"))
+COMPUTE_OFFERS = SilverTable(COMPUTE_OFFERS_SILVER_SCHEMA, OverwriteByPartition(column="snapshot_at", transform=DayTransform()))
 DS = Dataset(dataset_name=DatasetName.COMPUTE_OFFERS, dataset_type=DatasetType.SOURCES)
 TABLE = ("silver_sources", "compute_offers")
 
@@ -44,11 +44,11 @@ class TestIcebergSchema(unittest.TestCase):
 
 class TestPartitionSpec(unittest.TestCase):
 
-    def test_append_by_day_partitions_by_day(self):
+    def test_day_transform_partitions_by_day(self):
         spec = COMPUTE_OFFERS.partition_spec()
         self.assertEqual([(f.name, str(f.transform)) for f in spec.fields], [("snapshot_at_day", "day")])
 
-    def test_overwrite_by_partition_partitions_by_identity(self):
+    def test_default_transform_partitions_by_identity(self):
         spec = SilverTable(ELECTRICITY_TARIFF_TIERS_SILVER_SCHEMA, OverwriteByPartition()).partition_spec()
         self.assertEqual([(f.name, str(f.transform)) for f in spec.fields], [("valid_from", "identity")])
 
