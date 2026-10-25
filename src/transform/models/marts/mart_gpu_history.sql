@@ -97,12 +97,15 @@ select
     -- revenue (USD/hr per GPU)
     approx_quantiles(revenue_per_gpu_usd_per_hr, 100)[offset(50)]        as market_ask_per_gpu_usd_per_hr,
 
-    -- profit per GPU (USD/hr): electricity only, the access fee is paid anyway (ADR-025)
+    -- profit per GPU (USD/hr): electricity only, the access fee is paid anyway (ADR-025). The median is the typical
+    -- machine; the average is pulled up by a few overpriced listings (a 4090 at $40/hr on 10-21).
+    approx_quantiles(profit_per_gpu_usd_per_hr, 100)[offset(50)]         as median_profit_per_gpu_usd_per_hr,
     avg(profit_per_gpu_usd_per_hr)                                       as avg_profit_per_gpu_usd_per_hr,
     min(profit_per_gpu_usd_per_hr)                                       as min_profit_per_gpu_usd_per_hr,
     max(profit_per_gpu_usd_per_hr)                                       as max_profit_per_gpu_usd_per_hr,
 
     -- profit per TFLOP (USD)
+    approx_quantiles(profit_per_tflop_usd, 100)[offset(50)]              as median_profit_per_tflop_usd,
     avg(profit_per_tflop_usd)                                            as avg_profit_per_tflop_usd,
     min(profit_per_tflop_usd)                                            as min_profit_per_tflop_usd,
     max(profit_per_tflop_usd)                                            as max_profit_per_tflop_usd,

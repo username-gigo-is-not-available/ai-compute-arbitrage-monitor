@@ -361,14 +361,18 @@ models:
         description: "Median per-GPU ask of the variant's machines in USD/hr - the same measure as mart_gpu_forecast's"
 
       # profit per GPU (USD/hr): electricity only, the access fee is paid anyway (ADR-025)
+      - name: median_profit_per_gpu_usd_per_hr
+        description: "Median per-GPU profit in USD/hr for this tariff tier - the typical machine; plot this, not the average"
       - name: avg_profit_per_gpu_usd_per_hr
-        description: "Average per-GPU profit in USD/hr for this tariff tier"
+        description: "Average per-GPU profit in USD/hr for this tariff tier - pulled up by a few overpriced listings"
       - name: min_profit_per_gpu_usd_per_hr
         description: "Minimum per-GPU profit in USD/hr for this tariff tier"
       - name: max_profit_per_gpu_usd_per_hr
         description: "Maximum per-GPU profit in USD/hr for this tariff tier"
 
       # profit per TFLOP (USD)
+      - name: median_profit_per_tflop_usd
+        description: "Median profit per TFLOP in USD for this tariff tier - the typical machine"
       - name: avg_profit_per_tflop_usd
         description: "Average profit per TFLOP in USD for this tariff tier"
       - name: min_profit_per_tflop_usd
