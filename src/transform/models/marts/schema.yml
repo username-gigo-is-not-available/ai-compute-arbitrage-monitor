@@ -282,7 +282,7 @@ models:
 
   - name: mart_gpu_history
     description: >
-      The past-facing pair of mart_gpu_forecast (still per model; #53 brings it to this grain): per-GPU market ask and profit per GPU variant
+      The past-facing pair of mart_gpu_forecast, at the same grain: per-GPU market ask and profit per GPU variant
       (model + memory), hour and tariff tier (#40). The census is daily (ADR-020), so each census's machines are
       priced at every local hour of their census date, matching each tier to the EVN schedule in Macedonian local
       time with the tariffs valid on that date (ADR-021). Every machine counts, available or taken. TDP, TFLOPS and
@@ -505,19 +505,21 @@ models:
 
   - name: mart_gpu_forecast
     description: >
-      Forward-looking, per-GPU grid of electricity cost and profit per GPU model, future hour and tariff
-      tier, aligned to the EVN tariff window schedule in Macedonian local time (ADR-007, ADR-021). It carries every
+      Forward-looking, per-GPU grid of electricity cost and profit per GPU variant (model + memory), future hour
+      and tariff tier, the grain of mart_gpu_history (#40), aligned to the EVN tariff window schedule in Macedonian local time (ADR-007, ADR-021). It carries every
       consumer category and tariff block and no per-user input: the app picks the user's category, walks the
       blocks with a running total from their billing-period consumption, and scales by their GPU count and ask
-      price. Revenue is the current market ask (median per-GPU ask of the latest census). Cost is electricity only:
+      price. Revenue is the current market ask (median per-GPU ask of the variant's machines in the latest census). TDP and
+      TFLOPS still come from one arbitrary current machine of the variant (#53). Cost is electricity only:
       kWh x (tariff_value + distribution_fee) x (1 + household VAT), excluding the fixed access fee.
       Covers the next forecast_days (default 32) days.
-      One row per (gpu_model_name, forecast_hour, tariff_tier_skey).
+      One row per (gpu_model_name, gpu_memory_gb, forecast_hour, tariff_tier_skey).
     tests:
       - dbt_utils.unique_combination_of_columns:
           arguments:
             combination_of_columns:
               - gpu_model_name
+              - gpu_memory_gb
               - forecast_hour
               - tariff_tier_skey
     columns:
@@ -579,7 +581,7 @@ models:
               arguments:
                 expression: "> 0"
       - name: market_ask_per_gpu_usd_per_hr
-        description: "Median per-GPU ask of this GPU model's machines in the latest census, in USD/hr"
+        description: "Median per-GPU ask of this GPU variant's machines in the latest census, in USD/hr"
         tests:
           - not_null
       - name: cost_per_gpu_usd_per_hr

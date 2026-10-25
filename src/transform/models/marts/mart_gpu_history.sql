@@ -9,8 +9,8 @@
     cluster_by   = ['gpu_model_name', 'gpu_memory_gb']
 ) }}
 
--- The past-facing pair of mart_gpu_forecast: GPU variant (model + memory) x hour x tariff tier (#40). The forecast
--- is still per model; #53 brings it to this grain. The census is daily (ADR-020), so each census's machines are priced at every local hour of their census
+-- The past-facing pair of mart_gpu_forecast, at the same grain: GPU variant (model + memory) x hour x tariff tier
+-- (#40). The census is daily (ADR-020), so each census's machines are priced at every local hour of their census
 -- date, with the tariffs valid on that date. Every machine counts, available or taken. Values are per GPU, since
 -- machines differ in size; TDP, TFLOPS and ask are medians across the variant's machines, profit is spread
 -- across them.
