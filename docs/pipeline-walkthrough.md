@@ -127,7 +127,7 @@ All read the current fact rows.
 | `mart_best_offers_by_gpu` | For each GPU model, which available machine is best per GPU? |
 | `mart_gpu_model_summary` | Per GPU model: machines, GPUs, % available, % profitable, price per GPU of available vs taken machines |
 | `mart_gpu_forecast` | "My GPU over the next hours": median market price per GPU × my GPU count, against the hourly EVN schedule |
-| `mart_profitability_trends` | Profit by hour; with one census a day it only covers 00:00 until issue #40 |
+| `mart_gpu_history` | Profit by hour per GPU variant: each census's machines priced at every local hour of its day (#40) |
 
 In the first census, taken machines were cheaper per GPU than available ones (RTX 4090: ~$0.44 vs ~$0.51),
 so the taken price is the more realistic expectation for a host.

@@ -14,7 +14,7 @@ rates — then models them into analytical outputs that answer arbitrage questio
 | Which GPU offers on Vast.AI are profitable right now, after electricity costs? | `mart_arbitrage_opportunities` |
 | Which GPU model gives the best profit per TFLOP at the current tariff?         | `mart_best_offers_by_gpu`      |
 | Which GPU models have been consistently profitable historically?               | `mart_gpu_model_summary`       |
-| Does profitability change by time of day (high vs low tariff hours)?           | `mart_profitability_trends`    |
+| Does profitability change by time of day (high vs low tariff hours)?           | `mart_gpu_history`             |
 
 The core calculation: `profit = GPU rental revenue − electricity cost`, where electricity cost is derived from **GPU
 TDP × number of GPUs × applicable Macedonian tariff rate**, converted to USD at the current exchange rate.
@@ -243,7 +243,7 @@ After all four complete, `gpu_arbitrage__marts` will trigger automatically.
 | :----------- | :------------------------------------------------------------------ |
 | **Chart type**   | Time series                                                     |
 | **Name**         | Trends time series                                              |
-| **Mart source**  | `mart_profitability_trends`                                     |
+| **Mart source**  | `mart_gpu_history`                                              |
 | **What it shows**| Profitability trends over time, segmented by GPU                |
 
 ---
@@ -254,7 +254,7 @@ After all four complete, `gpu_arbitrage__marts` will trigger automatically.
 | :----------- | :------------------------------------------------------------------ |
 | **Chart type**   | Pivot table / heatmap                                           |
 | **Name**         | Trends pivot/heatmap                                            |
-| **Mart source**  | `mart_profitability_trends`                                     |
+| **Mart source**  | `mart_gpu_history`                                              |
 | **What it shows**| Heatmap of profitability across days of week and hours of day   |
 
 ---
@@ -298,7 +298,7 @@ After all four complete, `gpu_arbitrage__marts` will trigger automatically.
 | :--------------------------- | :-------------------------------------------------- |
 | `mart_gpu_model_summary`     | GPU Profitability Rate by Offer Type                |
 | `mart_best_offers_by_gpu`    | Current Best Profit per GPU                         |
-| `mart_profitability_trends`  | Profit Over Time by GPU, Profit by Day and Hour     |
+| `mart_gpu_history`           | Profit Over Time by GPU, Profit by Day and Hour     |
 | `mart_arbitrage_opportunities` | Risk vs Reward, Profit per TFLOP, Scorecard       |
 
 ## Data Lineage & Model Docs
