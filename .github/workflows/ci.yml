@@ -38,5 +38,8 @@ jobs:
       - name: Lint
         run: uv run --no-sync ruff check src tests
 
+      # Locally SETTINGS_PATH comes from the gitignored .env.
       - name: Test
         run: uv run --no-sync pytest tests
+        env:
+          SETTINGS_PATH: config/settings.yaml
