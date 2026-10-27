@@ -50,6 +50,8 @@ spine_with_window as (
 ),
 
 
+-- One row per GPU variant (model + memory), the grain of mart_gpu_history (#40). The specs still come from one
+-- arbitrary current machine of the variant; #53 replaces them with the variant's medians.
 gpu_specs as (
     select
         gpu_model_name,
@@ -61,22 +63,23 @@ gpu_specs as (
     from {{ ref('fct_compute_offers') }}
     where cast(valid_to as date) = date '9999-12-31'
     qualify row_number() over (
-        partition by gpu_model_name
+        partition by gpu_model_name, gpu_memory_gb
         order by valid_from desc
     ) = 1
 ),
 
 
 market_revenue as (
-    -- Median per-GPU ask across the latest census's machines (ADR-020): machines differ in size, so a median of
-    -- whole-machine prices would not be a per-GPU price.
+    -- Median per-GPU ask across the variant's machines in the latest census (ADR-020): machines differ in size, so
+    -- a median of whole-machine prices would not be a per-GPU price.
     select
         gpu_model_name,
+        gpu_memory_gb,
         approx_quantiles(revenue_per_gpu_usd_per_hr, 100)[offset(50)] as market_ask_per_gpu_usd_per_hr
     from {{ ref('fct_compute_offers') }}
     where cast(valid_to as date) = date '9999-12-31'
       and revenue_usd_per_hr > 0
-    group by gpu_model_name
+    group by gpu_model_name, gpu_memory_gb
 ),
 
 
@@ -148,7 +151,8 @@ combined as (
     from spine_with_window sw
     cross join gpu_specs gs
     join market_revenue mr
-        on gs.gpu_model_name = mr.gpu_model_name
+        on  gs.gpu_model_name = mr.gpu_model_name
+        and gs.gpu_memory_gb  = mr.gpu_memory_gb
     join tariff_tiers tt
         on tt.tariff_window_type = sw.tariff_window_type
     left join tariff_blocks tb
@@ -161,12 +165,12 @@ combined as (
 ),
 
 
--- Marginal cost only: the access fee is paid whether or not the GPU runs (ADR-007, ADR-021).
+-- Electricity only: the access fee is paid whether or not the GPU runs (ADR-007, ADR-025).
 metrics as (
     select
         *,
         gpu_tdp_watts / 1000.0 as kwh_per_gpu_per_hr,
-        {{ cost_usd_per_hr('gpu_tdp_watts / 1000.0') }} as marginal_cost_per_gpu_usd_per_hr
+        {{ cost_usd_per_hr('gpu_tdp_watts / 1000.0') }} as cost_per_gpu_usd_per_hr
     from combined
 )
 
@@ -185,11 +189,11 @@ select
 
     kwh_per_gpu_per_hr,
     market_ask_per_gpu_usd_per_hr,
-    marginal_cost_per_gpu_usd_per_hr,
-    market_ask_per_gpu_usd_per_hr - marginal_cost_per_gpu_usd_per_hr as marginal_profit_per_gpu_usd_per_hr,
-    marginal_cost_per_gpu_usd_per_hr / nullif(tflops_per_gpu, 0)     as marginal_cost_per_tflop_usd,
-    (market_ask_per_gpu_usd_per_hr - marginal_cost_per_gpu_usd_per_hr)
-        / nullif(tflops_per_gpu, 0)                                  as marginal_profit_per_tflop_usd,
+    cost_per_gpu_usd_per_hr,
+    market_ask_per_gpu_usd_per_hr - cost_per_gpu_usd_per_hr as profit_per_gpu_usd_per_hr,
+    cost_per_gpu_usd_per_hr / nullif(tflops_per_gpu, 0)     as cost_per_tflop_usd,
+    (market_ask_per_gpu_usd_per_hr - cost_per_gpu_usd_per_hr)
+        / nullif(tflops_per_gpu, 0)                                  as profit_per_tflop_usd,
 
     tariff_tier_skey,
     consumer_category,

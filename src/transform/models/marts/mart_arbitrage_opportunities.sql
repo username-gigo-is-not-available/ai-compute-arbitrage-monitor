@@ -24,7 +24,7 @@ ranked as (
         row_number() over (
             partition by tariff_tier_skey
             order by
-                marginal_profit_per_tflop_usd desc,
+                profit_per_tflop_usd desc,
                 reliability_score desc,
                 gpu_tdp_watts asc,
                 pcie_bandwidth_gbytes_per_sec desc,
@@ -95,17 +95,13 @@ select
     tariff_window_type,
     tariff_block_number,
 
-    -- costs / profits (USD/hr): marginal excludes the access fee, average includes it (ADR-021)
-    marginal_cost_usd_per_hr,
-    average_cost_usd_per_hr,
-    marginal_profit_usd_per_hr,
-    average_profit_usd_per_hr,
+    -- cost / profit (USD/hr): electricity only, the access fee is paid anyway (ADR-025)
+    cost_usd_per_hr,
+    profit_usd_per_hr,
 
     -- cost / profit per TFLOP (USD)
-    marginal_cost_per_tflop_usd,
-    average_cost_per_tflop_usd,
-    marginal_profit_per_tflop_usd,
-    average_profit_per_tflop_usd,
+    cost_per_tflop_usd,
+    profit_per_tflop_usd,
 
     valid_from
 

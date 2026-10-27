@@ -41,7 +41,7 @@ The low/high time-of-use window of a tariff tier (`low` or `high`). This is a pr
 _Avoid_: Scheduled window, TOU window
 
 **Scheduled tariff window type**:
-The effective tariff window at a specific hour, determined by the intersection of a tariff tier's `tariff_window_type` and the EVN time-of-use schedule (`dim_electricity_tariff_window_schedule`). Only present in `mart_profitability_trends`, where the join filters to hours where the tier's window matches the schedule.
+The effective tariff window at a specific hour, determined by the intersection of a tariff tier's `tariff_window_type` and the EVN time-of-use schedule (`dim_electricity_tariff_window_schedule`). Only present in `mart_gpu_history` and `mart_gpu_forecast`, where the join keeps the hours where the tier's window matches the schedule.
 _Avoid_: Scheduled window, effective window, live window
 
 **Tariff tier skey**:
@@ -68,13 +68,9 @@ _Avoid_: kWh consumed, monthly consumption, expected consumption
 The per-kWh price of the next high-tariff kWh the host consumes: the rate of the tariff block that contains the billing-period consumption.
 _Avoid_: Average rate, effective rate, blended rate
 
-**Marginal cost**:
-The hourly cost of running the host's GPU: its electricity at the tariff rate plus the per-kWh distribution fee, with VAT for household hosts. It excludes charges paid whether or not the GPU runs (the access fee and the public-lighting tax).
-_Avoid_: Cost, running cost, variable cost
-
-**Average cost**:
-Marginal cost plus the monthly access fee (with VAT for household hosts) spread evenly over the month's hours: a full-month figure, not the cost of running the GPU now.
-_Avoid_: Cost, total cost, full cost
+**Cost**:
+The hourly cost of running the host's GPU: its electricity at the tariff rate plus the per-kWh distribution fee, with VAT for household hosts. It excludes charges paid whether or not the GPU runs (the access fee and the public-lighting tax), so it is what running the GPU adds to the bill (ADR-025).
+_Avoid_: Marginal cost, average cost, running cost, total cost
 
 **Valid from / Valid to**:
 SCD Type 2 validity endpoints. Provenance is per-entity: for the four EVN tariff
