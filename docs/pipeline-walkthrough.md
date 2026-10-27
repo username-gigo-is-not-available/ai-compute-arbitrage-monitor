@@ -106,16 +106,14 @@ On 2026-10-05: 13,069 offers → **7,357 machines**, 23,436 GPUs.
 
 1. **One row per machine per tariff tier.** There are 7 tiers (consumer category × low/high window ×
    block), so 7,357 machines × 7 = 51,499 rows.
-2. **Look up that day's values:** USD→MKD exchange rate, the tier's price per kWh, distribution and
-   access fees.
+2. **Look up that day's values:** USD→MKD exchange rate, the tier's price per kWh, distribution fee.
 3. **Calculate:**
    - power: TDP × GPUs, e.g. 450 W × 5 = 2.25 kWh per hour
-   - **marginal cost** per hour (what running the GPUs adds to the bill): kWh × (tariff + distribution
-     fee), plus 18% VAT for households, ÷ exchange rate
-   - **average cost** per hour: the same plus the monthly access fee spread over 730 hours. The host pays
-     that fee anyway, so marginal cost is the one that decides whether renting out pays (ADR-021)
+   - **cost** per hour (what running the GPUs adds to the bill): kWh × (tariff + distribution fee), plus
+     18% VAT for households, ÷ exchange rate. The monthly access fee is left out: the host pays it whether
+     the GPU runs or not (ADR-025)
    - revenue: the machine's price, $2.00/hr
-   - profit: revenue − cost, for both costs, also per TFLOP
+   - profit: revenue − cost, also per TFLOP
 4. **History:** when the next census arrives, the previous rows get an end (`valid_to`). Current rows have
    `valid_to = 9999-12-31`.
 

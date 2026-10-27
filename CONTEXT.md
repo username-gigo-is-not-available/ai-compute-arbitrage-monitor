@@ -68,13 +68,9 @@ _Avoid_: kWh consumed, monthly consumption, expected consumption
 The per-kWh price of the next high-tariff kWh the host consumes: the rate of the tariff block that contains the billing-period consumption.
 _Avoid_: Average rate, effective rate, blended rate
 
-**Marginal cost**:
-The hourly cost of running the host's GPU: its electricity at the tariff rate plus the per-kWh distribution fee, with VAT for household hosts. It excludes charges paid whether or not the GPU runs (the access fee and the public-lighting tax).
-_Avoid_: Cost, running cost, variable cost
-
-**Average cost**:
-Marginal cost plus the monthly access fee (with VAT for household hosts) spread evenly over the month's hours: a full-month figure, not the cost of running the GPU now.
-_Avoid_: Cost, total cost, full cost
+**Cost**:
+The hourly cost of running the host's GPU: its electricity at the tariff rate plus the per-kWh distribution fee, with VAT for household hosts. It excludes charges paid whether or not the GPU runs (the access fee and the public-lighting tax), so it is what running the GPU adds to the bill (ADR-025).
+_Avoid_: Marginal cost, average cost, running cost, total cost
 
 **Valid from / Valid to**:
 SCD Type 2 validity endpoints. Provenance is per-entity: for the four EVN tariff

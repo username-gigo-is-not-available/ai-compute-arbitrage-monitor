@@ -19,10 +19,8 @@ with joined as (
         f.number_of_machine_gpus,
         f.valid_from,
         f.revenue_usd_per_hr,
-        f.marginal_profit_usd_per_hr,
-        f.average_profit_usd_per_hr,
-        f.marginal_profit_per_tflop_usd,
-        f.average_profit_per_tflop_usd,
+        f.profit_usd_per_hr,
+        f.profit_per_tflop_usd,
         f.tariff_tier_skey,
         f.consumer_category,
         f.tariff_window_type,
@@ -56,21 +54,15 @@ select
     -- revenue (USD/hr)
     avg(revenue_usd_per_hr)                                       as avg_revenue_usd_per_hr,
 
-    -- profitability (USD/hr): marginal excludes the access fee, average includes it (ADR-021)
-    avg(marginal_profit_usd_per_hr)                               as avg_profit_at_marginal_cost_usd_per_hr,
-    min(marginal_profit_usd_per_hr)                               as min_profit_at_marginal_cost_usd_per_hr,
-    max(marginal_profit_usd_per_hr)                               as max_profit_at_marginal_cost_usd_per_hr,
-    avg(average_profit_usd_per_hr)                                as avg_profit_at_average_cost_usd_per_hr,
-    min(average_profit_usd_per_hr)                                as min_profit_at_average_cost_usd_per_hr,
-    max(average_profit_usd_per_hr)                                as max_profit_at_average_cost_usd_per_hr,
+    -- profitability (USD/hr): electricity only, the access fee is paid anyway (ADR-025)
+    avg(profit_usd_per_hr)                               as avg_profit_usd_per_hr,
+    min(profit_usd_per_hr)                               as min_profit_usd_per_hr,
+    max(profit_usd_per_hr)                               as max_profit_usd_per_hr,
 
     -- profitability per TFLOP (USD)
-    avg(marginal_profit_per_tflop_usd)                            as avg_profit_per_tflop_at_marginal_cost_usd,
-    min(marginal_profit_per_tflop_usd)                            as min_profit_per_tflop_at_marginal_cost_usd,
-    max(marginal_profit_per_tflop_usd)                            as max_profit_per_tflop_at_marginal_cost_usd,
-    avg(average_profit_per_tflop_usd)                             as avg_profit_per_tflop_at_average_cost_usd,
-    min(average_profit_per_tflop_usd)                             as min_profit_per_tflop_at_average_cost_usd,
-    max(average_profit_per_tflop_usd)                             as max_profit_per_tflop_at_average_cost_usd,
+    avg(profit_per_tflop_usd)                            as avg_profit_per_tflop_usd,
+    min(profit_per_tflop_usd)                            as min_profit_per_tflop_usd,
+    max(profit_per_tflop_usd)                            as max_profit_per_tflop_usd,
 
     -- tariff tier context
     tariff_tier_skey,

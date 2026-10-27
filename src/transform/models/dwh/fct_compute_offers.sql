@@ -76,7 +76,6 @@ tariff_fees as (
     select
         consumer_category,
         max(case when fee_type = 'distribution' then value end) as distribution_fee,
-        max(case when fee_type = 'access' then value end) as access_fee,
         valid_from,
         valid_to
     from {{ ref('dim_electricity_tariff_fees') }}
@@ -113,7 +112,6 @@ joined as (
         tt.tariff_block_number,
 
         tf.distribution_fee,
-        tf.access_fee,
 
         tb.lower_bound_kwh,
         tb.upper_bound_kwh
@@ -160,12 +158,11 @@ with_vat_rate as (
     from calculations
 ),
 
--- Marginal cost is what running the GPU costs; average cost adds the access fee spread over the month (ADR-021).
+-- Cost is what running the GPU adds to the bill; the monthly access fee is paid whether it runs or not (ADR-025).
 cost_metrics as (
     select
         *,
-        {{ cost_usd_per_hr('total_system_kwh_per_hr') }}                     as marginal_cost_usd_per_hr,
-        {{ cost_usd_per_hr('total_system_kwh_per_hr', 'access_fee') }}       as average_cost_usd_per_hr
+        {{ cost_usd_per_hr('total_system_kwh_per_hr') }}                     as cost_usd_per_hr
     from with_vat_rate
 )
 
@@ -248,23 +245,18 @@ select
 
     -- cost inputs
     distribution_fee,
-    access_fee,
     vat_rate,
 
     -- costs (USD/hr)
-    marginal_cost_usd_per_hr,
-    average_cost_usd_per_hr,
+    cost_usd_per_hr,
 
     -- profits (USD/hr)
-    revenue_usd_per_hr - marginal_cost_usd_per_hr as marginal_profit_usd_per_hr,
-    revenue_usd_per_hr - average_cost_usd_per_hr  as average_profit_usd_per_hr,
+    revenue_usd_per_hr - cost_usd_per_hr as profit_usd_per_hr,
 
     -- cost per TFLOP (USD)
-    marginal_cost_usd_per_hr / nullif(total_system_tflops, 0) as marginal_cost_per_tflop_usd,
-    average_cost_usd_per_hr  / nullif(total_system_tflops, 0) as average_cost_per_tflop_usd,
+    cost_usd_per_hr / nullif(total_system_tflops, 0) as cost_per_tflop_usd,
 
     -- profit per TFLOP (USD)
-    (revenue_usd_per_hr - marginal_cost_usd_per_hr) / nullif(total_system_tflops, 0) as marginal_profit_per_tflop_usd,
-    (revenue_usd_per_hr - average_cost_usd_per_hr)  / nullif(total_system_tflops, 0) as average_profit_per_tflop_usd
+    (revenue_usd_per_hr - cost_usd_per_hr) / nullif(total_system_tflops, 0) as profit_per_tflop_usd
 
 from cost_metrics
