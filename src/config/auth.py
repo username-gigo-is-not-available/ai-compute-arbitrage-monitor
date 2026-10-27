@@ -1,6 +1,6 @@
 from google.auth import default as gcp_default
 from google.auth.transport.requests import Request as GcpRequest
-from openai import BaseModel
+from pydantic import BaseModel
 
 
 class GCPAuthentication(BaseModel):

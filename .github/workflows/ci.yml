@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+
+jobs:
+  test:
+    name: Lint & Test
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # PySpark needs a JVM for the Silver tests.
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+          enable-cache: true
+
+      # The dev dependency group is Airflow, which the tests don't need.
+      - name: Install dependencies
+        run: uv sync --locked --extra dev --no-dev
+
+      - name: Lint
+        run: uv run --no-sync ruff check src tests
+
+      # Locally SETTINGS_PATH comes from the gitignored .env.
+      - name: Test
+        run: uv run --no-sync pytest tests
+        env:
+          SETTINGS_PATH: config/settings.yaml
