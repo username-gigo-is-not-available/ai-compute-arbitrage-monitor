@@ -86,8 +86,9 @@ Renames and types the columns. Still one row per offer.
 
 1. **Group the slices by machine.** Our 3 rows form one group: #15489.
 2. **Machine size from any slice:** GPUs ÷ fraction = 1 ÷ 0.2 = **5 GPUs**, even though the biggest slice
-   returned was 4. Every slice gives the same answer; the test
-   `assert_stg_compute_offers_machine_slices_agree` checks it on every census.
+   returned was 4. Every slice gives the same answer. A machine whose slices disagree on GPU model, size
+   or per-GPU price (13–20 per census, e.g. a 5090 next to four 4090s) is dropped; the test
+   `assert_stg_compute_offers_machine_slices_agree` warns with them.
 3. **Specs from the biggest slice** (CPU, RAM, disk).
 4. **Price for the whole machine:** $0.40 per GPU × 5 = **$2.00/hr**. The per-GPU price is the same on
    every slice; the same test checks it.
@@ -98,14 +99,14 @@ Renames and types the columns. Still one row per offer.
 |---|---|---|---|---|
 | 15489 | RTX 4090 | 5 | $2.00 | yes |
 
-On 2026-10-05: 13,069 offers → **7,357 machines**, 23,436 GPUs.
+On 2026-10-05: 13,069 offers → **7,338 machines**, 23,362 GPUs (19 mixed machines dropped).
 
 ### 3c. `fct_compute_offers`: cost and profit
 
 **Goal:** for each machine, its profit if it ran in Macedonia, under every EVN tariff.
 
 1. **One row per machine per tariff tier.** There are 7 tiers (consumer category × low/high window ×
-   block), so 7,357 machines × 7 = 51,499 rows.
+   block), so 7,338 machines × 7 = 51,366 rows.
 2. **Look up that day's values:** USD→MKD exchange rate, the tier's price per kWh, distribution fee.
 3. **Calculate:**
    - power: TDP × GPUs, e.g. 450 W × 5 = 2.25 kWh per hour
