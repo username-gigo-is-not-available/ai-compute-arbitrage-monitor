@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Callable
 
 from airflow.providers.google.cloud.operators.dataproc import DataprocCreateBatchOperator
 from airflow.providers.standard.operators.python import PythonOperator
@@ -11,7 +10,6 @@ from common.enums import ExecutionType
 from config.cluster import GCPClusterConfig
 from config.loader import ConfigLoader
 from config.bucket import GCSBucketConfig
-from callable_builder import CallableBuilder
 from pipeline_config import PipelineConfig
 
 
@@ -38,12 +36,14 @@ class RefineStrategy(ABC):
 class LocalRefineStrategy(RefineStrategy):
 
     def build_operator(self, pipeline_config: PipelineConfig) -> BaseOperator:
-        module_path: str = pipeline_config.refine_module
-        module_callable: Callable = CallableBuilder(module_path).build()
+        # Imported here, not at the top: Composer parses this file but does not ship the refine package
+        # (gcp.composer.runtime_packages in settings.yaml)
+        from refine.registry import run_refine
 
         return PythonOperator(
             task_id="refine",
-            python_callable=module_callable,
+            python_callable=run_refine,
+            op_kwargs={"dataset": pipeline_config.dataset_name},
         )
 
 
@@ -56,7 +56,8 @@ class DataprocRefineStrategy(RefineStrategy):
     def batch_config(self, pipeline_config: PipelineConfig) -> dict:
         return {
             "pyspark_batch": {
-                "main_python_file_uri": f"gs://{self.bucket_config.bucket_name}/jobs/{pipeline_config.refine_uri}",
+                "main_python_file_uri": f"gs://{self.bucket_config.bucket_name}/jobs/refine/main.py",
+                "args": [pipeline_config.dataset_name],
                 "python_file_uris": [
                     f"gs://{self.bucket_config.bucket_name}/jobs/modules.zip",
                 ],

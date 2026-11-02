@@ -1,19 +1,11 @@
 from dataclasses import dataclass, field
 from typing import Callable
 
-from pyiceberg.transforms import DayTransform
-from pyspark.sql import DataFrame, SparkSession
+from pyspark.sql import DataFrame
 
-from common.classes import Dataset
-from common.enums import DatasetType, DatasetName
-from config.loader import ConfigLoader
-from config.apis.vast_ai import VastAIConfig
-from refine.load_strategy import OverwriteByPartition, SilverTable
 from refine.assets.filtering import deduplicate_keep_latest, keep_latest_per_group
-from refine.init import initialize_spark
 from refine.base import Pipeline
 from refine.assets.cleaning import strip_non_ascii, trim_whitespace, replace_substring, empty_to_null
-from refine.schemas.compute_offers import COMPUTE_OFFERS_SILVER_SCHEMA
 
 
 def strip_cpu_core_suffix(df: DataFrame) -> DataFrame:
@@ -34,25 +26,3 @@ class ComputeOffersPipeline(Pipeline):
         strip_cpu_core_suffix,
         deduplicate_compute_offers
     ])
-
-
-def run():
-    session: SparkSession = initialize_spark()
-    loader: ConfigLoader = ConfigLoader()
-    vast_ai_config: VastAIConfig = loader.get_vast_ai()
-    compute_offers: Dataset = Dataset(dataset_name=DatasetName.COMPUTE_OFFERS, dataset_type=DatasetType.SOURCES)
-    if not vast_ai_config.enabled:
-        return
-
-    compute_offers_pipeline: ComputeOffersPipeline = ComputeOffersPipeline(
-        session=session,
-        dataset=compute_offers,
-        config=vast_ai_config,
-        lakehouse_config=loader.get_lakehouse(),
-        silver_table=SilverTable(COMPUTE_OFFERS_SILVER_SCHEMA, OverwriteByPartition(column="snapshot_at", transform=DayTransform())),
-    )
-    compute_offers_pipeline.run()
-
-
-if __name__ == "__main__":
-    run()

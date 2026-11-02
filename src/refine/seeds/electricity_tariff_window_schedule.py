@@ -3,21 +3,15 @@ from dataclasses import field, dataclass
 from functools import reduce
 from typing import Callable
 
-from pyspark.sql import DataFrame, Row, SparkSession
+from pyspark.sql import DataFrame, Row
 from pyspark.sql import functions as F
 
-from common.classes import Dataset
-from common.enums import DatasetType, DatasetName, TariffWindowType
-from config.apis.evn import EVNConfig
-from config.loader import ConfigLoader
-from refine.load_strategy import OverwriteByPartition, SilverTable
+from common.enums import TariffWindowType
 from refine.assets.cleaning import trim_whitespace, empty_to_null
 from refine.assets.extraction import extract_valid_from_date
 from refine.assets.filtering import keep_latest_per_group
 from refine.assets.patterns import SCHEDULE_LOW_TARIFF_HOUR_PAIR_PATTERN, WEEKDAY_WEEKEND_SPLIT
 from refine.base import Pipeline
-from refine.init import initialize_spark
-from refine.schemas.electricity_tariff_window_schedule import ELECTRICITY_TARIFF_WINDOW_SCHEDULE_SILVER_SCHEMA
 
 
 def extract_low_tariff_window_hours(text: str) -> set[int]:
@@ -63,27 +57,3 @@ class ElectricityTariffWindowSchedulePipeline(Pipeline):
             .withColumn("ingested_at", F.lit(version["ingested_at"]))
             .select("tariff_window_type", "day_of_week", "start_hour", "end_hour", "valid_from", "ingested_at")
         )
-
-
-def run():
-    session: SparkSession = initialize_spark()
-    loader: ConfigLoader = ConfigLoader()
-    evn_config: EVNConfig = loader.get_evn()
-    electricity_tariff_window_schedule: Dataset = Dataset(dataset_name=DatasetName.ELECTRICITY_TARIFF_WINDOW_SCHEDULE,
-                                                   dataset_type=DatasetType.SEEDS)
-    if not evn_config.enabled:
-        return
-
-    electricity_tariff_window_schedule_pipeline: ElectricityTariffWindowSchedulePipeline = ElectricityTariffWindowSchedulePipeline(
-        session=session,
-        dataset=electricity_tariff_window_schedule,
-        config=evn_config,
-        lakehouse_config=loader.get_lakehouse(),
-        silver_table=SilverTable(ELECTRICITY_TARIFF_WINDOW_SCHEDULE_SILVER_SCHEMA, OverwriteByPartition()),
-    )
-
-    electricity_tariff_window_schedule_pipeline.run()
-
-
-if __name__ == "__main__":
-    run()
