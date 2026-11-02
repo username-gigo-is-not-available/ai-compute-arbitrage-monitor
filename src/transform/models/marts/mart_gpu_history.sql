@@ -32,9 +32,9 @@ census_hours as (
     from census_offers
     cross join unnest(
         generate_timestamp_array(
-            timestamp(census_date, '{{ var("evn_timezone") }}'),
+            {{ evn_day_start('census_date') }},
             timestamp_sub(
-                timestamp(date_add(census_date, interval 1 day), '{{ var("evn_timezone") }}'),
+                {{ evn_day_start('date_add(census_date, interval 1 day)') }},
                 interval 1 hour
             ),
             interval 1 hour
@@ -70,8 +70,8 @@ priced as (
         on  ts.day_of_week        = ch.day_of_week
         and ts.hour               = ch.hour_of_day
         and ts.tariff_window_type = o.tariff_window_type
-        and ch.census_date >= ts.valid_from
-        and ch.census_date <  ts.valid_to
+        and ch.history_hour >= ts.valid_from
+        and ch.history_hour <  ts.valid_to
 )
 
 select

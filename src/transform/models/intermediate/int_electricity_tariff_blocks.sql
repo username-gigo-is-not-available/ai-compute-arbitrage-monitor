@@ -14,7 +14,7 @@ transformed as (
         tariff_block_number,
         lower_bound_kwh,
         upper_bound_kwh,
-        valid_from,
+        {{ evn_day_start('valid_from') }} as valid_from,
         ingested_at,
         processed_at
     from source

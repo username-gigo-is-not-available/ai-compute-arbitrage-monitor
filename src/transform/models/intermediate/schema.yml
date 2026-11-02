@@ -359,12 +359,12 @@ models:
         tests: []
 
       - name: valid_from
-        description: "Date from which this tariff price is valid"
+        description: "When this tariff price becomes valid: the start of its EVN local date, as a UTC timestamp (ADR-021)"
         tests:
           - not_null
           - dbt_utils.expression_is_true:
               arguments:
-                expression: "<= current_date"
+                expression: "<= current_timestamp()"
 
       - name: ingested_at
         tests:
@@ -420,7 +420,7 @@ models:
                 values: [ 'distribution', 'access' ]
 
       - name: valid_from
-        description: "Date from which this fee is valid"
+        description: "When this fee becomes valid: the start of its EVN local date, as a UTC timestamp (ADR-021)"
         tests:
           - not_null
 
@@ -479,7 +479,7 @@ models:
                 expression: "> 0"
 
       - name: valid_from
-        description: "Date from which this block definition is valid"
+        description: "When this block definition becomes valid: the start of its EVN local date, as a UTC timestamp (ADR-021)"
         tests:
           - not_null
 
@@ -527,7 +527,7 @@ models:
                 values: [ 'low', 'high' ]
 
       - name: valid_from
-        description: "Date from which this schedule entry is valid"
+        description: "When this schedule entry becomes valid: the start of its EVN local date, as a UTC timestamp (ADR-021)"
         tests:
           - not_null
 

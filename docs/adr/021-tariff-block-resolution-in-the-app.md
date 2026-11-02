@@ -6,6 +6,12 @@ Accepted. _Amended by ADR-025_: one cost set (the former marginal cost, no prefi
 columns are gone. The dbt part is implemented in #42; the app part (Track B) is not yet built. Amends ADR-007 (forecast inputs, grain and framing) and the cost
 model of ADR-005 (marginal vs. average cost, VAT). Restores the intent of ADR-005's
 `kwh_consumed_so_far` input without restoring `mart_user_profitability_scenario`.
+_Amended 2026-11-02_: every timestamp stays UTC, and only local rules are converted. EVN publishes
+tariff, fee, block and schedule versions by Macedonian local date; the `int_electricity_tariff_*`
+models turn each date into the UTC instant it starts (`evn_day_start`), so the dims' `valid_from` /
+`valid_to` are UTC timestamps and fct and the marts compare instants with instants. Only the
+schedule's day of week and hour stay local (`evn_day_of_week`, `evn_hour`): in UTC the cheap
+window would shift with every DST change. Exchange rates keep their UTC dates: the API's time is UTC.
 
 ## Context
 

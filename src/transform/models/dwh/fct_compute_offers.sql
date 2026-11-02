@@ -122,21 +122,22 @@ joined as (
         on  cast(o.valid_from as date) >= er.valid_from
         and cast(o.valid_from as date) <  er.valid_to
 
+    -- Tariff validity is a UTC instant (the start of EVN's local date, ADR-021), like the census time.
     join tariff_tiers tt
-        on  cast(o.valid_from as date) >= tt.valid_from
-        and cast(o.valid_from as date) <  tt.valid_to
+        on  o.valid_from >= tt.valid_from
+        and o.valid_from <  tt.valid_to
 
     join tariff_fees tf
-        on  cast(o.valid_from as date) >= tf.valid_from
-        and cast(o.valid_from as date) <  tf.valid_to
+        on  o.valid_from >= tf.valid_from
+        and o.valid_from <  tf.valid_to
         and tt.consumer_category = tf.consumer_category
 
     left join tariff_blocks tb
         on  tt.consumer_category = tb.consumer_category
         and tt.tariff_window_type = tb.tariff_window_type
         and tt.tariff_block_number = tb.tariff_block_number
-        and cast(o.valid_from as date) >= tb.valid_from
-        and cast(o.valid_from as date) <  tb.valid_to
+        and o.valid_from >= tb.valid_from
+        and o.valid_from <  tb.valid_to
 ),
 
 calculations as (
