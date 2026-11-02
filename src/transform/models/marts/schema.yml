@@ -396,8 +396,8 @@ models:
     description: >
       Summary statistics per GPU variant and tariff tier over the latest census, counting machines, not their
       overlapping offers (ADR-020). Includes pct_profitable (share of
-      machines with positive profit for that tier, ADR-025), pct_available, host quality metrics, and per-GPU averages split by available and taken
-      machines. One row per (gpu_architecture, gpu_model_name, tflops_per_gpu, gpu_memory_gb, tariff_tier_skey).
+      machines with positive profit for that tier, ADR-025), pct_available, host quality metrics, and per-GPU median asks split by available and taken
+      machines (#53). One row per (gpu_architecture, gpu_model_name, gpu_memory_gb, tariff_tier_skey).
     tests:
       - dbt_utils.unique_combination_of_columns:
           arguments:
@@ -405,7 +405,6 @@ models:
               - gpu_architecture
               - gpu_model_name
               - gpu_memory_gb
-              - tflops_per_gpu
               - tariff_tier_skey
     columns:
       - name: gpu_architecture
@@ -417,7 +416,7 @@ models:
         tests:
           - not_null
       - name: tflops_per_gpu
-        description: "TFLOPS per GPU - part of grain"
+        description: "Median TFLOPS per GPU across the variant's machines, reported zeros ignored"
       - name: gpu_memory_gb
         description: "GPU VRAM in gigabytes - part of grain to separate RTX 4090 16GB vs 32GB"
 
@@ -437,14 +436,14 @@ models:
       - name: avg_kwh_per_tflop
         description: "Average energy efficiency ratio - kWh per TFLOP"
 
-      - name: avg_revenue_per_gpu_usd_per_hr
-        description: "Average revenue per GPU in USD/hr"
+      - name: median_revenue_per_gpu_usd_per_hr
+        description: "Median ask per GPU in USD/hr of all the variant's machines"
 
-      - name: avg_available_revenue_per_gpu_usd_per_hr
-        description: "Average ask per GPU in USD/hr of available machines - the competition"
+      - name: median_available_revenue_per_gpu_usd_per_hr
+        description: "Median ask per GPU in USD/hr of available machines - the competition"
 
-      - name: avg_taken_revenue_per_gpu_usd_per_hr
-        description: "Average ask per GPU in USD/hr of taken machines - prices being paid, or of switched-off machines"
+      - name: median_taken_revenue_per_gpu_usd_per_hr
+        description: "Median ask per GPU in USD/hr of taken machines - prices being paid, or of switched-off machines"
 
       - name: pct_profitable
         description: "Percentage of machines with profit_usd_per_hr > 0 for this tariff tier"
@@ -509,8 +508,8 @@ models:
       and tariff tier, the grain of mart_gpu_history (#40), aligned to the EVN tariff window schedule in Macedonian local time (ADR-007, ADR-021). It carries every
       consumer category and tariff block and no per-user input: the app picks the user's category, walks the
       blocks with a running total from their billing-period consumption, and scales by their GPU count and ask
-      price. Revenue is the current market ask (median per-GPU ask of the variant's machines in the latest census). TDP and
-      TFLOPS still come from one arbitrary current machine of the variant (#53). Cost is electricity only:
+      price. Revenue is the current market ask (median per-GPU ask of the variant's machines in the latest census). TDP, TFLOPS,
+      bandwidth and CUDA version are the medians of the variant's current machines, like mart_gpu_history (#53). Cost is electricity only:
       kWh x (tariff_value + distribution_fee) x (1 + household VAT), excluding the fixed access fee.
       Covers the next forecast_days (default 32) days.
       One row per (gpu_model_name, gpu_memory_gb, forecast_hour, tariff_tier_skey).
@@ -553,14 +552,14 @@ models:
         tests:
           - not_null
       - name: gpu_tdp_watts
-        description: "GPU TDP in watts"
+        description: "Median GPU TDP in watts across the variant's current machines, reported zeros ignored"
         tests:
           - not_null
           - dbt_utils.expression_is_true:
               arguments:
                 expression: "> 0"
       - name: tflops_per_gpu
-        description: "TFLOPS per GPU"
+        description: "Median TFLOPS per GPU across the variant's current machines, reported zeros ignored"
         tests:
           - not_null:
               config:

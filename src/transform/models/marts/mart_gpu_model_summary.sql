@@ -9,12 +9,15 @@ select
     -- identity / grouping
     gpu_architecture,
     gpu_model_name,
-    tflops_per_gpu,
     gpu_memory_gb,
     tariff_tier_skey,
     consumer_category,
     tariff_window_type,
     tariff_block_number,
+
+    -- specs: hosts report TFLOPS per machine and one card varies, so the variant takes the median, like
+    -- mart_gpu_history (#53). A reported 0 is no value.
+    approx_quantiles(nullif(tflops_per_gpu, 0), 100)[offset(50)]                 as tflops_per_gpu,
 
     -- supply
     count(*)                                                                     as number_of_machines,
@@ -23,10 +26,13 @@ select
     -- efficiency
     avg(kwh_per_tflop)                                                           as avg_kwh_per_tflop,
 
-    -- revenue / profitability (USD/hr)
-    avg(revenue_per_gpu_usd_per_hr)                                              as avg_revenue_per_gpu_usd_per_hr,
-    avg(if(rentable_flag, revenue_per_gpu_usd_per_hr, null))                     as avg_available_revenue_per_gpu_usd_per_hr,
-    avg(if(not rentable_flag, revenue_per_gpu_usd_per_hr, null))                 as avg_taken_revenue_per_gpu_usd_per_hr,
+    -- revenue / profitability (USD/hr): medians, like mart_gpu_history and mart_gpu_forecast, since a few
+    -- overpriced listings pull an average up (#53)
+    approx_quantiles(revenue_per_gpu_usd_per_hr, 100)[offset(50)]                as median_revenue_per_gpu_usd_per_hr,
+    approx_quantiles(if(rentable_flag, revenue_per_gpu_usd_per_hr, null), 100)[offset(50)]
+                                                                                 as median_available_revenue_per_gpu_usd_per_hr,
+    approx_quantiles(if(not rentable_flag, revenue_per_gpu_usd_per_hr, null), 100)[offset(50)]
+                                                                                 as median_taken_revenue_per_gpu_usd_per_hr,
 
     round(100.0 * countif(profit_usd_per_hr > 0) / nullif(count(*), 0), 2)
                                                                                  as pct_profitable,
@@ -45,7 +51,6 @@ where cast(valid_to as date) = date '9999-12-31'
 group by
     gpu_architecture,
     gpu_model_name,
-    tflops_per_gpu,
     gpu_memory_gb,
     tariff_tier_skey,
     consumer_category,

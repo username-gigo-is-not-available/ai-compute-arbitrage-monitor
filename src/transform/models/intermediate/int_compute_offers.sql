@@ -7,7 +7,8 @@
 -- A machine collapses into one row only when all of its offers agree on GPU model, machine size and per-GPU price
 -- (ADR-020). The few that don't (13-20 per census, e.g. a 5090 next to four 4090s) are dropped rather than
 -- given one model or price that is wrong for part of the machine; assert_stg_compute_offers_machine_slices_agree
--- reports them.
+-- reports them. A machine without a reported power draw (0 W, one per census) can't be costed and is dropped too;
+-- assert_stg_compute_offers_gpu_tdp_reported reports it.
 with single_type_machines as (
     select
         machine_id,
@@ -110,3 +111,4 @@ transformed as (
 )
 
 select * from transformed
+where gpu_tdp_watts > 0
