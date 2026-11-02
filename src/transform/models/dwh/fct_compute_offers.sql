@@ -122,21 +122,22 @@ joined as (
         on  cast(o.valid_from as date) >= er.valid_from
         and cast(o.valid_from as date) <  er.valid_to
 
+    -- EVN tariffs are versioned by Macedonian local date, like the marts' schedule matching (ADR-021).
     join tariff_tiers tt
-        on  cast(o.valid_from as date) >= tt.valid_from
-        and cast(o.valid_from as date) <  tt.valid_to
+        on  {{ evn_date('o.valid_from') }} >= tt.valid_from
+        and {{ evn_date('o.valid_from') }} <  tt.valid_to
 
     join tariff_fees tf
-        on  cast(o.valid_from as date) >= tf.valid_from
-        and cast(o.valid_from as date) <  tf.valid_to
+        on  {{ evn_date('o.valid_from') }} >= tf.valid_from
+        and {{ evn_date('o.valid_from') }} <  tf.valid_to
         and tt.consumer_category = tf.consumer_category
 
     left join tariff_blocks tb
         on  tt.consumer_category = tb.consumer_category
         and tt.tariff_window_type = tb.tariff_window_type
         and tt.tariff_block_number = tb.tariff_block_number
-        and cast(o.valid_from as date) >= tb.valid_from
-        and cast(o.valid_from as date) <  tb.valid_to
+        and {{ evn_date('o.valid_from') }} >= tb.valid_from
+        and {{ evn_date('o.valid_from') }} <  tb.valid_to
 ),
 
 calculations as (
