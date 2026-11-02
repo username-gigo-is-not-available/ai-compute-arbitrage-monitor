@@ -73,6 +73,8 @@ across three types). Probes on 2026-10-01 and 2026-10-03 found:
   next to 4090s); one model per machine was never checked. `int_compute_offers` now drops every
   machine whose offers disagree on GPU model, machine size or per-GPU price (13–20 per census),
   and `assert_stg_compute_offers_machine_slices_agree` warns with them.
+  _Amended 2026-11-02_: machines that report no GPU power draw (0 W, one per census) can't be
+  costed and are dropped as well; `assert_stg_compute_offers_gpu_tdp_reported` warns with them (#53).
 
 ## Considered options
 

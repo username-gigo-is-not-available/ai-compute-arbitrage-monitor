@@ -95,11 +95,12 @@ models:
                 expression: "> 0"
 
       - name: gpu_tdp_watts
-        description: "GPU TDP / max power draw in watts"
+        description: "GPU TDP / max power draw in watts, as the host reports it; machines without one are dropped"
         tests:
-          - not_null:
-              config:
-                severity: warn
+          - not_null
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: "> 0"
 
       - name: number_of_machine_gpus
         description: "GPUs in the machine, rented or not: number_of_offer_gpus / gpu_fraction_of_machine of any of its offers"
