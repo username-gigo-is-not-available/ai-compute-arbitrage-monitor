@@ -14,7 +14,7 @@ transformed as (
         metric,
         value,
         {{ extract_fee_type('label') }} as fee_type,
-        valid_from,
+        {{ evn_day_start('valid_from') }} as valid_from,
         ingested_at,
         processed_at
     from source

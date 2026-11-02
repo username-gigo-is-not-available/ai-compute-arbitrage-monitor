@@ -18,8 +18,8 @@ scd as (
         tariff_block_number,
         valid_from,
         coalesce(
-            cast({{ valid_to('valid_from', 'consumer_category, tariff_window_type, tariff_block_number') }} as date),
-            date '9999-12-31'
+            {{ valid_to('valid_from', 'consumer_category, tariff_window_type, tariff_block_number') }},
+            timestamp '9999-12-31'
         )                                                                                                   as valid_to,
         {{ is_latest('valid_from', 'consumer_category, tariff_window_type, tariff_block_number') }}         as is_latest
     from source

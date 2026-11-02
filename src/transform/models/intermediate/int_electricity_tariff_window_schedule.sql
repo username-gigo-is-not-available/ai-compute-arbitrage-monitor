@@ -21,7 +21,7 @@ select
     c.day_of_week,
     c.hour,
     s.tariff_window_type,
-    s.valid_from,
+    {{ evn_day_start('s.valid_from') }} as valid_from,
     s.ingested_at,
     s.processed_at
 from calendar as c

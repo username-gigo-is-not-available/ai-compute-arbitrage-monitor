@@ -8,6 +8,11 @@
     extract(hour from {{ ts }} at time zone '{{ var("evn_timezone") }}')
 {% endmacro %}
 
+{# EVN publishes tariffs by Macedonian local date; their validity is kept as the UTC instant that date starts. #}
+{% macro evn_day_start(local_date) %}
+    timestamp({{ local_date }}, '{{ var("evn_timezone") }}')
+{% endmacro %}
+
 {% macro evn_date(ts) %}
     date({{ ts }}, '{{ var("evn_timezone") }}')
 {% endmacro %}

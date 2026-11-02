@@ -64,8 +64,8 @@ window_mismatches as (
     left join {{ ref('dim_electricity_tariff_window_schedule') }} s
         on  s.day_of_week = mod(extract(dayofweek from l.local_history_datetime) + 5, 7) + 1
         and s.hour        = extract(hour from l.local_history_datetime)
-        and date(l.local_history_datetime) >= s.valid_from
-        and date(l.local_history_datetime) <  s.valid_to
+        and l.history_hour >= s.valid_from
+        and l.history_hour <  s.valid_to
     where s.tariff_window_type is null
        or s.tariff_window_type != l.scheduled_tariff_window_type
 )

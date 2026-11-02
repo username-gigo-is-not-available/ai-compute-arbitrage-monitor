@@ -16,8 +16,8 @@ scd as (
         value,
         valid_from,
         coalesce(
-            cast({{ valid_to('valid_from', 'consumer_category, fee_type') }} as date),
-            date '9999-12-31'
+            {{ valid_to('valid_from', 'consumer_category, fee_type') }},
+            timestamp '9999-12-31'
         )                                                                    as valid_to,
         {{ is_latest('valid_from', 'consumer_category, fee_type') }}         as is_latest
     from source

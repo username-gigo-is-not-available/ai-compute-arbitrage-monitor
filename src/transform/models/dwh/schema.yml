@@ -52,15 +52,15 @@ models:
         tests: []
 
       - name: valid_from
-        description: "Date from which this tariff version is effective"
+        description: "When this tariff version takes effect: the start of its EVN local date, as a UTC timestamp (ADR-021)"
         tests:
           - not_null
           - dbt_utils.expression_is_true:
               arguments:
-                expression: "<= current_date"
+                expression: "<= current_timestamp()"
 
       - name: valid_to
-        description: "Date from which this tariff version is superseded - null means currently active"
+        description: "When this tariff version is superseded (the next version's valid_from) - 9999-12-31 means currently active"
 
       - name: is_latest
         description: "True if this is the currently active version of the tariff"
@@ -84,7 +84,7 @@ models:
               - consumer_category
               - tariff_window_type
               - tariff_block_number
-            active_value: "date '9999-12-31'"
+            active_value: "timestamp '9999-12-31'"
       - assert_scd2_no_overlapping_ranges:
           arguments:
             natural_key_columns:
@@ -133,15 +133,15 @@ models:
                 expression: ">= 0"
 
       - name: valid_from
-        description: "Date from which this fee version is effective"
+        description: "When this fee version takes effect: the start of its EVN local date, as a UTC timestamp (ADR-021)"
         tests:
           - not_null
           - dbt_utils.expression_is_true:
               arguments:
-                expression: "<= current_date"
+                expression: "<= current_timestamp()"
 
       - name: valid_to
-        description: "Date from which this fee version is superseded - null means currently active"
+        description: "When this fee version is superseded (the next version's valid_from) - 9999-12-31 means currently active"
 
       - name: is_latest
         description: "True if this is the currently active version of the fee"
@@ -163,7 +163,7 @@ models:
             natural_key_columns:
               - consumer_category
               - fee_type
-            active_value: "date '9999-12-31'"
+            active_value: "timestamp '9999-12-31'"
       - assert_scd2_no_overlapping_ranges:
           arguments:
             natural_key_columns:
@@ -213,15 +213,15 @@ models:
                 expression: "> 0"
 
       - name: valid_from
-        description: "Date from which this block definition is effective"
+        description: "When this block definition takes effect: the start of its EVN local date, as a UTC timestamp (ADR-021)"
         tests:
           - not_null
           - dbt_utils.expression_is_true:
               arguments:
-                expression: "<= current_date"
+                expression: "<= current_timestamp()"
 
       - name: valid_to
-        description: "Date from which this block definition is superseded - null means currently active"
+        description: "When this block definition is superseded (the next version's valid_from) - 9999-12-31 means currently active"
 
       - name: is_latest
         description: "True if this is the currently active block definition"
@@ -245,7 +245,7 @@ models:
               - consumer_category
               - tariff_window_type
               - tariff_block_number
-            active_value: "date '9999-12-31'"
+            active_value: "timestamp '9999-12-31'"
       - assert_scd2_no_overlapping_ranges:
           arguments:
             natural_key_columns:
@@ -287,12 +287,12 @@ models:
                 values: [ 'low', 'high' ]
 
       - name: valid_from
-        description: "Date from which this schedule assignment is effective"
+        description: "When this schedule assignment takes effect: the start of its EVN local date, as a UTC timestamp (ADR-021)"
         tests:
           - not_null
 
       - name: valid_to
-        description: "Date from which this schedule assignment is superseded - null means currently active"
+        description: "When this schedule assignment is superseded (the next version's valid_from) - 9999-12-31 means currently active"
 
       - name: is_latest
         description: "True if this is the currently active assignment for this day/hour slot"
@@ -314,7 +314,7 @@ models:
             natural_key_columns:
               - day_of_week
               - hour
-            active_value: "date '9999-12-31'"
+            active_value: "timestamp '9999-12-31'"
       - assert_scd2_no_overlapping_ranges:
           arguments:
             natural_key_columns:

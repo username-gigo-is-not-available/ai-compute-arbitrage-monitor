@@ -16,7 +16,7 @@ transformed as (
         {{ extract_tariff_type('label') }} as tariff_type,
         {{ extract_tariff_window_type('tariff_tier') }} as tariff_window_type,
         {{ extract_tariff_block_number('tariff_tier') }} as tariff_block_number,
-        valid_from,
+        {{ evn_day_start('valid_from') }} as valid_from,
         ingested_at,
         processed_at
     from source
