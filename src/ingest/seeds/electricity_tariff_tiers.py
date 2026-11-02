@@ -1,17 +1,11 @@
-import logging
 from dataclasses import dataclass
 from datetime import datetime, UTC
 
 from bs4 import Tag
 
-from common.classes import Dataset
-from common.enums import DatasetName, DatasetType, ConsumerCategoryType
-from config.apis.evn import EVNConfig
-from config.loader import ConfigLoader
+from common.enums import ConsumerCategoryType
 from ingest.evn_base import EVNBaseIngestor
 from ingest.models.electricity_tariff_tier import ElectricityTariffTier
-from ingest.schemas.electricity_tariff_tiers import ELECTRICITY_TARIFF_TIERS_BRONZE_SCHEMA
-from ingest.write_strategy import AppendByDay, BronzeTable
 
 
 @dataclass(frozen=True)
@@ -79,30 +73,3 @@ class ElectricityTariffTiersIngestor(EVNBaseIngestor):
             tariff_tier=row[specification.tariff_tier_idx].text.strip(),
             valid_from_text=valid_from_text
         )
-
-
-def main() -> None:
-    loader: ConfigLoader = ConfigLoader()
-    evn_config: EVNConfig = loader.get_evn()
-    electricity_tariff_tiers: Dataset = Dataset(dataset_name=DatasetName.ELECTRICITY_TARIFF_TIERS,
-                                                dataset_type=DatasetType.SEEDS)
-    if not evn_config.enabled:
-        return
-
-    electricity_tariff_tiers_ingestor = ElectricityTariffTiersIngestor(
-        dataset=electricity_tariff_tiers,
-        config=evn_config,
-        lakehouse_config=loader.get_lakehouse(),
-        bronze_table=BronzeTable(ELECTRICITY_TARIFF_TIERS_BRONZE_SCHEMA, AppendByDay(column="ingested_at")),
-        http_config=loader.get_http(),
-    )
-    logging.info(f"Starting seed {electricity_tariff_tiers_ingestor.name}...")
-    electricity_tariff_tiers_ingestor.run()
-
-
-def run(scheduled_at: str | None = None) -> None:
-    main()
-
-
-if __name__ == "__main__":
-    run()

@@ -16,7 +16,7 @@ from tenacity import (
     stop_after_attempt,
 )
 
-from common.classes import Dataset
+from common.classes import Dataset, Snapshot
 from common.enums import DataStageType
 from common.types import DatasetConfig
 from config.http import HttpConfig
@@ -34,6 +34,7 @@ class Ingestor(ABC):
     lakehouse_config: GCPLakehouseConfig
     bronze_table: BronzeTable
     http_config: HttpConfig
+    snapshot: Snapshot  # the scheduled day this run is for (ADR-019)
     name: str = field(init=False)
     logger: logging.Logger = field(init=False)
     catalog: Catalog | None = field(init=False, default=None)

@@ -1,4 +1,3 @@
-import logging
 import time
 from dataclasses import dataclass, field
 from datetime import datetime, UTC
@@ -6,19 +5,13 @@ from typing import Any
 
 from pydantic import ValidationError
 
-from common.classes import Dataset, Snapshot
-from common.enums import OfferType, DatasetType, DatasetName
-from config.apis.vast_ai import VastAIConfig
-from config.loader import ConfigLoader
+from common.enums import OfferType
 from ingest.base import Ingestor
 from ingest.models.vast_ai_offer import VastAIOffer
-from ingest.schemas.compute_offers import COMPUTE_OFFERS_BRONZE_SCHEMA
-from ingest.write_strategy import AppendByDay, BronzeTable
 
 
 @dataclass
 class ComputeOffersIngestor(Ingestor):
-    snapshot: Snapshot
     rows_used: int = field(init=False, default=0)
     requests: int = field(init=False, default=0)
 
@@ -120,30 +113,3 @@ class ComputeOffersIngestor(Ingestor):
         except (KeyError, ValueError, TypeError, ValidationError) as e:
             self.logger.warning(f"Could not parse offer {data.get('id')}: {e}")
             return None
-
-
-def main(scheduled_at: str | None = None) -> None:
-    loader: ConfigLoader = ConfigLoader()
-    vast_ai_config: VastAIConfig = loader.get_vast_ai()
-    compute_offers: Dataset = Dataset(dataset_name=DatasetName.COMPUTE_OFFERS, dataset_type=DatasetType.SOURCES)
-    if not vast_ai_config.enabled:
-        return
-
-    compute_offers_ingestor: ComputeOffersIngestor = ComputeOffersIngestor(
-        dataset=compute_offers,
-        config=vast_ai_config,
-        lakehouse_config=loader.get_lakehouse(),
-        bronze_table=BronzeTable(COMPUTE_OFFERS_BRONZE_SCHEMA, AppendByDay(column="snapshot_at")),
-        http_config=loader.get_http(),
-        snapshot=Snapshot.from_scheduled_at(scheduled_at),
-    )
-    logging.info(f"Starting source {compute_offers_ingestor.name}...")
-    compute_offers_ingestor.run()
-
-
-def run(scheduled_at: str | None = None) -> None:
-    main(scheduled_at)
-
-
-if __name__ == "__main__":
-    run()

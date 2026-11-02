@@ -17,7 +17,7 @@ import requests
 from pyiceberg.schema import Schema
 from pyiceberg.types import NestedField, StringType
 
-from common.classes import Dataset
+from common.classes import Dataset, Snapshot
 from common.enums import ConsumerCategoryType, DatasetName, DatasetType
 from config.http import HttpConfig
 from config.lakehouse import GCPLakehouseConfig
@@ -59,6 +59,7 @@ class TestEVNSeedsBronze(unittest.TestCase):
             bronze_table=BronzeTable(Schema(NestedField(field_id=1, name="id", field_type=StringType(), required=False)),
                                      AppendByDay(column="ingested_at")),
             http_config=HttpConfig(timeout_seconds=30, retry_count=1, retry_delay_seconds=0),
+            snapshot=Snapshot.from_scheduled_at(None),
         )
         with mock.patch.object(requests, "get", side_effect=lambda url, **kwargs: FakePage(self.pages[url])):
             return ingestor.load()
