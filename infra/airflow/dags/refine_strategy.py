@@ -3,7 +3,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 
 from airflow.providers.google.cloud.operators.dataproc import DataprocCreateBatchOperator
-from airflow.providers.standard.operators.python import PythonOperator
+from airflow.providers.standard.operators.bash import BashOperator
 from airflow.sdk import BaseOperator
 
 from common.enums import ExecutionType
@@ -35,16 +35,14 @@ class RefineStrategy(ABC):
 
 class LocalRefineStrategy(RefineStrategy):
 
-    def build_operator(self, pipeline_config: PipelineConfig) -> BaseOperator:
-        # Imported here, not at the top: Composer parses this file but does not ship the refine package
-        # (gcp.composer.runtime_packages in settings.yaml)
-        from refine.registry import run_refine
+    # Starts the same entry script Dataproc runs, in its own process, so the DAG never imports refine (Composer does
+    # not ship it)
+    @staticmethod
+    def command(pipeline_config: PipelineConfig) -> str:
+        return f"python -m refine.main {pipeline_config.dataset_name}"
 
-        return PythonOperator(
-            task_id="refine",
-            python_callable=run_refine,
-            op_kwargs={"dataset": pipeline_config.dataset_name},
-        )
+    def build_operator(self, pipeline_config: PipelineConfig) -> BaseOperator:
+        return BashOperator(task_id="refine", bash_command=self.command(pipeline_config))
 
 
 class DataprocRefineStrategy(RefineStrategy):
