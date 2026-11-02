@@ -50,22 +50,20 @@ spine_with_window as (
 ),
 
 
--- One row per GPU variant (model + memory), the grain of mart_gpu_history (#40). The specs still come from one
--- arbitrary current machine of the variant; #53 replaces them with the variant's medians.
+-- One row per GPU variant (model + memory), the grain of mart_gpu_history (#40). Hosts report specs per machine
+-- and one card varies (a 4090 24GB reports 150-600 W), so the variant takes the median of its current machines,
+-- like mart_gpu_history (#53). A reported 0 is no value.
 gpu_specs as (
     select
         gpu_model_name,
-        gpu_tdp_watts,
-        tflops_per_gpu,
         gpu_memory_gb,
-        gpu_bandwidth_gbytes_per_sec,
-        gpu_max_cuda_version_supported
+        approx_quantiles(nullif(gpu_tdp_watts, 0), 100)[offset(50)]          as gpu_tdp_watts,
+        approx_quantiles(nullif(tflops_per_gpu, 0), 100)[offset(50)]         as tflops_per_gpu,
+        approx_quantiles(gpu_bandwidth_gbytes_per_sec, 100)[offset(50)]      as gpu_bandwidth_gbytes_per_sec,
+        approx_quantiles(gpu_max_cuda_version_supported, 100)[offset(50)]    as gpu_max_cuda_version_supported
     from {{ ref('fct_compute_offers') }}
     where cast(valid_to as date) = date '9999-12-31'
-    qualify row_number() over (
-        partition by gpu_model_name, gpu_memory_gb
-        order by valid_from desc
-    ) = 1
+    group by gpu_model_name, gpu_memory_gb
 ),
 
 

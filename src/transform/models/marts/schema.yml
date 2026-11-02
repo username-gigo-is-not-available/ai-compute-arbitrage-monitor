@@ -509,8 +509,8 @@ models:
       and tariff tier, the grain of mart_gpu_history (#40), aligned to the EVN tariff window schedule in Macedonian local time (ADR-007, ADR-021). It carries every
       consumer category and tariff block and no per-user input: the app picks the user's category, walks the
       blocks with a running total from their billing-period consumption, and scales by their GPU count and ask
-      price. Revenue is the current market ask (median per-GPU ask of the variant's machines in the latest census). TDP and
-      TFLOPS still come from one arbitrary current machine of the variant (#53). Cost is electricity only:
+      price. Revenue is the current market ask (median per-GPU ask of the variant's machines in the latest census). TDP, TFLOPS,
+      bandwidth and CUDA version are the medians of the variant's current machines, like mart_gpu_history (#53). Cost is electricity only:
       kWh x (tariff_value + distribution_fee) x (1 + household VAT), excluding the fixed access fee.
       Covers the next forecast_days (default 32) days.
       One row per (gpu_model_name, gpu_memory_gb, forecast_hour, tariff_tier_skey).
@@ -553,14 +553,14 @@ models:
         tests:
           - not_null
       - name: gpu_tdp_watts
-        description: "GPU TDP in watts"
+        description: "Median GPU TDP in watts across the variant's current machines, reported zeros ignored"
         tests:
           - not_null
           - dbt_utils.expression_is_true:
               arguments:
                 expression: "> 0"
       - name: tflops_per_gpu
-        description: "TFLOPS per GPU"
+        description: "Median TFLOPS per GPU across the variant's current machines, reported zeros ignored"
         tests:
           - not_null:
               config:
