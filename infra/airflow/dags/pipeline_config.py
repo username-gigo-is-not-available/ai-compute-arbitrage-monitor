@@ -2,17 +2,17 @@ from dataclasses import dataclass
 from datetime import datetime
 
 from common.enums import DatasetName
+from config.datasets import DATASETS
 
 
-# How each dataset is scheduled in Airflow. What the dataset is (type, settings, ingestor, pipeline) lives in the
-# registries: config.datasets, ingest.registry, refine.registry. No Airflow import here, so tests can read the list
-# in CI.
+# How Airflow schedules one dataset. Every dataset runs on the same schedule today; give DatasetDeclaration a
+# schedule field once one needs a different one.
 @dataclass(frozen=True)
 class PipelineConfig:
     dataset_name: DatasetName
-    schedule: str
-    start_date: datetime
     description: str = ""
+    schedule: str = "@daily"
+    start_date: datetime = datetime(2026, 1, 1)
 
     @property
     def dag_id(self) -> str:
@@ -23,41 +23,8 @@ class PipelineConfig:
         return f"tag:{self.dataset_name}"
 
 
+# One DAG per declared dataset, so the DAG list cannot drift from config.datasets.DATASETS
 PIPELINE_CONFIGS: list[PipelineConfig] = [
-    PipelineConfig(
-        dataset_name=DatasetName.COMPUTE_OFFERS,
-        schedule="@daily",
-        start_date=datetime(2026, 1, 1),
-        description="Vast.ai compute offers → Bronze → Silver → Gold",
-    ),
-    PipelineConfig(
-        dataset_name=DatasetName.EXCHANGE_RATES,
-        schedule="@daily",
-        start_date=datetime(2026, 1, 1),
-        description="MKD/USD exchange rate → Bronze → Silver → Gold",
-    ),
-    PipelineConfig(
-        dataset_name=DatasetName.ELECTRICITY_TARIFF_TIERS,
-        schedule="@daily",
-        start_date=datetime(2026, 1, 1),
-        description="EVN tariff tiers → Bronze → Silver → Gold",
-    ),
-    PipelineConfig(
-        dataset_name=DatasetName.ELECTRICITY_TARIFF_BLOCKS,
-        schedule="@daily",
-        start_date=datetime(2026, 1, 1),
-        description="EVN tariff blocks → Bronze → Silver → Gold",
-    ),
-    PipelineConfig(
-        dataset_name=DatasetName.ELECTRICITY_TARIFF_FEES,
-        schedule="@daily",
-        start_date=datetime(2026, 1, 1),
-        description="EVN tariff fees → Bronze → Silver → Gold",
-    ),
-    PipelineConfig(
-        dataset_name=DatasetName.ELECTRICITY_TARIFF_WINDOW_SCHEDULE,
-        schedule="@daily",
-        start_date=datetime(2026, 1, 1),
-        description="EVN tariff window schedule → Bronze → Silver → Gold",
-    ),
+    PipelineConfig(dataset_name=declaration.name, description=f"{declaration.description} → Bronze → Silver → Gold")
+    for declaration in DATASETS.values()
 ]
