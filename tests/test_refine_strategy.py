@@ -13,14 +13,14 @@ import pytest
 pytest.importorskip("airflow")
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "infra" / "airflow" / "dags"))
 
-from common.enums import DatasetName, DatasetType  # noqa: E402
+from common.enums import DatasetName  # noqa: E402
 from config.bucket import GCSBucketConfig  # noqa: E402
 from config.cluster import GCPClusterConfig  # noqa: E402
 from pipeline_config import PipelineConfig  # noqa: E402
 from refine_strategy import DataprocRefineStrategy, LocalRefineStrategy  # noqa: E402
 
-CONFIG = PipelineConfig(dataset_name=DatasetName.ELECTRICITY_TARIFF_FEES, dataset_type=DatasetType.SEEDS,
-                        schedule="@daily", start_date=datetime(2026, 1, 1))
+CONFIG = PipelineConfig(dataset_name=DatasetName.ELECTRICITY_TARIFF_FEES, schedule="@daily",
+                        start_date=datetime(2026, 1, 1))
 
 
 def test_dataproc_runs_the_one_entry_script_with_the_dataset_name():
