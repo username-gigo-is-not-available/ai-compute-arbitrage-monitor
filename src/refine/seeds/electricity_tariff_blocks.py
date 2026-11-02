@@ -2,20 +2,13 @@ from dataclasses import dataclass, field
 from functools import partial
 from typing import Callable
 
-from pyspark.sql import DataFrame, SparkSession
+from pyspark.sql import DataFrame
 
-from common.classes import Dataset
-from common.enums import DatasetName, DatasetType
-from config.apis.evn import EVNConfig
-from config.loader import ConfigLoader
-from refine.load_strategy import OverwriteByPartition, SilverTable
 from refine.assets.cleaning import trim_whitespace, empty_to_null
 from refine.assets.filtering import keep_latest_per_group
 from refine.assets.extraction import extract_pattern, extract_valid_from_date
 from refine.assets.patterns import KWH_BOUNDS_PATTERN, TARIFF_BLOCK_NUMBER_PATTERN
-from refine.init import initialize_spark
 from refine.base import Pipeline
-from refine.schemas.electricity_tariff_blocks import ELECTRICITY_TARIFF_BLOCKS_SILVER_SCHEMA
 
 
 def extract_tariff_block_number(df: DataFrame) -> DataFrame:
@@ -52,26 +45,3 @@ class ElectricityTariffBlocksPipeline(Pipeline):
         extract_valid_from_date,
         partial(keep_latest_per_group, group_by="valid_from", order_by="ingested_at")
     ])
-
-
-def run():
-    session: SparkSession = initialize_spark()
-    loader: ConfigLoader = ConfigLoader()
-    evn_config: EVNConfig = loader.get_evn()
-    electricity_tariff_blocks: Dataset = Dataset(dataset_name=DatasetName.ELECTRICITY_TARIFF_BLOCKS,
-                                                 dataset_type=DatasetType.SEEDS)
-    if not evn_config.enabled:
-        return
-
-    electricity_tariff_blocks_pipeline: ElectricityTariffBlocksPipeline = ElectricityTariffBlocksPipeline(
-        session=session,
-        dataset=electricity_tariff_blocks,
-        config=evn_config,
-        lakehouse_config=loader.get_lakehouse(),
-        silver_table=SilverTable(ELECTRICITY_TARIFF_BLOCKS_SILVER_SCHEMA, OverwriteByPartition()),
-    )
-    electricity_tariff_blocks_pipeline.run()
-
-
-if __name__ == '__main__':
-    run()

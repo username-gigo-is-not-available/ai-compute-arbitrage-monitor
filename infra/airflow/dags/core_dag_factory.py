@@ -6,7 +6,7 @@ from airflow import DAG
 from airflow.providers.standard.operators.python import PythonOperator
 from airflow.sdk import Asset
 
-from callable_builder import CallableBuilder
+from ingest.registry import run_ingest
 from transform_strategy import TransformStrategy
 from pipeline_config import PipelineConfig
 from refine_strategy import RefineStrategy
@@ -44,8 +44,8 @@ class DagFactory:
         ) as dag:
             t_ingest = PythonOperator(
                 task_id="ingest",
-                python_callable=CallableBuilder(config.ingest_module).build(),
-                op_kwargs={"scheduled_at": "{{ data_interval_end }}"},
+                python_callable=run_ingest,
+                op_kwargs={"dataset": config.dataset_name, "scheduled_at": "{{ data_interval_end }}"},
             )
 
             t_refine = self.refine_strategy.build_operator(self.pipeline_config)

@@ -2,20 +2,13 @@ from dataclasses import dataclass, field
 from functools import partial
 from typing import Callable
 
-from pyspark.sql import DataFrame, SparkSession
+from pyspark.sql import DataFrame
 
-from common.classes import Dataset
-from common.enums import DatasetName, DatasetType
-from config.apis.evn import EVNConfig
-from config.loader import ConfigLoader
-from refine.load_strategy import OverwriteByPartition, SilverTable
 from refine.assets.cleaning import trim_whitespace, replace_substring, empty_to_null
 from refine.assets.filtering import keep_latest_per_group
 from refine.assets.extraction import extract_valid_from_date
 from refine.assets.imputation import fill_from_group
-from refine.init import initialize_spark
 from refine.base import Pipeline
-from refine.schemas.electricity_tariff_tiers import ELECTRICITY_TARIFF_TIERS_SILVER_SCHEMA
 
 
 def replace_decimal_separator(df: DataFrame) -> DataFrame:
@@ -57,26 +50,3 @@ class ElectricityTariffTiersPipeline(Pipeline):
         fill_metric,
         normalize_tariff_tier
     ])
-
-
-def run():
-    session: SparkSession = initialize_spark()
-    loader: ConfigLoader = ConfigLoader()
-    evn_config: EVNConfig = loader.get_evn()
-    electricity_tariff_tiers: Dataset = Dataset(dataset_name=DatasetName.ELECTRICITY_TARIFF_TIERS,
-                                                dataset_type=DatasetType.SEEDS)
-    if not evn_config.enabled:
-        return
-
-    electricity_tariff_tiers_pipeline: ElectricityTariffTiersPipeline = ElectricityTariffTiersPipeline(
-        session=session,
-        dataset=electricity_tariff_tiers,
-        config=evn_config,
-        lakehouse_config=loader.get_lakehouse(),
-        silver_table=SilverTable(ELECTRICITY_TARIFF_TIERS_SILVER_SCHEMA, OverwriteByPartition()),
-    )
-    electricity_tariff_tiers_pipeline.run()
-
-
-if __name__ == '__main__':
-    run()

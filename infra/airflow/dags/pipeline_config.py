@@ -1,19 +1,18 @@
-
 from dataclasses import dataclass
 from datetime import datetime
 
-from common.enums import DatasetName, DatasetType
+from common.enums import DatasetName
+from config.datasets import DATASETS
 
 
+# How Airflow schedules one dataset. Every dataset runs on the same schedule today; give DatasetDeclaration a
+# schedule field once one needs a different one.
 @dataclass(frozen=True)
 class PipelineConfig:
     dataset_name: DatasetName
-    dataset_type: DatasetType
-    schedule: str
-    start_date: datetime
-    ingest_module_base: str = "ingest"
-    refine_module_base: str = "refine"
     description: str = ""
+    schedule: str = "@daily"
+    start_date: datetime = datetime(2026, 1, 1)
 
     @property
     def dag_id(self) -> str:
@@ -23,14 +22,9 @@ class PipelineConfig:
     def dbt_tag(self) -> str:
         return f"tag:{self.dataset_name}"
 
-    @property
-    def ingest_module(self) -> str:
-        return f"{self.ingest_module_base}.{self.dataset_type}.{self.dataset_name}"
 
-    @property
-    def refine_module(self) -> str:
-        return f"{self.refine_module_base}.{self.dataset_type}.{self.dataset_name}"
-
-    @property
-    def refine_uri(self) -> str:
-        return f"{self.refine_module_base}/{self.dataset_type}/{self.dataset_name}.py"
+# One DAG per declared dataset, so the DAG list cannot drift from config.datasets.DATASETS
+PIPELINE_CONFIGS: list[PipelineConfig] = [
+    PipelineConfig(dataset_name=declaration.name, description=f"{declaration.description} → Bronze → Silver → Gold")
+    for declaration in DATASETS.values()
+]

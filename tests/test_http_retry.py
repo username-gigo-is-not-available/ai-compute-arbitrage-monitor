@@ -166,6 +166,7 @@ def _evn(retry_count: int) -> _EVNTestIngestor:
         lakehouse_config=_lakehouse(),
         bronze_table=BronzeTable(_DUMMY_BRONZE_SCHEMA, AppendByDay(column="ingested_at")),
         http_config=_http(retry_count=retry_count),
+        snapshot=Snapshot.from_scheduled_at(None),
     )
 
 
@@ -281,6 +282,7 @@ def _exchange(retry_count: int) -> ExchangeRateIngestor:
         lakehouse_config=_lakehouse(),
         bronze_table=BronzeTable(_DUMMY_BRONZE_SCHEMA, AppendByDay(column="ingested_at")),
         http_config=_http(retry_count=retry_count),
+        snapshot=Snapshot.from_scheduled_at(None),
     )
 
 
