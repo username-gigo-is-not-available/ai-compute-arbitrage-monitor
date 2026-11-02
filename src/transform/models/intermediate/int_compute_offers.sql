@@ -4,9 +4,23 @@
     )
 }}
 
-with offers as (
+-- A machine collapses into one row only when all of its offers agree on GPU model, machine size and per-GPU price
+-- (ADR-020). The few that don't (13-20 per census, e.g. a 5090 next to four 4090s) are dropped rather than
+-- given one model or price that is wrong for part of the machine; assert_stg_compute_offers_machine_slices_agree
+-- reports them.
+with single_type_machines as (
+    select
+        machine_id,
+        snapshot_at
+    from {{ ref('stg_compute_offers') }}
+    group by machine_id, snapshot_at
+    having count(distinct gpu_model_name) = 1
+       and count(distinct {{ number_of_machine_gpus() }}) = 1
+       and count(distinct round(gpu_price_usd_per_hr / number_of_offer_gpus, 4)) = 1
+),
+
+offers as (
     -- An offer rents number_of_offer_gpus of its machine's number_of_machine_gpus (rented or not, ADR-020).
-    -- Prices per GPU are the same on every offer of a machine (assert_stg_compute_offers_machine_slices_agree).
     select
         *,
         {{ number_of_machine_gpus() }}                                         as number_of_machine_gpus,
@@ -15,6 +29,7 @@ with offers as (
         minimum_bid_price_usd / number_of_offer_gpus                           as minimum_bid_price_per_gpu_usd,
         gpu_tflops / number_of_offer_gpus                                      as tflops_per_gpu
     from {{ ref('stg_compute_offers') }}
+    join single_type_machines using (machine_id, snapshot_at)
 ),
 
 machines as (
