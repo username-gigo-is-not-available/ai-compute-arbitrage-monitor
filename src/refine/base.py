@@ -27,15 +27,6 @@ class Pipeline:
         self.name = self.__class__.__name__
         self.logger = logging.getLogger(self.name)
 
-    def ensure_silver_table(self) -> None:
-        self.lakehouse_config.ensure_table(
-            catalog=self.lakehouse_config.open_catalog(),
-            stage=DataStageType.SILVER,
-            dataset=self.dataset,
-            schema=self.silver_table.iceberg_schema(),
-            partition_spec=self.silver_table.partition_spec(),
-        )
-
     def read(self) -> DataFrame:
         bronze = self.lakehouse_config.spark_table(DataStageType.BRONZE, self.dataset)
         silver = self.lakehouse_config.spark_table(DataStageType.SILVER, self.dataset)
@@ -66,7 +57,7 @@ class Pipeline:
     def run(self):
         name = self.__class__.__name__
         self.logger.info(f"{name} starting")
-        self.ensure_silver_table()
+        # The setup task has already made the Silver table match its declaration (lakehouse.setup)
         df = self.read()
         if df.isEmpty():
             self.logger.info(f"{name}: no fetches Silver has not seen, nothing to write")

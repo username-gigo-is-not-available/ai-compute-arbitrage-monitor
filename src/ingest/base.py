@@ -6,7 +6,6 @@ from typing import Any, cast
 
 import pyarrow as pa
 import requests
-from pyiceberg.catalog import Catalog
 from tenacity import (
     before_sleep_log,
     retry,
@@ -37,7 +36,6 @@ class Ingestor(ABC):
     snapshot: Snapshot  # the scheduled day this run is for (ADR-019)
     name: str = field(init=False)
     logger: logging.Logger = field(init=False)
-    catalog: Catalog | None = field(init=False, default=None)
 
     def __post_init__(self) -> None:
         self.name = self.__class__.__name__
@@ -68,16 +66,6 @@ class Ingestor(ABC):
             before_sleep=before_sleep_log(cast(Any, self.logger), logging.WARNING),
         )
 
-    def ensure_bronze_table(self) -> None:
-        self.catalog = self.lakehouse_config.open_catalog()
-        self.lakehouse_config.ensure_table(
-            catalog=self.catalog,
-            stage=DataStageType.BRONZE,
-            dataset=self.dataset,
-            schema=self.bronze_table.schema,
-            partition_spec=self.bronze_table.partition_spec(),
-        )
-
     def handle_result(self, data: list[IngestorRecord]) -> None:
         if not data:
             raise RuntimeError(f"{self.name} fetched no records")
@@ -85,7 +73,9 @@ class Ingestor(ABC):
         self.store(data)
 
     def store(self, data: list[IngestorRecord]) -> None:
-        catalog = self.catalog or self.lakehouse_config.open_catalog()
+        # The setup task has already made the table match its declaration (lakehouse.setup); a table that does not
+        # match fails this write
+        catalog = self.lakehouse_config.open_catalog()
         arrow_table = pa.Table.from_pylist([r.to_row() for r in data])
         table = catalog.load_table(self.lakehouse_config.table_id(DataStageType.BRONZE, self.dataset))
         self.bronze_table.write(table, arrow_table)
@@ -105,6 +95,5 @@ class Ingestor(ABC):
 
     def run(self) -> None:
         self.logger.info(f"Starting load for {self.name}...")
-        self.ensure_bronze_table()
         self.handle_result(self.load())
 

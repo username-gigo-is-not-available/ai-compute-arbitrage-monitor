@@ -134,6 +134,7 @@ def test_dataproc_builds_correct_gcs_destinations() -> None:
     finally:
         _restore_env()
     expected = [
+        ("src/lakehouse/", f"gs://{EXPECTED_BUCKET}/jobs/lakehouse/"),
         ("src/refine/", f"gs://{EXPECTED_BUCKET}/jobs/refine/"),
         ("modules.zip", f"gs://{EXPECTED_BUCKET}/jobs/modules.zip"),
         ("config/settings.yaml", f"gs://{EXPECTED_BUCKET}/jobs/config/settings.yaml"),

@@ -126,7 +126,6 @@ class TestTariffSeedsSilver(unittest.TestCase):
             f"SELECT 'x' AS schedule_text, '{OLD}' AS valid_from_text, CAST(NULL AS TIMESTAMP) AS ingested_at"
         ).filter("false")
         saved = []
-        pipeline.ensure_silver_table = lambda: None
         pipeline.read = lambda: empty
         pipeline.save = saved.append
         pipeline.run()

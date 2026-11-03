@@ -57,6 +57,7 @@ def main() -> None:
 
     zip_packages(packages)
 
+    gcs_cp("src/lakehouse/", f"{dst_jobs}lakehouse/")
     gcs_cp("src/refine/", f"{dst_jobs}refine/")
     gcs_cp("modules.zip", f"{dst_jobs}modules.zip")
     gcs_cp("config/settings.yaml", f"{dst_jobs}config/settings.yaml")
