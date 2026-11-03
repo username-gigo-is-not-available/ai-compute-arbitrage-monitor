@@ -10,4 +10,4 @@ from ingest.base import Ingestor
 class EVNBaseIngestor(Ingestor, ABC):
 
     def fetch_soup(self, url: str) -> BeautifulSoup:
-        return BeautifulSoup(self.fetch(url).text, "html.parser")
+        return BeautifulSoup(self.http.get(url).text, "html.parser")

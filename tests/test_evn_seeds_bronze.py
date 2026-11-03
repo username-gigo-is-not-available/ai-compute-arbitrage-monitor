@@ -11,9 +11,7 @@ from __future__ import annotations
 
 import unittest
 from pathlib import Path
-from unittest import mock
 
-import requests
 from pyiceberg.schema import Schema
 from pyiceberg.types import NestedField, StringType
 
@@ -22,6 +20,7 @@ from common.enums import ConsumerCategoryType, DatasetName, DatasetType
 from config.http import HttpConfig
 from config.lakehouse import GCPLakehouseConfig
 from config.loader import ConfigLoader
+from ingest.http_client import HttpClient
 from ingest.seeds.electricity_tariff_blocks import ElectricityTariffBlocksIngestor
 from ingest.seeds.electricity_tariff_fees import ElectricityTariffFeesIngestor
 from ingest.seeds.electricity_tariff_tiers import ElectricityTariffTiersIngestor
@@ -58,11 +57,11 @@ class TestEVNSeedsBronze(unittest.TestCase):
             lakehouse_config=GCPLakehouseConfig(catalog_id="test", project_id="test", warehouse="gs://test"),
             bronze_table=BronzeTable(Schema(NestedField(field_id=1, name="id", field_type=StringType(), required=False)),
                                      AppendByDay(column="ingested_at")),
-            http_config=HttpConfig(timeout_seconds=30, retry_count=1, retry_delay_seconds=0),
+            http=HttpClient(HttpConfig(timeout_seconds=30, retry_count=1, retry_delay_seconds=0),
+                            send=lambda url, **kwargs: FakePage(self.pages[url])),
             snapshot=Snapshot.from_scheduled_at(None),
         )
-        with mock.patch.object(requests, "get", side_effect=lambda url, **kwargs: FakePage(self.pages[url])):
-            return ingestor.load()
+        return ingestor.load()
 
     def test_tiers_read_both_consumer_tables(self):
         tiers = self._load(ElectricityTariffTiersIngestor, DatasetName.ELECTRICITY_TARIFF_TIERS)

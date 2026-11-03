@@ -5,6 +5,7 @@ from common.enums import DatasetName
 from config.datasets import DATASETS
 from config.loader import ConfigLoader
 from ingest.base import Ingestor
+from ingest.http_client import HttpClient
 from ingest.seeds.electricity_tariff_blocks import ElectricityTariffBlocksIngestor
 from ingest.seeds.electricity_tariff_fees import ElectricityTariffFeesIngestor
 from ingest.seeds.electricity_tariff_tiers import ElectricityTariffTiersIngestor
@@ -64,6 +65,6 @@ def run_ingest(dataset: str, scheduled_at: str | None = None) -> None:
         config=config,
         lakehouse_config=loader.get_lakehouse(),
         bronze_table=spec.bronze_table,
-        http_config=loader.get_http(),
+        http=HttpClient(loader.get_http()),
         snapshot=Snapshot.from_scheduled_at(scheduled_at),
     ).run()

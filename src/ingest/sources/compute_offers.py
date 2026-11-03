@@ -56,8 +56,8 @@ class ComputeOffersIngestor(Ingestor):
         return list(zip(bounds, bounds[1:]))
 
     def request_range(self, start: int, end: int | None) -> list[dict[str, Any]]:
-        data: dict[str, Any] = self.fetch(self.config.url, headers=self.config.header,
-                                          params=self.config.params(start, end)).json()
+        data: dict[str, Any] = self.http.get(self.config.url, headers=self.config.header,
+                                             params=self.config.params(start, end)).json()
         time.sleep(self.config.request_interval_seconds)
         offers = data.get("offers", [])
         self.requests += 1
