@@ -8,7 +8,6 @@ from common.classes import Dataset
 from common.enums import DataStageType
 from common.types import DatasetConfig
 from config.lakehouse import GCPLakehouseConfig
-from lakehouse.sync import sync_table
 from refine.assets.casting import cast_to_schema
 from refine.assets.extraction import add_processed_at_column
 from refine.load_strategy import SilverTable
@@ -27,14 +26,6 @@ class Pipeline:
     def __post_init__(self):
         self.name = self.__class__.__name__
         self.logger = logging.getLogger(self.name)
-
-    def ensure_silver_table(self) -> None:
-        sync_table(
-            catalog=self.lakehouse_config.open_catalog(),
-            table_id=self.lakehouse_config.table_id(DataStageType.SILVER, self.dataset),
-            schema=self.silver_table.iceberg_schema(),
-            partition_spec=self.silver_table.partition_spec(),
-        )
 
     def read(self) -> DataFrame:
         bronze = self.lakehouse_config.spark_table(DataStageType.BRONZE, self.dataset)
@@ -66,7 +57,7 @@ class Pipeline:
     def run(self):
         name = self.__class__.__name__
         self.logger.info(f"{name} starting")
-        self.ensure_silver_table()
+        # The setup task has already made the Silver table match its declaration (lakehouse.setup)
         df = self.read()
         if df.isEmpty():
             self.logger.info(f"{name}: no fetches Silver has not seen, nothing to write")

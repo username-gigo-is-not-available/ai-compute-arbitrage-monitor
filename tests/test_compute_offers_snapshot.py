@@ -55,21 +55,18 @@ class TestSnapshotAt(unittest.TestCase):
         self.assertEqual(offer.ingested_at, fetched)
         self.assertEqual(offer.to_row()["snapshot_at"], snapshot_at)
 
-    def test_backfill_is_skipped_without_touching_the_catalog(self):
+    def test_backfill_is_skipped_without_fetching(self):
         ingestor = _ingestor(datetime.now(UTC).replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(hours=25))
-        with mock.patch.object(ingestor, "ensure_bronze_table") as ensure_mock, mock.patch.object(ingestor, "load") as load_mock:
+        with mock.patch.object(ingestor, "load") as load_mock:
             ingestor.run()
-        ensure_mock.assert_not_called()
         load_mock.assert_not_called()
 
     def test_today_runs(self):
         ingestor = _ingestor(datetime.now(UTC).replace(hour=0, minute=0, second=0, microsecond=0))
 
-        with mock.patch.object(ingestor, "ensure_bronze_table") as ensure_mock, \
-                mock.patch.object(ingestor, "load", return_value=[]), \
+        with mock.patch.object(ingestor, "load", return_value=[]), \
                 mock.patch.object(ingestor, "handle_result") as handle_mock:
             ingestor.run()
-        ensure_mock.assert_called_once()
         handle_mock.assert_called_once_with([])
 
 

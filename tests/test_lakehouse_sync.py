@@ -173,5 +173,30 @@ class TestSyncConverges(unittest.TestCase):
         self.assertEqual((table.schema().schema_id, table.spec().spec_id, table.current_snapshot().snapshot_id),
                          (schema_id, spec_id, snapshot_id))
 
+
+class TestWriteBeforeSync(unittest.TestCase):
+    """Ingest no longer syncs (#41): rows with a column the table lacks fail the write and change nothing."""
+    TABLE = ("bronze_sources", "exchange_rates")
+    SYNCED = Schema(NestedField(field_id=1, name="rate", field_type=DoubleType(), required=False))
+
+    def setUp(self):
+        self.catalog = _FakeCatalog()
+        sync_table(self.catalog, self.TABLE, schema=self.SYNCED, partition_spec=PartitionSpec())
+
+    def tearDown(self):
+        self.catalog.tmp.cleanup()
+
+    def test_rows_with_an_undeclared_column_fail_and_the_table_is_unchanged(self):
+        table = self.catalog.load_table(self.TABLE)
+        rows = pa.table({"rate": pa.array([61.5], pa.float64()), "quote": ["MKD"]})
+
+        with self.assertRaises(ValueError):
+            table.append(rows)
+
+        table = self.catalog.load_table(self.TABLE)
+        self.assertEqual([f.name for f in table.schema().fields], ["rate"])
+        self.assertIsNone(table.current_snapshot())
+
+
 if __name__ == "__main__":
     unittest.main()

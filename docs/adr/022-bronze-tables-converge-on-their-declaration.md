@@ -9,6 +9,11 @@ columns) is converted to an Iceberg schema with every column optional, as in Bro
 before Spark opens the table; Spark then only appends or overwrites partitions. This replaces
 Spark creating Silver tables on first write and `SilverWriteStrategy._add_missing_columns` (now `LoadStrategy`).
 Spark still casts to the declared nullability; `not_null` is enforced by the dbt tests.
+_Amended 2026-11-03_ (#41): the sync no longer runs inside ingest and refine. It lives in
+`lakehouse.sync.sync_table`, and each dataset DAG starts with a `setup` task (`python -m lakehouse.main
+<dataset>`) that syncs the dataset's Bronze and Silver tables from `ingest.tables` and `refine.tables`. Ingest
+then only appends and refine only overwrites; a write against a table that does not match its declaration
+fails instead of changing it. Where this ADR says "every ingest run", read "every setup run".
 
 ## Context
 

@@ -140,7 +140,6 @@ class TestComputeOffersCensus(unittest.TestCase):
         ingestor = _ingestor()
         get_mock = mock.Mock(side_effect=[FakeResponse(offers=full_page), FakeResponse(status=429)])
         with mock.patch.object(requests, "get", new=get_mock), \
-                mock.patch.object(ingestor, "ensure_bronze_table"), \
                 mock.patch.object(ingestor, "store") as store_mock, \
                 self.assertRaises(requests.HTTPError) as raised:
             ingestor.run()
