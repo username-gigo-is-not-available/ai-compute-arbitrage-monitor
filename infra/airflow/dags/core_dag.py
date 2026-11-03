@@ -4,7 +4,7 @@ from airflow import DAG  # noqa: F401  Airflow only parses files that mention "D
 
 from transform_strategy import TransformStrategy
 from marts_dag_factory import MartsDagFactory
-from refine_strategy import RefineStrategy
+from spark_job_strategy import SparkJobStrategy
 from core_dag_factory import DagFactory
 from pipeline_config import PIPELINE_CONFIGS
 from config.loader import ConfigLoader
@@ -13,7 +13,7 @@ from config.loader import ConfigLoader
 for pipeline_config in PIPELINE_CONFIGS:
     globals()[pipeline_config.dag_id] = DagFactory(
         pipeline_config=pipeline_config,
-        refine_strategy=RefineStrategy.build_strategy(config=ConfigLoader()),
+        spark_job_strategy=SparkJobStrategy.build_strategy(config=ConfigLoader()),
         transform_strategy=TransformStrategy.build_strategy(config=ConfigLoader()),
     ).build()
 

@@ -6,6 +6,8 @@ from pyiceberg.schema import Schema
 from pyiceberg.table import Table
 from pyiceberg.table.update.schema import UpdateSchema
 
+# pyiceberg only, no pyspark: Composer imports this module while parsing the DAGs (through ingest.base).
+
 logger = logging.getLogger(__name__)
 
 

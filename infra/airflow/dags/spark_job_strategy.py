@@ -13,48 +13,49 @@ from config.bucket import GCSBucketConfig
 from pipeline_config import PipelineConfig
 
 
-class RefineStrategy(ABC):
+# Runs a package's main.py with the dataset as its one argument, where pyspark is installed: lakehouse (the setup
+# task) and refine. The DAG starts it as a command and never imports the package (Composer has no pyspark).
+class SparkJobStrategy(ABC):
 
     @abstractmethod
-    def build_operator(self, pipeline_config: PipelineConfig) -> BaseOperator:
+    def build_operator(self, pipeline_config: PipelineConfig, package: str, task_id: str) -> BaseOperator:
         raise NotImplementedError
 
     @staticmethod
-    def build_strategy(config: ConfigLoader) -> RefineStrategy:
+    def build_strategy(config: ConfigLoader) -> SparkJobStrategy:
         execution_type: ExecutionType = config.get_execution_type()
         if execution_type == ExecutionType.GCP:
-            return DataprocRefineStrategy(
+            return DataprocSparkJobStrategy(
                 cluster_config=config.get_cluster(),
                 bucket_config=config.get_bucket()
             )
         elif execution_type == ExecutionType.LOCAL:
-            return LocalRefineStrategy()
+            return LocalSparkJobStrategy()
         else:
             raise NotImplementedError
 
 
-class LocalRefineStrategy(RefineStrategy):
+class LocalSparkJobStrategy(SparkJobStrategy):
 
-    # Starts the same entry script Dataproc runs, in its own process, so the DAG never imports refine (Composer does
-    # not ship it)
+    # The same entry script Dataproc runs, in its own process
     @staticmethod
-    def command(pipeline_config: PipelineConfig) -> str:
-        return f"python -m refine.main {pipeline_config.dataset_name}"
+    def command(pipeline_config: PipelineConfig, package: str) -> str:
+        return f"python -m {package}.main {pipeline_config.dataset_name}"
 
-    def build_operator(self, pipeline_config: PipelineConfig) -> BaseOperator:
-        return BashOperator(task_id="refine", bash_command=self.command(pipeline_config))
+    def build_operator(self, pipeline_config: PipelineConfig, package: str, task_id: str) -> BaseOperator:
+        return BashOperator(task_id=task_id, bash_command=self.command(pipeline_config, package))
 
 
-class DataprocRefineStrategy(RefineStrategy):
+class DataprocSparkJobStrategy(SparkJobStrategy):
 
     def __init__(self, cluster_config: GCPClusterConfig, bucket_config: GCSBucketConfig) -> None:
         self.cluster_config = cluster_config
         self.bucket_config = bucket_config
 
-    def batch_config(self, pipeline_config: PipelineConfig) -> dict:
+    def batch_config(self, pipeline_config: PipelineConfig, package: str) -> dict:
         return {
             "pyspark_batch": {
-                "main_python_file_uri": f"gs://{self.bucket_config.bucket_name}/jobs/refine/main.py",
+                "main_python_file_uri": f"gs://{self.bucket_config.bucket_name}/jobs/{package}/main.py",
                 "args": [pipeline_config.dataset_name],
                 "python_file_uris": [
                     f"gs://{self.bucket_config.bucket_name}/jobs/modules.zip",
@@ -77,16 +78,17 @@ class DataprocRefineStrategy(RefineStrategy):
             },
         }
 
+    # The task id is part of it: setup and refine run in the same DAG run, and batch ids must be unique
     @staticmethod
-    def generate_batch_id(pipeline_config: PipelineConfig) -> str:
-        return f"{pipeline_config.dataset_name.replace('_', '-')}-{{{{ ts_nodash | lower }}}}"
+    def generate_batch_id(pipeline_config: PipelineConfig, task_id: str) -> str:
+        return f"{task_id}-{pipeline_config.dataset_name.replace('_', '-')}-{{{{ ts_nodash | lower }}}}"
 
-    def build_operator(self, pipeline_config: PipelineConfig) -> BaseOperator:
+    def build_operator(self, pipeline_config: PipelineConfig, package: str, task_id: str) -> BaseOperator:
         return DataprocCreateBatchOperator(
-            task_id="refine",
+            task_id=task_id,
             project_id=self.cluster_config.project_id,
             region=self.cluster_config.region_name,
-            batch=self.batch_config(pipeline_config),
-            batch_id=self.generate_batch_id(pipeline_config),
+            batch=self.batch_config(pipeline_config, package),
+            batch_id=self.generate_batch_id(pipeline_config, task_id),
             deferrable=True
         )
