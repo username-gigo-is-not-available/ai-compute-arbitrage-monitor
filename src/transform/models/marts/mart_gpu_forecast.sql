@@ -81,37 +81,11 @@ market_revenue as (
 ),
 
 
-tariff_tiers as (
-    select
-        consumer_category,
-        tariff_window_type,
-        value as tariff_value,
-        tariff_block_number,
-        skey as tariff_tier_skey
-    from {{ ref('dim_electricity_tariff_tiers') }}
-    where is_latest = true
-),
-
--- Bounds are for a 30-day billing period; the app scales them to the user's period length (ADR-021).
-tariff_blocks as (
-    select
-        consumer_category,
-        tariff_window_type,
-        tariff_block_number,
-        lower_bound_kwh,
-        upper_bound_kwh
-    from {{ ref('dim_electricity_tariff_blocks') }}
-    where is_latest = true
-),
-
-
-fees as (
-    select
-        consumer_category,
-        max(case when fee_type = 'distribution' then value end) as distribution_fee
-    from {{ ref('dim_electricity_tariff_fees') }}
-    where is_latest = true
-    group by consumer_category
+-- The rates in force now. Block bounds are for a 30-day billing period; the app scales them (ADR-021).
+tariff_rates as (
+    select *
+    from {{ ref('int_electricity_tariff_rates') }}
+    where valid_to = timestamp '9999-12-31'
 ),
 
 
@@ -137,28 +111,22 @@ combined as (
         gs.gpu_bandwidth_gbytes_per_sec,
         gs.gpu_max_cuda_version_supported,
         mr.market_ask_per_gpu_usd_per_hr,
-        tt.tariff_tier_skey,
-        tt.consumer_category,
-        tt.tariff_value,
-        tt.tariff_block_number,
-        tb.lower_bound_kwh,
-        tb.upper_bound_kwh,
-        ft.distribution_fee,
-        {{ vat_rate('tt.consumer_category') }} as vat_rate,
+        tr.tariff_tier_skey,
+        tr.consumer_category,
+        tr.tariff_value,
+        tr.tariff_block_number,
+        tr.lower_bound_kwh,
+        tr.upper_bound_kwh,
+        tr.distribution_fee,
+        tr.vat_rate,
         er.usd_to_mkd_rate
     from spine_with_window sw
     cross join gpu_specs gs
     join market_revenue mr
         on  gs.gpu_model_name = mr.gpu_model_name
         and gs.gpu_memory_gb  = mr.gpu_memory_gb
-    join tariff_tiers tt
-        on tt.tariff_window_type = sw.tariff_window_type
-    left join tariff_blocks tb
-        on  tb.consumer_category   = tt.consumer_category
-        and tb.tariff_window_type  = tt.tariff_window_type
-        and tb.tariff_block_number = tt.tariff_block_number
-    join fees ft
-        on ft.consumer_category = tt.consumer_category
+    join tariff_rates tr
+        on tr.tariff_window_type = sw.tariff_window_type
     cross join exchange_rate er
 ),
 

@@ -547,6 +547,31 @@ models:
               - hour
               - valid_from
 
+  - name: int_electricity_tariff_rates
+    description: "Ephemeral: what one kWh costs under each tariff tier. One row per tier per period in which its price, distribution fee and block bounds all stay the same. Shared by fct_compute_offers (row in force at each census) and mart_gpu_forecast (current row)."
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - tariff_tier_skey
+              - valid_from
+      - dbt_utils.expression_is_true:
+          arguments:
+            expression: "valid_from < valid_to"
+    columns:
+      - name: tariff_tier_skey
+        description: "Foreign key to dim_electricity_tariff_tiers"
+        tests:
+          - not_null
+      - name: distribution_fee
+        description: "Per-kWh distribution fee in MKD in force for the whole period (from dim_electricity_tariff_fees)"
+      - name: vat_rate
+        description: "household_vat_rate for households, 0 for business (a VAT-registered business reclaims it)"
+      - name: valid_from
+        description: "Start of the period: the latest valid_from of the tier, its fee and its block"
+      - name: valid_to
+        description: "End of the period: the earliest valid_to of the tier, its fee and its block"
+
   - name: int_exchange_rates
     description: "Intermediate exchange rates - inverse rate added"
     columns:
@@ -605,3 +630,29 @@ models:
               - from_currency
               - to_currency
               - timestamp
+
+unit_tests:
+  # The fee changes on 1 March while the tier and block do not: each tier must split into a January-February row
+  # at the old fee and a row from March at the new one. The low-tariff tier has no block, so null bounds.
+  - name: int_electricity_tariff_rates_split_when_a_fee_changes
+    model: int_electricity_tariff_rates
+    given:
+      - input: ref('dim_electricity_tariff_tiers')
+        rows:
+          - {skey: high_1, consumer_category: household, tariff_type: high, metric: MKD/kWh, value: 6.5, tariff_window_type: high, tariff_block_number: 1, valid_from: "2026-01-01 00:00:00", valid_to: "9999-12-31 00:00:00"}
+          - {skey: low, consumer_category: household, tariff_type: low, metric: MKD/kWh, value: 3.0, tariff_window_type: low, tariff_block_number: null, valid_from: "2026-01-01 00:00:00", valid_to: "9999-12-31 00:00:00"}
+      - input: ref('dim_electricity_tariff_fees')
+        rows:
+          - {consumer_category: household, fee_type: distribution, value: 1.2, valid_from: "2026-01-01 00:00:00", valid_to: "2026-03-01 00:00:00"}
+          - {consumer_category: household, fee_type: access, value: 100.0, valid_from: "2026-01-01 00:00:00", valid_to: "2026-03-01 00:00:00"}
+          - {consumer_category: household, fee_type: distribution, value: 1.4, valid_from: "2026-03-01 00:00:00", valid_to: "9999-12-31 00:00:00"}
+          - {consumer_category: household, fee_type: access, value: 100.0, valid_from: "2026-03-01 00:00:00", valid_to: "9999-12-31 00:00:00"}
+      - input: ref('dim_electricity_tariff_blocks')
+        rows:
+          - {consumer_category: household, tariff_window_type: high, tariff_block_number: 1, lower_bound_kwh: 0, upper_bound_kwh: 350, valid_from: "2026-01-01 00:00:00", valid_to: "9999-12-31 00:00:00"}
+    expect:
+      rows:
+        - {tariff_tier_skey: high_1, tariff_value: 6.5, distribution_fee: 1.2, lower_bound_kwh: 0, upper_bound_kwh: 350, vat_rate: 0.18, valid_from: "2026-01-01 00:00:00", valid_to: "2026-03-01 00:00:00"}
+        - {tariff_tier_skey: high_1, tariff_value: 6.5, distribution_fee: 1.4, lower_bound_kwh: 0, upper_bound_kwh: 350, vat_rate: 0.18, valid_from: "2026-03-01 00:00:00", valid_to: "9999-12-31 00:00:00"}
+        - {tariff_tier_skey: low, tariff_value: 3.0, distribution_fee: 1.2, lower_bound_kwh: null, upper_bound_kwh: null, vat_rate: 0.18, valid_from: "2026-01-01 00:00:00", valid_to: "2026-03-01 00:00:00"}
+        - {tariff_tier_skey: low, tariff_value: 3.0, distribution_fee: 1.4, lower_bound_kwh: null, upper_bound_kwh: null, vat_rate: 0.18, valid_from: "2026-03-01 00:00:00", valid_to: "9999-12-31 00:00:00"}

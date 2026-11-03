@@ -58,63 +58,28 @@ exchange_rates as (
       and to_currency   = 'MKD'
 ),
 
-tariff_tiers as (
-    select
-        skey as tariff_tier_skey,
-        consumer_category,
-        tariff_type,
-        metric,
-        value as tariff_value,
-        tariff_window_type,
-        tariff_block_number,
-        valid_from,
-        valid_to
-    from {{ ref('dim_electricity_tariff_tiers') }}
-),
-
-tariff_fees as (
-    select
-        consumer_category,
-        max(case when fee_type = 'distribution' then value end) as distribution_fee,
-        valid_from,
-        valid_to
-    from {{ ref('dim_electricity_tariff_fees') }}
-    group by consumer_category, valid_from, valid_to
-),
-
-tariff_blocks as (
-    select
-        consumer_category,
-        tariff_window_type,
-        tariff_block_number,
-        lower_bound_kwh,
-        upper_bound_kwh,
-        valid_from,
-        valid_to
-    from {{ ref('dim_electricity_tariff_blocks') }}
-),
-
 joined as (
     select
         o.*,
 
         -- dim skeys
         er.exchange_rate_skey,
-        tt.tariff_tier_skey,
+        r.tariff_tier_skey,
 
         er.value as usd_to_mkd_rate,
 
-        tt.consumer_category,
-        tt.tariff_type,
-        tt.metric as tariff_metric,
-        tt.tariff_value,
-        tt.tariff_window_type,
-        tt.tariff_block_number,
+        r.consumer_category,
+        r.tariff_type,
+        r.tariff_metric,
+        r.tariff_value,
+        r.tariff_window_type,
+        r.tariff_block_number,
 
-        tf.distribution_fee,
+        r.distribution_fee,
+        r.vat_rate,
 
-        tb.lower_bound_kwh,
-        tb.upper_bound_kwh
+        r.lower_bound_kwh,
+        r.upper_bound_kwh
 
     from offers o
 
@@ -123,21 +88,9 @@ joined as (
         and cast(o.valid_from as date) <  er.valid_to
 
     -- Tariff validity is a UTC instant (the start of EVN's local date, ADR-021), like the census time.
-    join tariff_tiers tt
-        on  o.valid_from >= tt.valid_from
-        and o.valid_from <  tt.valid_to
-
-    join tariff_fees tf
-        on  o.valid_from >= tf.valid_from
-        and o.valid_from <  tf.valid_to
-        and tt.consumer_category = tf.consumer_category
-
-    left join tariff_blocks tb
-        on  tt.consumer_category = tb.consumer_category
-        and tt.tariff_window_type = tb.tariff_window_type
-        and tt.tariff_block_number = tb.tariff_block_number
-        and o.valid_from >= tb.valid_from
-        and o.valid_from <  tb.valid_to
+    join {{ ref('int_electricity_tariff_rates') }} r
+        on  o.valid_from >= r.valid_from
+        and o.valid_from <  r.valid_to
 ),
 
 calculations as (
@@ -152,19 +105,12 @@ calculations as (
     from joined
 ),
 
-with_vat_rate as (
-    select
-        *,
-        {{ vat_rate('consumer_category') }} as vat_rate
-    from calculations
-),
-
 -- Cost is what running the GPU adds to the bill; the monthly access fee is paid whether it runs or not (ADR-025).
 cost_metrics as (
     select
         *,
         {{ cost_usd_per_hr('total_system_kwh_per_hr') }}                     as cost_usd_per_hr
-    from with_vat_rate
+    from calculations
 )
 
 select
