@@ -158,6 +158,7 @@ def test_composer_builds_correct_gcs_destinations() -> None:
         ("src/common/*", f"gs://{EXPECTED_BUCKET}/dags/common/"),
         ("src/config/*", f"gs://{EXPECTED_BUCKET}/dags/config/"),
         ("src/ingest/*", f"gs://{EXPECTED_BUCKET}/dags/ingest/"),
+        ("src/lakehouse/*", f"gs://{EXPECTED_BUCKET}/dags/lakehouse/"),
         ("config/settings.yaml", f"gs://{EXPECTED_BUCKET}/dags/config/settings.yaml"),
     ]
     assert calls == expected, calls

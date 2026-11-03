@@ -23,6 +23,7 @@ from config.http import HttpConfig
 from config.lakehouse import GCPLakehouseConfig
 from ingest.models.types import IngestorRecord
 from ingest.write_strategy import BronzeTable
+from lakehouse.sync import sync_table
 
 ExceptionTypes = type[BaseException] | tuple[type[BaseException], ...]
 
@@ -70,10 +71,9 @@ class Ingestor(ABC):
 
     def ensure_bronze_table(self) -> None:
         self.catalog = self.lakehouse_config.open_catalog()
-        self.lakehouse_config.ensure_table(
+        sync_table(
             catalog=self.catalog,
-            stage=DataStageType.BRONZE,
-            dataset=self.dataset,
+            table_id=self.lakehouse_config.table_id(DataStageType.BRONZE, self.dataset),
             schema=self.bronze_table.schema,
             partition_spec=self.bronze_table.partition_spec(),
         )

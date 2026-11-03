@@ -8,6 +8,7 @@ from common.classes import Dataset
 from common.enums import DataStageType
 from common.types import DatasetConfig
 from config.lakehouse import GCPLakehouseConfig
+from lakehouse.sync import sync_table
 from refine.assets.casting import cast_to_schema
 from refine.assets.extraction import add_processed_at_column
 from refine.load_strategy import SilverTable
@@ -28,10 +29,9 @@ class Pipeline:
         self.logger = logging.getLogger(self.name)
 
     def ensure_silver_table(self) -> None:
-        self.lakehouse_config.ensure_table(
+        sync_table(
             catalog=self.lakehouse_config.open_catalog(),
-            stage=DataStageType.SILVER,
-            dataset=self.dataset,
+            table_id=self.lakehouse_config.table_id(DataStageType.SILVER, self.dataset),
             schema=self.silver_table.iceberg_schema(),
             partition_spec=self.silver_table.partition_spec(),
         )
