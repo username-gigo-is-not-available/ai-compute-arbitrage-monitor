@@ -1,22 +1,13 @@
 from __future__ import annotations
 
-from datetime import timedelta
-
 from airflow import DAG
 from airflow.providers.standard.operators.python import PythonOperator
 from airflow.sdk import Asset
 
 from ingest.registry import run_ingest
 from transform_strategy import TransformStrategy
-from pipeline_config import PipelineConfig
+from pipeline_config import DAG_TAGS, DEFAULT_ARGS, PipelineConfig
 from spark_job_strategy import SparkJobStrategy
-
-DEFAULT_ARGS = {
-    "owner": "gigo",
-    "retries": 1,
-    "retry_delay": timedelta(minutes=5),
-    "depends_on_past": False,
-}
 
 
 class DagFactory:
@@ -39,7 +30,7 @@ class DagFactory:
                 start_date=config.start_date,
                 catchup=False,
                 default_args=DEFAULT_ARGS,
-                tags={"ai", "compute", "arbitrage", "monitor", "capstone"},
+                tags=DAG_TAGS,
                 max_active_runs=1,
         ) as dag:
             # DDL first: the tables match their declarations before anything loads (ADR-022, #41)
@@ -56,7 +47,7 @@ class DagFactory:
             t_dbt_run = self.transform_strategy.build_run_operator(tag=config.dbt_tag)
 
             t_dbt_test = self.transform_strategy.build_test_operator(tag=config.dbt_tag)
-            t_dbt_test.outlets = [Asset(f"ai-compute-arbitrage-monitor/{config.dataset_name}")]
+            t_dbt_test.outlets = [Asset(config.asset_name)]
 
             t_setup >> t_ingest >> t_refine >> t_dbt_run >> t_dbt_test
 
