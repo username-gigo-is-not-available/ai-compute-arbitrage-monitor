@@ -3,8 +3,8 @@ from __future__ import annotations
 from airflow import DAG
 from airflow.sdk import Asset, AssetAny
 
-from transform_strategy import TransformStrategy
 from pipeline_config import DAG_TAGS, DEFAULT_ARGS, PipelineConfig
+from transform_strategy import TransformStrategy
 
 
 class MartsDagFactory:

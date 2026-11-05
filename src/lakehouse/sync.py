@@ -1,4 +1,5 @@
 import logging
+from itertools import pairwise
 
 from pyiceberg.catalog import Catalog
 from pyiceberg.partitioning import PartitionSpec
@@ -37,7 +38,7 @@ def drop_removed_columns(update: UpdateSchema, current: Schema, schema: Schema) 
 def update_schema_order(update: UpdateSchema, schema: Schema) -> None:
     columns = [f.name for f in schema.fields]
     update.move_first(columns[0])
-    for previous_column, current_column in zip(columns, columns[1:]):
+    for previous_column, current_column in pairwise(columns):
         update.move_after(current_column, previous_column)
 
 

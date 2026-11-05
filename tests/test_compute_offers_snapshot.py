@@ -7,7 +7,7 @@ Under pytest:   uv run --extra dev pytest tests/test_compute_offers_snapshot.py
 from __future__ import annotations
 
 import unittest
-from datetime import datetime, timedelta, UTC
+from datetime import UTC, datetime, timedelta
 from unittest import mock
 
 from pyiceberg.schema import Schema

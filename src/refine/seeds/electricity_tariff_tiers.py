@@ -1,12 +1,12 @@
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from functools import partial
-from typing import Callable
 
 from pyspark.sql import DataFrame
 
-from refine.assets.cleaning import trim_whitespace, replace_substring, empty_to_null
-from refine.assets.filtering import keep_latest_per_group
+from refine.assets.cleaning import empty_to_null, replace_substring, trim_whitespace
 from refine.assets.extraction import extract_valid_from_date
+from refine.assets.filtering import keep_latest_per_group
 from refine.assets.imputation import fill_from_group
 from refine.base import Pipeline
 

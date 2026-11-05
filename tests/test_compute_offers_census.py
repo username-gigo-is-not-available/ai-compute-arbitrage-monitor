@@ -12,7 +12,7 @@ import json
 import random
 import unittest
 from collections.abc import Callable
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from unittest import mock
 
 import requests

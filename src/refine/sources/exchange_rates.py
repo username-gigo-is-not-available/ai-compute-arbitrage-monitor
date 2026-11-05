@@ -1,10 +1,10 @@
-from dataclasses import field, dataclass
-from typing import Callable
+from collections.abc import Callable
+from dataclasses import dataclass, field
 
 from pyspark.sql import DataFrame
 
+from refine.assets.cleaning import empty_to_null, trim_whitespace
 from refine.assets.filtering import deduplicate_keep_latest
-from refine.assets.cleaning import trim_whitespace, empty_to_null
 from refine.base import Pipeline
 
 

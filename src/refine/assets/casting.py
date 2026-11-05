@@ -1,7 +1,5 @@
-from pyspark.sql import DataFrame
+from pyspark.sql import DataFrame, functions as F
 from pyspark.sql.types import StructType
-from pyspark.sql import functions as F
-
 
 
 def cast_to_schema(df: DataFrame, schema: StructType) -> DataFrame:

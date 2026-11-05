@@ -10,19 +10,19 @@ from common.enums import ExecutionType
 from config.apis.evn import EVNConfig
 from config.apis.exchange_rate import ExchangeRateConfig
 from config.apis.vast_ai import VastAIConfig
+from config.bucket import GCSBucketConfig
 from config.cluster import GCPClusterConfig
 from config.dbt import DbtConfig
 from config.execution import CloudRunConfig
 from config.http import HttpConfig
 from config.lakehouse import GCPLakehouseConfig
-from config.bucket import GCSBucketConfig
 
 load_dotenv()
 
 
 class ConfigLoader:
-    def __init__(self, config_path: Path = Path(os.getenv("SETTINGS_PATH", "settings.yaml"))) -> None:
-        self._raw = self._load_yaml(config_path)
+    def __init__(self, config_path: Path | None = None) -> None:
+        self._raw = self._load_yaml(config_path or Path(os.getenv("SETTINGS_PATH", "settings.yaml")))
         self._setup_logging()
 
 
@@ -99,7 +99,7 @@ class ConfigLoader:
     @staticmethod
     def _load_yaml(path: Path) -> dict:
         try:
-            with open(path, "r", encoding="utf-8") as f:
+            with open(path, encoding="utf-8") as f:
                 return yaml.safe_load(f)
         except FileNotFoundError:
             logging.warning(f"Config file not found at {path}, using defaults.")

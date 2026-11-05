@@ -15,6 +15,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "infra" / "airflow"
 from common.enums import DatasetName  # noqa: E402
 from config.bucket import GCSBucketConfig  # noqa: E402
 from config.cluster import GCPClusterConfig  # noqa: E402
+
 from pipeline_config import PipelineConfig  # noqa: E402
 from spark_job_strategy import DataprocSparkJobStrategy, LocalSparkJobStrategy  # noqa: E402
 

@@ -1,5 +1,5 @@
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Callable
 
 from common.classes import Dataset
 from common.enums import DatasetName, DatasetType

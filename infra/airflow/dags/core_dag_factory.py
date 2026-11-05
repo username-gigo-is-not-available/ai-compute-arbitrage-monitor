@@ -5,9 +5,10 @@ from airflow.providers.standard.operators.python import PythonOperator
 from airflow.sdk import Asset
 
 from ingest.registry import run_ingest
-from transform_strategy import TransformStrategy
+
 from pipeline_config import DAG_TAGS, DEFAULT_ARGS, PipelineConfig
 from spark_job_strategy import SparkJobStrategy
+from transform_strategy import TransformStrategy
 
 
 class DagFactory:

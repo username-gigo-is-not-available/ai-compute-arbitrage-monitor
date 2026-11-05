@@ -1,6 +1,7 @@
 import time
 from dataclasses import dataclass, field
-from datetime import datetime, UTC
+from datetime import UTC, datetime
+from itertools import pairwise
 from typing import Any
 
 from pydantic import ValidationError
@@ -53,7 +54,7 @@ class ComputeOffersIngestor(Ingestor):
         step = max(1, len(ids) // self.config.census_parts)
         cuts = ids[step::step]
         bounds = [0, *cuts, None]
-        return list(zip(bounds, bounds[1:]))
+        return list(pairwise(bounds))
 
     def request_range(self, start: int, end: int | None) -> list[dict[str, Any]]:
         data: dict[str, Any] = self.http.get(self.config.url, headers=self.config.header,

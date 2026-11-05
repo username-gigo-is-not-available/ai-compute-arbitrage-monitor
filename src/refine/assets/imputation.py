@@ -1,5 +1,4 @@
-from pyspark.sql import DataFrame, Window
-from pyspark.sql import functions as F
+from pyspark.sql import DataFrame, Window, functions as F
 
 
 def fill_from_group(df: DataFrame, group_by: list[str], fill_column: str) -> DataFrame:

@@ -6,17 +6,18 @@ import subprocess
 import sys
 from pathlib import Path
 
-from dotenv import load_dotenv
 import yaml
+from dotenv import load_dotenv
 
 _SRC = Path(__file__).resolve().parents[1] / "src"
 if str(_SRC) not in sys.path:
     sys.path.insert(0, str(_SRC))
 
-from common.enums import DataStageType, DatasetType  # noqa: E402
+from pyiceberg.catalog import Catalog  # noqa: E402
+
+from common.enums import DatasetType, DataStageType  # noqa: E402
 from config.lakehouse import GCPLakehouseConfig  # noqa: E402
 from config.loader import ConfigLoader  # noqa: E402
-from pyiceberg.catalog import Catalog  # noqa: E402
 
 load_dotenv()
 
@@ -114,6 +115,36 @@ def purge_bigquery(project: str, dataset: str) -> None:
     logging.info("BigQuery dataset dropped. Recreate tables with `make dbt-run` (dbt run).")
 
 
+def selected_stages(args: argparse.Namespace) -> list[DataStageType]:
+    if args.all:
+        return [DataStageType.BRONZE, DataStageType.SILVER, DataStageType.GOLD]
+    if args.gold:
+        return [DataStageType.GOLD]
+    if args.bronze:
+        return [DataStageType.BRONZE]
+    return [DataStageType.SILVER]
+
+
+def log_plan(stages: list[DataStageType], bucket: str, project: str, dataset: str) -> None:
+    logging.info("The following destructive actions will be executed:")
+    for stage in stages:
+        if stage == DataStageType.GOLD:
+            logging.info(f"  - bq rm -r -f -d {project}:{dataset}")
+        else:
+            for namespace in stage_namespaces(stage):
+                logging.info(f"  - drop all Iceberg tables in {namespace}; gcloud storage rm -r gs://{bucket}/{namespace}/**")
+
+
+def confirm_or_exit() -> None:
+    try:
+        answer: str = input("Type 'yes' to confirm (anything else aborts): ").strip().lower()
+    except (EOFError, KeyboardInterrupt):
+        answer = ""
+    if answer != "yes":
+        logging.error("Aborted - nothing was deleted.")
+        sys.exit(1)
+
+
 def main() -> None:
     args: argparse.Namespace = parse_args()
 
@@ -128,35 +159,10 @@ def main() -> None:
     project: str = os.environ["GCP_PROJECT_ID"]
     dataset: str = os.environ["BQ_DATASET_NAME"]
 
-    if args.all:
-        stages: list[DataStageType] = [
-            DataStageType.BRONZE,
-            DataStageType.SILVER,
-            DataStageType.GOLD,
-        ]
-    elif args.gold:
-        stages = [DataStageType.GOLD]
-    elif args.bronze:
-        stages = [DataStageType.BRONZE]
-    else:
-        stages = [DataStageType.SILVER]
-
-    logging.info("The following destructive actions will be executed:")
-    for stage in stages:
-        if stage == DataStageType.GOLD:
-            logging.info(f"  - bq rm -r -f -d {project}:{dataset}")
-        else:
-            for namespace in stage_namespaces(stage):
-                logging.info(f"  - drop all Iceberg tables in {namespace}; gcloud storage rm -r gs://{bucket}/{namespace}/**")
-
+    stages = selected_stages(args)
+    log_plan(stages, bucket, project, dataset)
     if not args.confirm:
-        try:
-            answer: str = input("Type 'yes' to confirm (anything else aborts): ").strip().lower()
-        except (EOFError, KeyboardInterrupt):
-            answer = ""
-        if answer != "yes":
-            logging.error("Aborted - nothing was deleted.")
-            sys.exit(1)
+        confirm_or_exit()
 
     catalog = open_catalog() if any(stage != DataStageType.GOLD for stage in stages) else None
     for stage in stages:

@@ -7,7 +7,7 @@ Under pytest:   uv run --extra dev pytest tests/test_scheduling.py
 from __future__ import annotations
 
 import unittest
-from datetime import datetime, timedelta, timezone, UTC
+from datetime import UTC, datetime, timedelta
 
 from common.classes import Snapshot
 
@@ -45,7 +45,7 @@ class TestFromScheduledAt(unittest.TestCase):
                          Snapshot.from_scheduled_at("2026-10-01T09:12:00+00:00", now=NOW))
 
     def test_result_is_utc(self):
-        self.assertEqual(Snapshot.from_scheduled_at("2026-10-01T16:00:00+02:00", now=NOW).at.tzinfo, timezone.utc)
+        self.assertEqual(Snapshot.from_scheduled_at("2026-10-01T16:00:00+02:00", now=NOW).at.tzinfo, UTC)
 
 
 class TestIsBackfill(unittest.TestCase):

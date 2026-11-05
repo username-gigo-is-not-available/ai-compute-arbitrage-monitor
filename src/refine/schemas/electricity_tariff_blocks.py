@@ -1,4 +1,4 @@
-from pyspark.sql.types import StructType, StructField, StringType, DateType, IntegerType
+from pyspark.sql.types import DateType, IntegerType, StringType, StructField, StructType
 
 ELECTRICITY_TARIFF_BLOCKS_SILVER_SCHEMA = StructType(
     [

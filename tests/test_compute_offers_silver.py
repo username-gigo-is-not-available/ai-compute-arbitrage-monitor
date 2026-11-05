@@ -10,16 +10,15 @@ import os
 import sys
 import unittest
 
+from pyiceberg.transforms import DayTransform
 from pyspark.sql import SparkSession
 
 from common.classes import Dataset
 from common.enums import DatasetName, DatasetType
-from refine.schemas.compute_offers import COMPUTE_OFFERS_SILVER_SCHEMA
-from refine.sources.compute_offers import ComputeOffersPipeline, deduplicate_compute_offers
-from pyiceberg.transforms import DayTransform
-
 from lakehouse.partition import Partition
 from refine.load_strategy import OverwriteByPartition, SilverTable
+from refine.schemas.compute_offers import COMPUTE_OFFERS_SILVER_SCHEMA
+from refine.sources.compute_offers import ComputeOffersPipeline, deduplicate_compute_offers
 
 OVERWRITE_BY_DAY = OverwriteByPartition(Partition("snapshot_at", DayTransform()))
 

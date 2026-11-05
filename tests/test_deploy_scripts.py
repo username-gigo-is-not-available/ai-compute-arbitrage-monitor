@@ -32,6 +32,7 @@ Run under pytest (optional, once the dev-extra is installed)::
 from __future__ import annotations
 
 import builtins
+import contextlib
 import importlib.util
 import logging
 import os
@@ -523,10 +524,8 @@ def _run_standalone() -> int:
     # encode; force UTF-8 output so the command-logic assertions are what run.
     # (Linux/GitHub Actions already default to UTF-8.)
     for _stream in (sys.stdout, sys.stderr):
-        try:
+        with contextlib.suppress(AttributeError, ValueError):
             _stream.reconfigure(encoding="utf-8")
-        except (AttributeError, ValueError):
-            pass
     failures = 0
     for t in _TESTS:
         try:

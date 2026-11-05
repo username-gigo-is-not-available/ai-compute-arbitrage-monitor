@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 
 from ingest.evn_base import EVNBaseIngestor
 from ingest.models.electricity_tariff_window_schedule import ElectricityTariffWindowSchedule

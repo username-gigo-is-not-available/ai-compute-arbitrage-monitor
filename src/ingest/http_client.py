@@ -7,11 +7,11 @@ from typing import Any, cast
 
 import requests
 from tenacity import (
+    RetryCallState,
+    Retrying,
     before_sleep_log,
     retry_if_exception_type,
     retry_if_result,
-    RetryCallState,
-    Retrying,
     stop_after_attempt,
 )
 

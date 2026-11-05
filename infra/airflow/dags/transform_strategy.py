@@ -2,13 +2,14 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 
-from airflow.providers.standard.operators.bash import BashOperator
 from airflow.providers.google.cloud.operators.cloud_run import CloudRunExecuteJobOperator
+from airflow.providers.standard.operators.bash import BashOperator
 from airflow.sdk import BaseOperator
 
 from common.enums import ExecutionType
-from config.loader import ConfigLoader
 from config.execution import CloudRunConfig
+from config.loader import ConfigLoader
+
 from transform_adapter import DbtAdapter
 
 
@@ -23,7 +24,7 @@ class TransformStrategy(ABC):
         raise NotImplementedError
 
     @staticmethod
-    def build_strategy(config: ConfigLoader) -> "TransformStrategy":
+    def build_strategy(config: ConfigLoader) -> TransformStrategy:
         execution_type = config.get_execution_type()
         dbt_adapter = DbtAdapter(config.get_dbt())
         if execution_type == ExecutionType.GCP:

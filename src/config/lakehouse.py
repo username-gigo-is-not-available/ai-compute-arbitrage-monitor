@@ -4,7 +4,7 @@ from pydantic import BaseModel
 from pyiceberg.catalog.rest import RestCatalog
 
 from common.classes import Dataset
-from common.enums import DataStageType, DatasetType
+from common.enums import DatasetType, DataStageType
 from config.auth import GCPAuthentication
 
 

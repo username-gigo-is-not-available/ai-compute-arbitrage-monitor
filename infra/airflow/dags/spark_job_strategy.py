@@ -7,9 +7,10 @@ from airflow.providers.standard.operators.bash import BashOperator
 from airflow.sdk import BaseOperator
 
 from common.enums import ExecutionType
+from config.bucket import GCSBucketConfig
 from config.cluster import GCPClusterConfig
 from config.loader import ConfigLoader
-from config.bucket import GCSBucketConfig
+
 from pipeline_config import PipelineConfig
 
 

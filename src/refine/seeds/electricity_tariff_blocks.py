@@ -1,12 +1,12 @@
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from functools import partial
-from typing import Callable
 
 from pyspark.sql import DataFrame
 
-from refine.assets.cleaning import trim_whitespace, empty_to_null
-from refine.assets.filtering import keep_latest_per_group
+from refine.assets.cleaning import empty_to_null, trim_whitespace
 from refine.assets.extraction import extract_pattern, extract_valid_from_date
+from refine.assets.filtering import keep_latest_per_group
 from refine.assets.patterns import KWH_BOUNDS_PATTERN, TARIFF_BLOCK_NUMBER_PATTERN
 from refine.base import Pipeline
 

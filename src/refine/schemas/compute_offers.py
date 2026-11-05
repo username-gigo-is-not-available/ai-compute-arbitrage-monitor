@@ -1,5 +1,13 @@
 from pyspark.sql.types import (
-    ArrayType, StructType, StructField, StringType, IntegerType, LongType, DoubleType, BooleanType, TimestampType
+    ArrayType,
+    BooleanType,
+    DoubleType,
+    IntegerType,
+    LongType,
+    StringType,
+    StructField,
+    StructType,
+    TimestampType,
 )
 
 COMPUTE_OFFERS_SILVER_SCHEMA = StructType(

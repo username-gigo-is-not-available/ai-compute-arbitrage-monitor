@@ -1,13 +1,12 @@
 import re
-from dataclasses import field, dataclass
+from collections.abc import Callable
+from dataclasses import dataclass, field
 from functools import reduce
-from typing import Callable
 
-from pyspark.sql import DataFrame, Row
-from pyspark.sql import functions as F
+from pyspark.sql import DataFrame, Row, functions as F
 
 from common.enums import TariffWindowType
-from refine.assets.cleaning import trim_whitespace, empty_to_null
+from refine.assets.cleaning import empty_to_null, trim_whitespace
 from refine.assets.extraction import extract_valid_from_date
 from refine.assets.filtering import keep_latest_per_group
 from refine.assets.patterns import SCHEDULE_LOW_TARIFF_HOUR_PAIR_PATTERN, WEEKDAY_WEEKEND_SPLIT
@@ -18,11 +17,7 @@ def extract_low_tariff_window_hours(text: str) -> set[int]:
     low_hours = set()
     for s, e in re.findall(SCHEDULE_LOW_TARIFF_HOUR_PAIR_PATTERN, text):
         start, end = int(s[:2]), int(e[:2])
-        if end > start:
-            hours = range(start, end)
-        else:
-            hours = list(range(start, 24)) + list(range(0, end))
-        low_hours.update(hours)
+        low_hours.update(range(start, end) if end > start else [*range(start, 24), *range(end)])
     return low_hours
 
 

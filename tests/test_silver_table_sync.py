@@ -13,13 +13,13 @@ from pyiceberg.partitioning import PartitionField, PartitionSpec
 from pyiceberg.schema import assign_fresh_schema_ids
 from pyiceberg.transforms import DayTransform, HourTransform
 from pyspark.sql.pandas.types import to_arrow_schema
+from test_lakehouse_sync import _FakeCatalog
 
+from lakehouse.partition import Partition
+from lakehouse.sync import sync_table
+from refine.load_strategy import OverwriteByPartition, SilverTable
 from refine.schemas.compute_offers import COMPUTE_OFFERS_SILVER_SCHEMA
 from refine.schemas.electricity_tariff_tiers import ELECTRICITY_TARIFF_TIERS_SILVER_SCHEMA
-from lakehouse.partition import Partition
-from refine.load_strategy import OverwriteByPartition, SilverTable
-from lakehouse.sync import sync_table
-from test_lakehouse_sync import _FakeCatalog
 
 COMPUTE_OFFERS = SilverTable(COMPUTE_OFFERS_SILVER_SCHEMA, OverwriteByPartition(Partition("snapshot_at", DayTransform())))
 TABLE = ("silver_sources", "compute_offers")

@@ -1,11 +1,11 @@
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Callable
 
 from pyspark.sql import DataFrame
 
+from refine.assets.cleaning import empty_to_null, replace_substring, strip_non_ascii, trim_whitespace
 from refine.assets.filtering import deduplicate_keep_latest, keep_latest_per_group
 from refine.base import Pipeline
-from refine.assets.cleaning import strip_non_ascii, trim_whitespace, replace_substring, empty_to_null
 
 
 def strip_cpu_core_suffix(df: DataFrame) -> DataFrame:

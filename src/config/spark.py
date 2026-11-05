@@ -4,7 +4,6 @@ from common.enums import ExecutionType
 from config.auth import GCPAuthentication
 from config.lakehouse import GCPLakehouseConfig
 
-
 _ICEBERG_VERSION = "1.11.0"
 _ICEBERG_PACKAGES = (
     f"org.apache.iceberg:iceberg-spark-runtime-4.1_2.13:{_ICEBERG_VERSION},"

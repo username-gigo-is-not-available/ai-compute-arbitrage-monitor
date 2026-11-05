@@ -1,5 +1,4 @@
-from pyspark.sql import functions as F
-from pyspark.sql import DataFrame, Window
+from pyspark.sql import DataFrame, Window, functions as F
 
 
 def keep_latest_per_group(df: DataFrame, group_by: str, order_by: str) -> DataFrame:
