@@ -41,6 +41,7 @@ class SilverTable:
 
     def iceberg_schema(self) -> Schema:
         optional = StructType([StructField(f.name, f.dataType, nullable=True) for f in self.table_schema().fields])
+        # Private pyiceberg call: the public pyarrow_to_schema needs field ids, which a Spark-made Arrow schema lacks.
         return assign_fresh_schema_ids(Catalog._convert_schema_if_needed(to_arrow_schema(optional)))
 
     def partition_spec(self) -> PartitionSpec:
