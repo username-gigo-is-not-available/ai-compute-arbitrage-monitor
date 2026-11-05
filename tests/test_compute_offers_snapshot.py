@@ -18,6 +18,7 @@ from common.enums import DatasetName, DatasetType, OfferType
 from config.apis.vast_ai import VastAIConfig
 from config.http import HttpConfig
 from config.lakehouse import GCPLakehouseConfig
+from ingest.http_client import HttpClient
 from ingest.sources.compute_offers import ComputeOffersIngestor
 from ingest.write_strategy import AppendByDay, BronzeTable
 
@@ -40,7 +41,7 @@ def _ingestor(snapshot_at: datetime) -> ComputeOffersIngestor:
             Schema(NestedField(field_id=1, name="id", field_type=StringType(), required=False)),
             AppendByDay(column="snapshot_at"),
         ),
-        http_config=HttpConfig(timeout_seconds=30, retry_count=1, retry_delay_seconds=0),
+        http=HttpClient(HttpConfig(timeout_seconds=30, retry_count=1, retry_delay_seconds=0)),
         snapshot=Snapshot(at=snapshot_at),
     )
 

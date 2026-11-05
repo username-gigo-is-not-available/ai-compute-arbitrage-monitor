@@ -1,6 +1,6 @@
 """ComputeOffersIngestor fetches the on-demand market as a census of ask_contract_id ranges (ADR-020).
 
-Mocks at the HTTP seam (requests.get); no network, no quota.
+The ingestor's HttpClient sends through a fake market instead of requests.get; no network, no quota.
 
 Run directly:   uv run python tests/test_compute_offers_census.py
 Under pytest:   uv run --extra dev pytest tests/test_compute_offers_census.py
@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 import random
 import unittest
+from collections.abc import Callable
 from datetime import datetime, UTC
 from unittest import mock
 
@@ -24,6 +25,7 @@ from config.apis.vast_ai import VastAIConfig
 from config.http import HttpConfig
 from config.lakehouse import GCPLakehouseConfig
 from config.loader import ConfigLoader
+from ingest.http_client import HttpClient
 from ingest.schemas.compute_offers import COMPUTE_OFFERS_BRONZE_SCHEMA
 from ingest.sources.compute_offers import ComputeOffersIngestor
 from ingest.write_strategy import AppendByDay, BronzeTable
@@ -70,7 +72,7 @@ class FakeMarket:
         return FakeResponse(offers=self.random.sample(matches, limit) if len(matches) > limit else matches)
 
 
-def _ingestor() -> ComputeOffersIngestor:
+def _ingestor(send: Callable[..., FakeResponse]) -> ComputeOffersIngestor:
     return ComputeOffersIngestor(
         dataset=Dataset(dataset_name=DatasetName.COMPUTE_OFFERS, dataset_type=DatasetType.SOURCES),
         config=VastAIConfig(enabled=True, base_url="https://console.vast.test/api/v0", limit=512, split_at=500,
@@ -80,7 +82,7 @@ def _ingestor() -> ComputeOffersIngestor:
             Schema(NestedField(field_id=1, name="id", field_type=StringType(), required=False)),
             AppendByDay(column="snapshot_at"),
         ),
-        http_config=HttpConfig(timeout_seconds=30, retry_count=1, retry_delay_seconds=0),
+        http=HttpClient(HttpConfig(timeout_seconds=30, retry_count=1, retry_delay_seconds=0), send=send),
         snapshot=Snapshot(at=datetime.now(UTC).replace(hour=0, minute=0, second=0, microsecond=0)),
     )
 
@@ -93,43 +95,39 @@ class TestComputeOffersCensus(unittest.TestCase):
 
     def test_requests_on_demand_offers_by_ask_contract_id_range(self):
         get_mock = mock.Mock(side_effect=[FakeResponse(offers=[OFFER])])
-        with mock.patch.object(requests, "get", new=get_mock):
-            offers = _ingestor().load()
+        offers = _ingestor(get_mock).load()
         self.assertEqual(_queries(get_mock), [{"type": "on-demand", "limit": 512, "ask_contract_id": {"gte": 0}}])
         self.assertEqual([o.offer_id for o in offers], [8_936_325])
 
     def test_market_over_the_limit_returns_every_offer_exactly_once(self):
         ids = random.Random(1).sample(range(7_000_000, 54_000_000), 3_000)
-        with mock.patch.object(requests, "get", new=FakeMarket(ids).get):
-            offers = _ingestor().load()
+        offers = _ingestor(FakeMarket(ids).get).load()
         returned = [o.offer_id for o in offers]
         self.assertEqual(len(returned), 3_000)
         self.assertEqual(set(returned), set(ids))
 
     def test_a_range_that_comes_back_full_fails_the_run(self):
         # 3,000 offers in 4 ranges is ~750 per range: over the limit, so a range would only be a sample
-        ingestor = _ingestor()
-        ingestor.config = ingestor.config.model_copy(update={"census_parts": 4})
         ids = random.Random(1).sample(range(7_000_000, 54_000_000), 3_000)
-        with mock.patch.object(requests, "get", new=FakeMarket(ids).get),                 self.assertRaisesRegex(RuntimeError, "raise census_parts"):
+        ingestor = _ingestor(FakeMarket(ids).get)
+        ingestor.config = ingestor.config.model_copy(update={"census_parts": 4})
+        with self.assertRaisesRegex(RuntimeError, "raise census_parts"):
             ingestor.load()
 
     def test_configured_census_costs_about_the_market_size(self):
         # The daily quota counts returned rows, and a full range's rows are thrown away when it is split; the
         # configured split must keep that overhead small (a 4-way split cost ~2x on 2026-10-03 and ran out of quota).
         configured = ConfigLoader().get_vast_ai()
-        ingestor = _ingestor()
-        ingestor.config = ingestor.config.model_copy(update={"census_parts": configured.census_parts})
         ids = random.Random(3).sample(range(7_000_000, 54_000_000), 10_000)
-        with mock.patch.object(requests, "get", new=FakeMarket(ids).get):
-            offers = ingestor.load()
+        ingestor = _ingestor(FakeMarket(ids).get)
+        ingestor.config = ingestor.config.model_copy(update={"census_parts": configured.census_parts})
+        offers = ingestor.load()
         self.assertEqual(len(offers), 10_000)
         self.assertLessEqual(ingestor.rows_used, 11_500)
 
     def test_bronze_rows_keep_the_slice_of_the_machine(self):
         # gpu_frac gives machine size (num_gpus / gpu_frac); gpu_ids shows which slices overlap (ADR-020).
-        with mock.patch.object(requests, "get", new=mock.Mock(side_effect=[FakeResponse(offers=[OFFER])])):
-            row = _ingestor().load()[0].to_row()
+        row = _ingestor(mock.Mock(side_effect=[FakeResponse(offers=[OFFER])])).load()[0].to_row()
         self.assertEqual(row["gpu_fraction_of_machine"], 0.4)
         self.assertEqual(row["gpu_ids"], [55_783, 55_784])
         self.assertTrue({"gpu_fraction_of_machine", "gpu_ids"} <= set(COMPUTE_OFFERS_BRONZE_SCHEMA.column_names))
@@ -137,10 +135,8 @@ class TestComputeOffersCensus(unittest.TestCase):
     def test_a_failed_range_writes_nothing_and_fails_the_run(self):
         # The first range comes back full, so the census splits it; the second request is quota-exhausted.
         full_page = [{**OFFER, "ask_contract_id": i} for i in range(8_000_000, 8_000_512)]
-        ingestor = _ingestor()
-        get_mock = mock.Mock(side_effect=[FakeResponse(offers=full_page), FakeResponse(status=429)])
-        with mock.patch.object(requests, "get", new=get_mock), \
-                mock.patch.object(ingestor, "store") as store_mock, \
+        ingestor = _ingestor(mock.Mock(side_effect=[FakeResponse(offers=full_page), FakeResponse(status=429)]))
+        with mock.patch.object(ingestor, "store") as store_mock, \
                 self.assertRaises(requests.HTTPError) as raised:
             ingestor.run()
         store_mock.assert_not_called()
