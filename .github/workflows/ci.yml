@@ -36,10 +36,13 @@ jobs:
         run: uv sync --locked --extra dev --no-dev
 
       - name: Lint
-        run: uv run --no-sync ruff check src tests
+        run: uv run --no-sync ruff check src tests infra/airflow/dags scripts
+
+      - name: Format
+        run: uv run --no-sync ruff format --check src tests infra/airflow/dags scripts
 
       # Locally SETTINGS_PATH comes from the gitignored .env.
       - name: Test
-        run: uv run --no-sync pytest tests
+        run: uv run --no-sync pytest
         env:
           SETTINGS_PATH: config/settings.yaml
