@@ -1,7 +1,6 @@
 """The marts DAG waits on exactly the assets the dataset DAGs emit, so a renamed asset cannot silently stop it.
 
-Needs Airflow, which CI does not install (the dev dependency group), so it is skipped there and runs locally:
-    uv run pytest tests/test_dag_assets.py
+Needs Airflow (the dev dependency group): skipped without it; CI runs it in the Airflow DAGs job.
 """
 
 import sys

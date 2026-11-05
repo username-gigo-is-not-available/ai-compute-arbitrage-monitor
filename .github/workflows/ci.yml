@@ -46,3 +46,68 @@ jobs:
         run: uv run --no-sync pytest
         env:
           SETTINGS_PATH: config/settings.yaml
+
+  airflow:
+    name: Airflow DAGs
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+          enable-cache: true
+
+      - name: Install dependencies with Airflow
+        run: uv sync --locked --extra dev
+
+      # The DAG tests skip themselves without Airflow; this step fails instead, so a broken install is not a green run.
+      - name: Check Airflow imports
+        run: uv run --no-sync python -c "import airflow"
+
+      - name: Test DAGs
+        run: uv run --no-sync pytest tests/test_dag_import.py tests/test_dag_assets.py tests/test_spark_job_strategy.py
+        env:
+          SETTINGS_PATH: config/settings.yaml
+
+  dbt:
+    name: dbt parse
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
+    # parse compiles the project without connecting, so the profile only needs placeholder values.
+    env:
+      GCP_PROJECT_ID: ci
+      BQ_DATASET_NAME: ci
+      BQ_LOCATION: EU
+
+    defaults:
+      run:
+        working-directory: src/transform
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+          enable-cache: true
+
+      - name: Install dependencies
+        run: uv sync --locked --no-dev
+
+      - name: Install dbt packages
+        run: uv run --no-sync dbt deps --profiles-dir .
+
+      - name: Parse
+        run: uv run --no-sync dbt --warn-error parse --profiles-dir . --no-partial-parse
