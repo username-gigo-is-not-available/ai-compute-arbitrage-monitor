@@ -13,20 +13,21 @@ from pyiceberg.partitioning import PartitionField, PartitionSpec
 from pyiceberg.schema import assign_fresh_schema_ids
 from pyiceberg.transforms import DayTransform, HourTransform
 from pyspark.sql.pandas.types import to_arrow_schema
-
-from refine.schemas.compute_offers import COMPUTE_OFFERS_SILVER_SCHEMA
-from refine.schemas.electricity_tariff_tiers import ELECTRICITY_TARIFF_TIERS_SILVER_SCHEMA
-from lakehouse.partition import Partition
-from refine.load_strategy import OverwriteByPartition, SilverTable
-from lakehouse.sync import sync_table
 from test_lakehouse_sync import _FakeCatalog
 
-COMPUTE_OFFERS = SilverTable(COMPUTE_OFFERS_SILVER_SCHEMA, OverwriteByPartition(Partition("snapshot_at", DayTransform())))
+from lakehouse.partition import Partition
+from lakehouse.sync import sync_table
+from refine.load_strategy import OverwriteByPartition, SilverTable
+from refine.schemas.compute_offers import COMPUTE_OFFERS_SILVER_SCHEMA
+from refine.schemas.electricity_tariff_tiers import ELECTRICITY_TARIFF_TIERS_SILVER_SCHEMA
+
+COMPUTE_OFFERS = SilverTable(
+    COMPUTE_OFFERS_SILVER_SCHEMA, OverwriteByPartition(Partition("snapshot_at", DayTransform()))
+)
 TABLE = ("silver_sources", "compute_offers")
 
 
 class TestIcebergSchema(unittest.TestCase):
-
     def test_columns_follow_the_spark_schema_then_the_meta_columns(self):
         names = [f.name for f in COMPUTE_OFFERS.iceberg_schema().fields]
         self.assertEqual(names, [f.name for f in COMPUTE_OFFERS_SILVER_SCHEMA.fields] + ["ingested_at", "processed_at"])
@@ -42,7 +43,6 @@ class TestIcebergSchema(unittest.TestCase):
 
 
 class TestPartitionSpec(unittest.TestCase):
-
     def test_day_transform_partitions_by_day(self):
         spec = COMPUTE_OFFERS.partition_spec()
         self.assertEqual([(f.name, str(f.transform)) for f in spec.fields], [("snapshot_at_day", "day")])
@@ -53,7 +53,6 @@ class TestPartitionSpec(unittest.TestCase):
 
 
 class TestSyncSilverTable(unittest.TestCase):
-
     def setUp(self):
         self.catalog = _FakeCatalog()
 
@@ -61,15 +60,19 @@ class TestSyncSilverTable(unittest.TestCase):
         self.catalog.tmp.cleanup()
 
     def _sync(self) -> None:
-        sync_table(self.catalog, TABLE, schema=COMPUTE_OFFERS.iceberg_schema(), partition_spec=COMPUTE_OFFERS.partition_spec())
+        sync_table(
+            self.catalog, TABLE, schema=COMPUTE_OFFERS.iceberg_schema(), partition_spec=COMPUTE_OFFERS.partition_spec()
+        )
 
     def test_existing_spark_created_table_converges(self):
         # As Spark created it: required columns from nullable=False, partitioned by hour(snapshot_at)
         spark_created = assign_fresh_schema_ids(
-            Catalog._convert_schema_if_needed(to_arrow_schema(COMPUTE_OFFERS.table_schema())))
+            Catalog._convert_schema_if_needed(to_arrow_schema(COMPUTE_OFFERS.table_schema()))
+        )
         source_id = spark_created.find_field("snapshot_at").field_id
-        hourly = PartitionSpec(PartitionField(source_id=source_id, field_id=1000, transform=HourTransform(),
-                                              name="snapshot_at_hour"))
+        hourly = PartitionSpec(
+            PartitionField(source_id=source_id, field_id=1000, transform=HourTransform(), name="snapshot_at_hour")
+        )
         self.catalog.create_table_if_not_exists(TABLE, schema=spark_created, partition_spec=hourly)
 
         self._sync()

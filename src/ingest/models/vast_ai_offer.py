@@ -3,8 +3,8 @@ from typing import Any
 
 from pydantic import field_validator
 
+from common.enums import OfferType, VerificationStatusType
 from ingest.models.base import BaseRecord
-from common.enums import VerificationStatusType, OfferType
 
 
 class VastAIOffer(BaseRecord):

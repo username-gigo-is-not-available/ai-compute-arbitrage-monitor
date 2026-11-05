@@ -7,7 +7,7 @@ Under pytest:   uv run --extra dev pytest tests/test_compute_offers_snapshot.py
 from __future__ import annotations
 
 import unittest
-from datetime import datetime, timedelta, UTC
+from datetime import UTC, datetime, timedelta
 from unittest import mock
 
 from pyiceberg.schema import Schema
@@ -23,19 +23,36 @@ from ingest.sources.compute_offers import ComputeOffersIngestor
 from ingest.write_strategy import AppendByDay, BronzeTable
 
 OFFER = {
-    "ask_contract_id": 111, "machine_id": 222, "host_id": 333,
-    "dph_base": 0.50, "discounted_dph_total": 0.45, "dlperf_per_dphtotal": 12.0,
-    "gpu_arch": "NVIDIA", "gpu_name": "RTX 4090", "gpu_ram": 24, "cpu_ram": 96,
-    "disk_space": 512, "inet_down": 1000, "inet_up": 100,
-    "verification": "verified", "rentable": True, "rented": False,
+    "ask_contract_id": 111,
+    "machine_id": 222,
+    "host_id": 333,
+    "dph_base": 0.50,
+    "discounted_dph_total": 0.45,
+    "dlperf_per_dphtotal": 12.0,
+    "gpu_arch": "NVIDIA",
+    "gpu_name": "RTX 4090",
+    "gpu_ram": 24,
+    "cpu_ram": 96,
+    "disk_space": 512,
+    "inet_down": 1000,
+    "inet_up": 100,
+    "verification": "verified",
+    "rentable": True,
+    "rented": False,
 }
 
 
 def _ingestor(snapshot_at: datetime) -> ComputeOffersIngestor:
     return ComputeOffersIngestor(
         dataset=Dataset(dataset_name=DatasetName.COMPUTE_OFFERS, dataset_type=DatasetType.SOURCES),
-        config=VastAIConfig(enabled=True, base_url="https://console.vast.test/api/v0", limit=512, split_at=500,
-                            census_parts=4, request_interval_seconds=0),
+        config=VastAIConfig(
+            enabled=True,
+            base_url="https://console.vast.test/api/v0",
+            limit=512,
+            split_at=500,
+            census_parts=4,
+            request_interval_seconds=0,
+        ),
         lakehouse_config=GCPLakehouseConfig(catalog_id="test", project_id="test", warehouse="gs://test"),
         bronze_table=BronzeTable(
             Schema(NestedField(field_id=1, name="id", field_type=StringType(), required=False)),
@@ -47,7 +64,6 @@ def _ingestor(snapshot_at: datetime) -> ComputeOffersIngestor:
 
 
 class TestSnapshotAt(unittest.TestCase):
-
     def test_parse_stamps_scheduled_snapshot_at_and_real_ingested_at(self):
         snapshot_at = datetime(2026, 10, 1, 14, tzinfo=UTC)
         fetched = datetime(2026, 10, 1, 14, 0, 7, tzinfo=UTC)
@@ -65,8 +81,10 @@ class TestSnapshotAt(unittest.TestCase):
     def test_today_runs(self):
         ingestor = _ingestor(datetime.now(UTC).replace(hour=0, minute=0, second=0, microsecond=0))
 
-        with mock.patch.object(ingestor, "load", return_value=[]), \
-                mock.patch.object(ingestor, "handle_result") as handle_mock:
+        with (
+            mock.patch.object(ingestor, "load", return_value=[]),
+            mock.patch.object(ingestor, "handle_result") as handle_mock,
+        ):
             ingestor.run()
         handle_mock.assert_called_once_with([])
 

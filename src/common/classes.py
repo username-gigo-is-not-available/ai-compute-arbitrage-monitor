@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, UTC
+from datetime import UTC, datetime, timedelta
 from typing import ClassVar
 
 from pydantic import BaseModel, ConfigDict
@@ -13,6 +13,7 @@ class Dataset(BaseModel):
 
 class Snapshot(BaseModel):
     """The scheduled day an ingest run's data represents, not the fetch moment (ADR-019)."""
+
     model_config = ConfigDict(frozen=True)
 
     # A day: a failed daily run cleared in Airflow keeps its 00:00 label and must still write (ADR-019)

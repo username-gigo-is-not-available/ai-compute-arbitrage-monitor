@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 
 from bs4 import Tag
 
@@ -18,7 +18,6 @@ class CellSpecification:
 
 @dataclass
 class ElectricityTariffFeesIngestor(EVNBaseIngestor):
-
     def load(self) -> list[ElectricityTariffFee]:
         parser = self.fetch_soup(self.config.tariff_tiers_url)
         ingested_at: datetime = datetime.now(UTC)
@@ -56,21 +55,21 @@ class ElectricityTariffFeesIngestor(EVNBaseIngestor):
         table_element: Tag = parser.select_one(self.config.tariff_fees_table_selector)
         cells: list[Tag] = table_element.select(self.config.table_cells_selector)
         for cell_specification in cell_specifications:
-            electricity_tariff_fee: ElectricityTariffFee = self.parse(cells=cells,
-                                                                      specification=cell_specification,
-                                                                      valid_from_text=valid_from_text,
-                                                                      ingested_at=ingested_at)
+            electricity_tariff_fee: ElectricityTariffFee = self.parse(
+                cells=cells, specification=cell_specification, valid_from_text=valid_from_text, ingested_at=ingested_at
+            )
             electricity_tariff_fees.append(electricity_tariff_fee)
 
         return electricity_tariff_fees
 
-    def parse(self, cells: list[Tag], specification: CellSpecification, valid_from_text: str,
-              ingested_at: datetime) -> ElectricityTariffFee:
+    def parse(
+        self, cells: list[Tag], specification: CellSpecification, valid_from_text: str, ingested_at: datetime
+    ) -> ElectricityTariffFee:
         return ElectricityTariffFee(
             ingested_at=ingested_at,
             consumer_category=specification.consumer_category,
             label=cells[specification.label_idx].text.strip(),
             metric=cells[specification.metric_idx].text.strip(),
             value=cells[specification.value_idx].text.strip(),
-            valid_from_text=valid_from_text
+            valid_from_text=valid_from_text,
         )

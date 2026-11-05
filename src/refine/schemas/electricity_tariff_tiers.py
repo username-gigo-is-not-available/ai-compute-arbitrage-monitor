@@ -1,4 +1,4 @@
-from pyspark.sql.types import StructType, StructField, StringType, DoubleType, DateType
+from pyspark.sql.types import DateType, DoubleType, StringType, StructField, StructType
 
 ELECTRICITY_TARIFF_TIERS_SILVER_SCHEMA = StructType(
     [
@@ -8,4 +8,5 @@ ELECTRICITY_TARIFF_TIERS_SILVER_SCHEMA = StructType(
         StructField("value", DoubleType(), nullable=False),
         StructField("tariff_tier", StringType(), nullable=False),
         StructField("valid_from", DateType(), nullable=False),
-    ])
+    ]
+)

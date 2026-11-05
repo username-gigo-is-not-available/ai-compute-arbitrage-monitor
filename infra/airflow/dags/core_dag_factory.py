@@ -5,17 +5,19 @@ from airflow.providers.standard.operators.python import PythonOperator
 from airflow.sdk import Asset
 
 from ingest.registry import run_ingest
-from transform_strategy import TransformStrategy
+
 from pipeline_config import DAG_TAGS, DEFAULT_ARGS, PipelineConfig
 from spark_job_strategy import SparkJobStrategy
+from transform_strategy import TransformStrategy
 
 
 class DagFactory:
-
-    def __init__(self, pipeline_config: PipelineConfig,
-                 spark_job_strategy: SparkJobStrategy,
-                 transform_strategy: TransformStrategy
-                 ) -> None:
+    def __init__(
+        self,
+        pipeline_config: PipelineConfig,
+        spark_job_strategy: SparkJobStrategy,
+        transform_strategy: TransformStrategy,
+    ) -> None:
         self.pipeline_config = pipeline_config
         self.spark_job_strategy = spark_job_strategy
         self.transform_strategy = transform_strategy
@@ -24,14 +26,14 @@ class DagFactory:
         config: PipelineConfig = self.pipeline_config
 
         with DAG(
-                dag_id=config.dag_id,
-                description=config.description,
-                schedule=config.schedule,
-                start_date=config.start_date,
-                catchup=False,
-                default_args=DEFAULT_ARGS,
-                tags=DAG_TAGS,
-                max_active_runs=1,
+            dag_id=config.dag_id,
+            description=config.description,
+            schedule=config.schedule,
+            start_date=config.start_date,
+            catchup=False,
+            default_args=DEFAULT_ARGS,
+            tags=DAG_TAGS,
+            max_active_runs=1,
         ) as dag:
             # DDL first: the tables match their declarations before anything loads (ADR-022, #41)
             t_setup = self.spark_job_strategy.build_operator(config, package="lakehouse", task_id="setup")

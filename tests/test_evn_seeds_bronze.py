@@ -41,7 +41,6 @@ class FakePage:
 
 
 class TestEVNSeedsBronze(unittest.TestCase):
-
     @classmethod
     def setUpClass(cls):
         cls.config = ConfigLoader().get_evn()
@@ -55,10 +54,14 @@ class TestEVNSeedsBronze(unittest.TestCase):
             dataset=Dataset(dataset_name=name, dataset_type=DatasetType.SEEDS),
             config=self.config,
             lakehouse_config=GCPLakehouseConfig(catalog_id="test", project_id="test", warehouse="gs://test"),
-            bronze_table=BronzeTable(Schema(NestedField(field_id=1, name="id", field_type=StringType(), required=False)),
-                                     AppendByDay(column="ingested_at")),
-            http=HttpClient(HttpConfig(timeout_seconds=30, retry_count=1, retry_delay_seconds=0),
-                            send=lambda url, **kwargs: FakePage(self.pages[url])),
+            bronze_table=BronzeTable(
+                Schema(NestedField(field_id=1, name="id", field_type=StringType(), required=False)),
+                AppendByDay(column="ingested_at"),
+            ),
+            http=HttpClient(
+                HttpConfig(timeout_seconds=30, retry_count=1, retry_delay_seconds=0),
+                send=lambda url, **kwargs: FakePage(self.pages[url]),
+            ),
             snapshot=Snapshot.from_scheduled_at(None),
         )
         return ingestor.load()
@@ -66,15 +69,18 @@ class TestEVNSeedsBronze(unittest.TestCase):
     def test_tiers_read_both_consumer_tables(self):
         tiers = self._load(ElectricityTariffTiersIngestor, DatasetName.ELECTRICITY_TARIFF_TIERS)
         self.assertEqual(len(tiers), 7)
-        self.assertEqual({t.consumer_category for t in tiers},
-                         {ConsumerCategoryType.HOUSEHOLD, ConsumerCategoryType.BUSINESS})
+        self.assertEqual(
+            {t.consumer_category for t in tiers}, {ConsumerCategoryType.HOUSEHOLD, ConsumerCategoryType.BUSINESS}
+        )
         self.assertTrue(all(t.value for t in tiers), "every tier has a price")
 
     def test_fees_read_four_cells(self):
         fees = self._load(ElectricityTariffFeesIngestor, DatasetName.ELECTRICITY_TARIFF_FEES)
         self.assertEqual(len(fees), 4)
-        self.assertEqual(sorted(f.consumer_category for f in fees),
-                         sorted([ConsumerCategoryType.HOUSEHOLD, ConsumerCategoryType.BUSINESS] * 2))
+        self.assertEqual(
+            sorted(f.consumer_category for f in fees),
+            sorted([ConsumerCategoryType.HOUSEHOLD, ConsumerCategoryType.BUSINESS] * 2),
+        )
 
     def test_blocks_read_each_block_with_its_kwh_bounds(self):
         blocks = self._load(ElectricityTariffBlocksIngestor, DatasetName.ELECTRICITY_TARIFF_BLOCKS)

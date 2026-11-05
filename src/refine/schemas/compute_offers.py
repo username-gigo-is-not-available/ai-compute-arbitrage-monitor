@@ -1,5 +1,13 @@
 from pyspark.sql.types import (
-    ArrayType, StructType, StructField, StringType, IntegerType, LongType, DoubleType, BooleanType, TimestampType
+    ArrayType,
+    BooleanType,
+    DoubleType,
+    IntegerType,
+    LongType,
+    StringType,
+    StructField,
+    StructType,
+    TimestampType,
 )
 
 COMPUTE_OFFERS_SILVER_SCHEMA = StructType(
@@ -57,4 +65,5 @@ COMPUTE_OFFERS_SILVER_SCHEMA = StructType(
         StructField("verification_flag", StringType(), nullable=False),
         StructField("rentable_flag", BooleanType(), nullable=False),
         StructField("rented_flag", BooleanType(), nullable=False),
-    ])
+    ]
+)

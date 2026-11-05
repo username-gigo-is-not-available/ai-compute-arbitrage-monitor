@@ -32,6 +32,7 @@ Run under pytest (optional, once the dev-extra is installed)::
 from __future__ import annotations
 
 import builtins
+import contextlib
 import importlib.util
 import logging
 import os
@@ -119,16 +120,20 @@ def _load_script(name: str):
 # Tests
 # ---------------------------------------------------------------------------
 
+
 def test_dataproc_builds_correct_gcs_destinations() -> None:
     """Valid packages + bucket set -> exactly the three jobs/ blobs, correct gs:// path."""
     script = _load_script("package_dataproc_modules")
     calls: list[tuple[str, str]] = []
     try:
         _set_env()
-        with _chdir(REPO_ROOT), _patched(
-            script,
-            gcs_cp=lambda src, dst: calls.append((src, dst)),
-            zip_packages=lambda _packages: None,
+        with (
+            _chdir(REPO_ROOT),
+            _patched(
+                script,
+                gcs_cp=lambda src, dst: calls.append((src, dst)),
+                zip_packages=lambda _packages: None,
+            ),
         ):
             script.main()
     finally:
@@ -148,9 +153,7 @@ def test_composer_builds_correct_gcs_destinations() -> None:
     calls: list[tuple[str, str]] = []
     try:
         _set_env()
-        with _chdir(REPO_ROOT), _patched(
-            script, gcs_cp=lambda src, dst: calls.append((src, dst))
-        ):
+        with _chdir(REPO_ROOT), _patched(script, gcs_cp=lambda src, dst: calls.append((src, dst))):
             script.main()
     finally:
         _restore_env()
@@ -170,9 +173,7 @@ def test_missing_bucket_env_raises_keyerror() -> None:
     script = _load_script("package_dataproc_modules")
     try:
         _set_env(bucket=None)
-        with _chdir(REPO_ROOT), _patched(
-            script, gcs_cp=lambda src, dst: None, zip_packages=lambda _p: None
-        ):
+        with _chdir(REPO_ROOT), _patched(script, gcs_cp=lambda src, dst: None, zip_packages=lambda _p: None):
             script.main()
         raise AssertionError("expected KeyError('GCS_BUCKET_NAME')")
     except KeyError as e:
@@ -273,10 +274,12 @@ def _run_purge(
     exit_code: int | None = None
     try:
         _set_env()
-        with _chdir(REPO_ROOT), _patched(subprocess, run=fake_run), _patched(
-            sys, argv=["purge_data.py", *argv]
-        ), _patched(shutil, which=lambda _name: None), _patched(
-            script, open_catalog=lambda: _FakeCatalog([] if fail else calls)
+        with (
+            _chdir(REPO_ROOT),
+            _patched(subprocess, run=fake_run),
+            _patched(sys, argv=["purge_data.py", *argv]),
+            _patched(shutil, which=lambda _name: None),
+            _patched(script, open_catalog=lambda: _FakeCatalog([] if fail else calls)),
         ):
             try:
                 if confirm is None:
@@ -298,17 +301,20 @@ def test_purge_no_flags_exits_nonzero_and_purges_nothing() -> None:
     assert exit_code == 2, exit_code
     assert calls == [], calls
 
+
 def test_purge_conflicting_flags_exits_nonzero_and_purges_nothing() -> None:
     """Two stage flags together -> argparse usage error, exit 2, no gcloud/bq command issued."""
     calls, exit_code = _run_purge(["--bronze", "--silver"])
     assert exit_code == 2, exit_code
     assert calls == [], calls
 
+
 def test_purge_bronze_confirm_drops_tables_then_deletes_namespace_prefixes() -> None:
     """--bronze --confirm -> per Bronze namespace: drop Iceberg tables, then `gcloud storage rm` its prefix."""
     calls, exit_code = _run_purge(["--bronze"])
     assert calls == _expected_stage("bronze"), calls
     assert exit_code is None, exit_code
+
 
 def test_purge_bucket_with_trailing_slash_is_stripped() -> None:
     """GCS_BUCKET_NAME with a trailing slash -> no double slash in the gs:// target."""
@@ -322,23 +328,24 @@ def test_purge_bucket_with_trailing_slash_is_stripped() -> None:
 
     try:
         _set_env(bucket=f"{EXPECTED_BUCKET}/")
-        with _chdir(REPO_ROOT), _patched(subprocess, run=fake_run), _patched(
-            shutil, which=lambda _name: None
-        ), _patched(
-            sys, argv=["purge_data.py", "--bronze", "--confirm"]
-        ), _patched(script, open_catalog=lambda: _FakeCatalog(calls)):
+        with (
+            _chdir(REPO_ROOT),
+            _patched(subprocess, run=fake_run),
+            _patched(shutil, which=lambda _name: None),
+            _patched(sys, argv=["purge_data.py", "--bronze", "--confirm"]),
+            _patched(script, open_catalog=lambda: _FakeCatalog(calls)),
+        ):
             script.main()
     finally:
         _restore_env()
         subprocess.run = real_run
     assert calls == _expected_stage("bronze"), calls
 
+
 def test_purge_gold_confirm_issues_expected_bq_command() -> None:
     """--gold --confirm -> exactly `bq rm -r -f -d <project>:<dataset>`."""
     calls, exit_code = _run_purge(["--gold"])
-    assert calls == [
-        ["bq", "rm", "-r", "-f", "-d", f"{EXPECTED_PROJECT}:{EXPECTED_DATASET}"]
-    ], calls
+    assert calls == [["bq", "rm", "-r", "-f", "-d", f"{EXPECTED_PROJECT}:{EXPECTED_DATASET}"]], calls
     assert exit_code is None, exit_code
 
 
@@ -393,12 +400,13 @@ def test_purge_uses_logging_not_print() -> None:
 
     try:
         _set_env()
-        with _chdir(REPO_ROOT), _patched(subprocess, run=fake_run), _patched(
-            shutil, which=lambda _name: None
-        ), _patched(
-            sys, argv=["purge_data.py", "--bronze", "--confirm"]
-        ), _patched(logging, info=capture_info, error=capture_error), _patched(
-            script, open_catalog=lambda: _FakeCatalog(calls)
+        with (
+            _chdir(REPO_ROOT),
+            _patched(subprocess, run=fake_run),
+            _patched(shutil, which=lambda _name: None),
+            _patched(sys, argv=["purge_data.py", "--bronze", "--confirm"]),
+            _patched(logging, info=capture_info, error=capture_error),
+            _patched(script, open_catalog=lambda: _FakeCatalog(calls)),
         ):
             script.main()
     finally:
@@ -416,9 +424,7 @@ def test_purge_missing_project_env_raises_keyerror() -> None:
     try:
         _set_env()
         os.environ.pop("GCP_PROJECT_ID", None)
-        with _chdir(REPO_ROOT), _patched(
-            sys, argv=["purge_data.py", "--bronze", "--confirm"]
-        ):
+        with _chdir(REPO_ROOT), _patched(sys, argv=["purge_data.py", "--bronze", "--confirm"]):
             script.main()
         raise AssertionError("expected KeyError('GCP_PROJECT_ID')")
     except KeyError as e:
@@ -426,15 +432,14 @@ def test_purge_missing_project_env_raises_keyerror() -> None:
     finally:
         _restore_env()
 
+
 def test_purge_missing_dataset_env_raises_keyerror() -> None:
     """BQ_DATASET_NAME unset -> KeyError naming the var (no silent degrade)."""
     script = _load_script("purge_data")
     try:
         _set_env()
         os.environ.pop("BQ_DATASET_NAME", None)
-        with _chdir(REPO_ROOT), _patched(
-            sys, argv=["purge_data.py", "--gold", "--confirm"]
-        ):
+        with _chdir(REPO_ROOT), _patched(sys, argv=["purge_data.py", "--gold", "--confirm"]):
             script.main()
         raise AssertionError("expected KeyError('BQ_DATASET_NAME')")
     except KeyError as e:
@@ -442,13 +447,16 @@ def test_purge_missing_dataset_env_raises_keyerror() -> None:
     finally:
         _restore_env()
 
+
 def test_purge_missing_settings_exits_nonzero() -> None:
     """SETTINGS_PATH points at a missing settings.yaml -> exit 1, no commands."""
     script = _load_script("purge_data")
     try:
         _set_env()
-        with tempfile.TemporaryDirectory() as tmp, _chdir(Path(tmp)), _patched(
-            sys, argv=["purge_data.py", "--bronze", "--confirm"]
+        with (
+            tempfile.TemporaryDirectory() as tmp,
+            _chdir(Path(tmp)),
+            _patched(sys, argv=["purge_data.py", "--bronze", "--confirm"]),
         ):
             os.environ["SETTINGS_PATH"] = str(Path(tmp) / "no-such-settings.yaml")
             try:
@@ -476,9 +484,12 @@ def test_purge_prompt_eof_exits_nonzero_and_purges_nothing() -> None:
 
     try:
         _set_env()
-        with _chdir(REPO_ROOT), _patched(subprocess, run=fake_run), _patched(
-            sys, argv=["purge_data.py", "--bronze"]
-        ), _patched(builtins, input=raise_eof):
+        with (
+            _chdir(REPO_ROOT),
+            _patched(subprocess, run=fake_run),
+            _patched(sys, argv=["purge_data.py", "--bronze"]),
+            _patched(builtins, input=raise_eof),
+        ):
             try:
                 script.main()
             except SystemExit as e:
@@ -523,10 +534,8 @@ def _run_standalone() -> int:
     # encode; force UTF-8 output so the command-logic assertions are what run.
     # (Linux/GitHub Actions already default to UTF-8.)
     for _stream in (sys.stdout, sys.stderr):
-        try:
+        with contextlib.suppress(AttributeError, ValueError):
             _stream.reconfigure(encoding="utf-8")
-        except (AttributeError, ValueError):
-            pass
     failures = 0
     for t in _TESTS:
         try:

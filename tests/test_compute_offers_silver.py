@@ -10,16 +10,15 @@ import os
 import sys
 import unittest
 
+from pyiceberg.transforms import DayTransform
 from pyspark.sql import SparkSession
 
 from common.classes import Dataset
 from common.enums import DatasetName, DatasetType
-from refine.schemas.compute_offers import COMPUTE_OFFERS_SILVER_SCHEMA
-from refine.sources.compute_offers import ComputeOffersPipeline, deduplicate_compute_offers
-from pyiceberg.transforms import DayTransform
-
 from lakehouse.partition import Partition
 from refine.load_strategy import OverwriteByPartition, SilverTable
+from refine.schemas.compute_offers import COMPUTE_OFFERS_SILVER_SCHEMA
+from refine.sources.compute_offers import ComputeOffersPipeline, deduplicate_compute_offers
 
 OVERWRITE_BY_DAY = OverwriteByPartition(Partition("snapshot_at", DayTransform()))
 
@@ -34,43 +33,50 @@ def _offers(session: SparkSession, rows: str):
 
 
 class TestComputeOffersSilver(unittest.TestCase):
-
     @classmethod
     def setUpClass(cls):
         os.environ.setdefault("PYSPARK_PYTHON", sys.executable)
         cls.session = SparkSession.builder.master("local[1]").appName("test").getOrCreate()
-        _offers(cls.session, "(1, 'bid', 0.10, '2026-10-01 14:00:00', '2026-10-01 14:00:05')") \
-            .createOrReplaceTempView("silver_offers")
+        _offers(cls.session, "(1, 'bid', 0.10, '2026-10-01 14:00:00', '2026-10-01 14:00:05')").createOrReplaceTempView(
+            "silver_offers"
+        )
 
     def test_watermark_reads_every_fetch_silver_has_not_seen(self):
         # Silver holds the 14:00 snapshot fetched at 14:00:05. A re-run of the same snapshot at 14:40 is a newer
         # fetch, so it is read and overwrites that day, as a rebuild from Bronze would.
-        bronze = _offers(self.session,
-                         "(1, 'bid', 0.10, '2026-10-01 14:00:00', '2026-10-01 14:00:05'), "
-                         "(1, 'bid', 0.11, '2026-10-01 14:00:00', '2026-10-01 14:40:00'), "
-                         "(1, 'bid', 0.12, '2026-10-01 15:00:00', '2026-10-01 15:00:04')")
+        bronze = _offers(
+            self.session,
+            "(1, 'bid', 0.10, '2026-10-01 14:00:00', '2026-10-01 14:00:05'), "
+            "(1, 'bid', 0.11, '2026-10-01 14:00:00', '2026-10-01 14:40:00'), "
+            "(1, 'bid', 0.12, '2026-10-01 15:00:00', '2026-10-01 15:00:04')",
+        )
         bronze.createOrReplaceTempView("bronze_offers")
         result = OVERWRITE_BY_DAY.read(self.session, "bronze_offers", "silver_offers")
         self.assertEqual(sorted(r["price"] for r in result.collect()), [0.11, 0.12])
 
     def test_empty_silver_reads_all_of_bronze(self):
-        _offers(self.session, "(1, 'bid', 0.10, '2026-10-01 14:00:00', '2026-10-01 14:00:05')") \
-            .filter("false").createOrReplaceTempView("empty_silver_offers")
-        bronze = _offers(self.session,
-                         "(1, 'bid', 0.10, '2026-10-01 14:00:00', '2026-10-01 14:00:05'), "
-                         "(1, 'bid', 0.12, '2026-10-01 15:00:00', '2026-10-01 15:00:04')")
+        _offers(self.session, "(1, 'bid', 0.10, '2026-10-01 14:00:00', '2026-10-01 14:00:05')").filter(
+            "false"
+        ).createOrReplaceTempView("empty_silver_offers")
+        bronze = _offers(
+            self.session,
+            "(1, 'bid', 0.10, '2026-10-01 14:00:00', '2026-10-01 14:00:05'), "
+            "(1, 'bid', 0.12, '2026-10-01 15:00:00', '2026-10-01 15:00:04')",
+        )
         bronze.createOrReplaceTempView("bronze_offers")
         result = OVERWRITE_BY_DAY.read(self.session, "bronze_offers", "empty_silver_offers")
         self.assertEqual(sorted(r["price"] for r in result.collect()), [0.10, 0.12])
 
     def test_retry_replaces_whole_earlier_attempt_not_merges(self):
         # Attempt 1 saw offers 1 and 2; the retry saw offers 1 and 3. The snapshot is the retry's view only.
-        batch = _offers(self.session,
-                        "(1, 'bid', 0.11, '2026-10-01 15:00:00', '2026-10-01 15:00:04'), "
-                        "(2, 'bid', 0.20, '2026-10-01 15:00:00', '2026-10-01 15:00:04'), "
-                        "(1, 'bid', 0.12, '2026-10-01 15:00:00', '2026-10-01 15:05:09'), "
-                        "(3, 'bid', 0.30, '2026-10-01 15:00:00', '2026-10-01 15:05:09'), "
-                        "(4, 'bid', 0.40, '2026-10-01 16:00:00', '2026-10-01 16:00:03')")
+        batch = _offers(
+            self.session,
+            "(1, 'bid', 0.11, '2026-10-01 15:00:00', '2026-10-01 15:00:04'), "
+            "(2, 'bid', 0.20, '2026-10-01 15:00:00', '2026-10-01 15:00:04'), "
+            "(1, 'bid', 0.12, '2026-10-01 15:00:00', '2026-10-01 15:05:09'), "
+            "(3, 'bid', 0.30, '2026-10-01 15:00:00', '2026-10-01 15:05:09'), "
+            "(4, 'bid', 0.40, '2026-10-01 16:00:00', '2026-10-01 16:00:03')",
+        )
         rows = {(r["offer_id"], r["price"]) for r in deduplicate_compute_offers(batch).collect()}
         self.assertEqual(rows, {(1, 0.12), (3, 0.30), (4, 0.40)})
 

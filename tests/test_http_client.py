@@ -33,8 +33,9 @@ RETRY_DELAY_SECONDS = 60
 class FakeResponse:
     """Stands in for requests.Response at the level the ingestors use."""
 
-    def __init__(self, status: int = HTTPStatus.OK, text: str = "", json_data: dict | None = None,
-                 headers: dict | None = None):
+    def __init__(
+        self, status: int = HTTPStatus.OK, text: str = "", json_data: dict | None = None, headers: dict | None = None
+    ):
         self.status_code = status
         self.headers = headers or {}
         self.text = text
@@ -75,6 +76,7 @@ class FakeServer:
 # ---------------------------------------------------------------------------
 # Retry rules
 # ---------------------------------------------------------------------------
+
 
 def test_a_200_is_returned_without_retrying_and_passes_the_timeout_and_arguments():
     server = FakeServer(FakeResponse(text="ok"))
@@ -132,8 +134,9 @@ def test_a_transport_error_is_retried():
 
 
 def test_a_permanent_transport_error_reraises_the_last_one():
-    server = FakeServer(requests.exceptions.ConnectionError("connection refused"),
-                        requests.exceptions.ReadTimeout("read timeout"))
+    server = FakeServer(
+        requests.exceptions.ConnectionError("connection refused"), requests.exceptions.ReadTimeout("read timeout")
+    )
     with pytest.raises(requests.exceptions.ReadTimeout):
         server.client(retry_count=2).get("https://x.test/")
     assert len(server.calls) == 2
@@ -182,8 +185,10 @@ def test_a_retry_after_missing_or_not_in_seconds_waits_the_delay(headers):
 # What the ingestors still own: reading the response and refusing an empty fetch
 # ---------------------------------------------------------------------------
 
-_DUMMY_BRONZE_TABLE = BronzeTable(Schema(NestedField(field_id=1, name="id", field_type=StringType(), required=False)),
-                                  AppendByDay(column="ingested_at"))
+_DUMMY_BRONZE_TABLE = BronzeTable(
+    Schema(NestedField(field_id=1, name="id", field_type=StringType(), required=False)),
+    AppendByDay(column="ingested_at"),
+)
 _LAKEHOUSE = GCPLakehouseConfig(catalog_id="test", project_id="test", warehouse="gs://test")
 
 
@@ -209,14 +214,23 @@ def test_evn_parses_the_page_the_client_returns():
 
 
 def test_exchange_rates_parse_the_json_the_client_returns():
-    client = FakeServer(FakeResponse(json_data={
-        "conversion_rates": {"MKD": 58.15},
-        "time_last_update_utc": "Tue, 03 Sep 2026 00:00:00 +0000",
-    })).client()
+    client = FakeServer(
+        FakeResponse(
+            json_data={
+                "conversion_rates": {"MKD": 58.15},
+                "time_last_update_utc": "Tue, 03 Sep 2026 00:00:00 +0000",
+            }
+        )
+    ).client()
     ingestor = ExchangeRateIngestor(
         dataset=Dataset(dataset_name=DatasetName.EXCHANGE_RATES, dataset_type=DatasetType.SOURCES),
-        config=ExchangeRateConfig(enabled=True, base_url="https://exchangerate.test/", from_currency="USD",
-                                  to_currency="MKD", api_key="test-key"),
+        config=ExchangeRateConfig(
+            enabled=True,
+            base_url="https://exchangerate.test/",
+            from_currency="USD",
+            to_currency="MKD",
+            api_key="test-key",
+        ),
         lakehouse_config=_LAKEHOUSE,
         bronze_table=_DUMMY_BRONZE_TABLE,
         http=client,

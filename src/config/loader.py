@@ -10,21 +10,20 @@ from common.enums import ExecutionType
 from config.apis.evn import EVNConfig
 from config.apis.exchange_rate import ExchangeRateConfig
 from config.apis.vast_ai import VastAIConfig
+from config.bucket import GCSBucketConfig
 from config.cluster import GCPClusterConfig
 from config.dbt import DbtConfig
 from config.execution import CloudRunConfig
 from config.http import HttpConfig
 from config.lakehouse import GCPLakehouseConfig
-from config.bucket import GCSBucketConfig
 
 load_dotenv()
 
 
 class ConfigLoader:
-    def __init__(self, config_path: Path = Path(os.getenv("SETTINGS_PATH", "settings.yaml"))) -> None:
-        self._raw = self._load_yaml(config_path)
+    def __init__(self, config_path: Path | None = None) -> None:
+        self._raw = self._load_yaml(config_path or Path(os.getenv("SETTINGS_PATH", "settings.yaml")))
         self._setup_logging()
-
 
     def get_execution_type(self) -> ExecutionType:
         execution_type: ExecutionType = ExecutionType(self._raw.get("execution_type", "local"))
@@ -58,9 +57,7 @@ class ConfigLoader:
         return HttpConfig(**self._raw["http"])
 
     def get_bucket(self) -> GCSBucketConfig:
-        return GCSBucketConfig(
-            bucket_name=os.environ["GCS_BUCKET_NAME"]
-        )
+        return GCSBucketConfig(bucket_name=os.environ["GCS_BUCKET_NAME"])
 
     def get_dbt(self) -> DbtConfig:
         execution_type: ExecutionType = self.get_execution_type()
@@ -93,13 +90,13 @@ class ConfigLoader:
         logging.basicConfig(
             level=log_config.get("level", "INFO"),
             format=log_config.get("format", "%(asctime)s - %(name)s - %(levelname)s - %(message)s"),
-            force=True
+            force=True,
         )
 
     @staticmethod
     def _load_yaml(path: Path) -> dict:
         try:
-            with open(path, "r", encoding="utf-8") as f:
+            with open(path, encoding="utf-8") as f:
                 return yaml.safe_load(f)
         except FileNotFoundError:
             logging.warning(f"Config file not found at {path}, using defaults.")
@@ -107,4 +104,3 @@ class ConfigLoader:
         except Exception as e:
             logging.error(f"Could not load config file {path}: {e}")
             return {}
-

@@ -15,7 +15,6 @@ from refine.schemas.base import SILVER_META_COLUMNS_SCHEMA
 # Every Silver table reads the Bronze fetches it has not seen yet and overwrites the partitions they touch, so
 # Silver is what a rebuild from Bronze would give. Assumes each fetch delivers whole partitions.
 class OverwriteByPartition:
-
     def __init__(self, partition: Partition = Partition("valid_from")) -> None:
         self.partition = partition
 

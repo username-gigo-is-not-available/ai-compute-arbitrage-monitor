@@ -7,16 +7,16 @@ from airflow.providers.standard.operators.bash import BashOperator
 from airflow.sdk import BaseOperator
 
 from common.enums import ExecutionType
+from config.bucket import GCSBucketConfig
 from config.cluster import GCPClusterConfig
 from config.loader import ConfigLoader
-from config.bucket import GCSBucketConfig
+
 from pipeline_config import PipelineConfig
 
 
 # Runs a package's main.py with the dataset as its one argument, where pyspark is installed: lakehouse (the setup
 # task) and refine. The DAG starts it as a command and never imports the package (Composer has no pyspark).
 class SparkJobStrategy(ABC):
-
     @abstractmethod
     def build_operator(self, pipeline_config: PipelineConfig, package: str, task_id: str) -> BaseOperator:
         raise NotImplementedError
@@ -25,10 +25,7 @@ class SparkJobStrategy(ABC):
     def build_strategy(config: ConfigLoader) -> SparkJobStrategy:
         execution_type: ExecutionType = config.get_execution_type()
         if execution_type == ExecutionType.GCP:
-            return DataprocSparkJobStrategy(
-                cluster_config=config.get_cluster(),
-                bucket_config=config.get_bucket()
-            )
+            return DataprocSparkJobStrategy(cluster_config=config.get_cluster(), bucket_config=config.get_bucket())
         elif execution_type == ExecutionType.LOCAL:
             return LocalSparkJobStrategy()
         else:
@@ -36,7 +33,6 @@ class SparkJobStrategy(ABC):
 
 
 class LocalSparkJobStrategy(SparkJobStrategy):
-
     # The same entry script Dataproc runs, in its own process
     @staticmethod
     def command(pipeline_config: PipelineConfig, package: str) -> str:
@@ -47,7 +43,6 @@ class LocalSparkJobStrategy(SparkJobStrategy):
 
 
 class DataprocSparkJobStrategy(SparkJobStrategy):
-
     def __init__(self, cluster_config: GCPClusterConfig, bucket_config: GCSBucketConfig) -> None:
         self.cluster_config = cluster_config
         self.bucket_config = bucket_config
@@ -90,5 +85,5 @@ class DataprocSparkJobStrategy(SparkJobStrategy):
             region=self.cluster_config.region_name,
             batch=self.batch_config(pipeline_config, package),
             batch_id=self.generate_batch_id(pipeline_config, task_id),
-            deferrable=True
+            deferrable=True,
         )

@@ -2,13 +2,13 @@ from __future__ import annotations
 
 from airflow import DAG  # noqa: F401  Airflow only parses files that mention "DAG"; the factory builds them
 
-from transform_strategy import TransformStrategy
-from marts_dag_factory import MartsDagFactory
-from spark_job_strategy import SparkJobStrategy
-from core_dag_factory import DagFactory
-from pipeline_config import PIPELINE_CONFIGS
 from config.loader import ConfigLoader
 
+from core_dag_factory import DagFactory
+from marts_dag_factory import MartsDagFactory
+from pipeline_config import PIPELINE_CONFIGS
+from spark_job_strategy import SparkJobStrategy
+from transform_strategy import TransformStrategy
 
 for pipeline_config in PIPELINE_CONFIGS:
     globals()[pipeline_config.dag_id] = DagFactory(

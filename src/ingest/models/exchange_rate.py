@@ -8,4 +8,3 @@ class ExchangeRate(BaseRecord):
     to_currency: str
     value: float
     timestamp: datetime
-

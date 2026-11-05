@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import tempfile
 import unittest
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pyarrow as pa
@@ -45,8 +45,9 @@ class _FakeCatalog:
     def create_table_if_not_exists(self, identifier, schema, partition_spec) -> Table:
         if identifier not in self.metadata:
             self.created_tables.append(identifier)
-            self.metadata[identifier] = new_table_metadata(schema, partition_spec, UNSORTED_SORT_ORDER,
-                                                           location=self.location)
+            self.metadata[identifier] = new_table_metadata(
+                schema, partition_spec, UNSORTED_SORT_ORDER, location=self.location
+            )
         return self.load_table(identifier)
 
     def load_table(self, identifier) -> Table:
@@ -54,11 +55,12 @@ class _FakeCatalog:
 
     def commit_table(self, table, requirements, updates) -> CommitTableResponse:
         self.metadata[table.name()] = update_table_metadata(self.metadata[table.name()], updates)
-        return CommitTableResponse(metadata=self.metadata[table.name()], metadata_location=f"{self.location}/metadata.json")
+        return CommitTableResponse(
+            metadata=self.metadata[table.name()], metadata_location=f"{self.location}/metadata.json"
+        )
 
 
 class TestSyncCreates(unittest.TestCase):
-
     def test_existing_namespace_is_kept(self):
         catalog = _FakeCatalog(namespaces={"silver_sources"})
         sync_table(catalog, ("silver_sources", "compute_offers"), COMPUTE_OFFERS_BRONZE_SCHEMA, PartitionSpec())
@@ -66,28 +68,37 @@ class TestSyncCreates(unittest.TestCase):
 
     def test_sync_creates_namespace_and_missing_table(self):
         catalog = _FakeCatalog()
-        sync_table(catalog, ("bronze_sources", "compute_offers"), schema=COMPUTE_OFFERS_BRONZE_SCHEMA,
-                               partition_spec=PartitionSpec())
+        sync_table(
+            catalog,
+            ("bronze_sources", "compute_offers"),
+            schema=COMPUTE_OFFERS_BRONZE_SCHEMA,
+            partition_spec=PartitionSpec(),
+        )
         self.assertEqual(catalog.namespaces, {"bronze_sources"})
         self.assertEqual(catalog.created_tables, [("bronze_sources", "compute_offers")])
 
     def test_sync_does_not_recreate_existing_table(self):
         catalog = _FakeCatalog()
         for _ in range(2):
-            sync_table(catalog, ("bronze_sources", "compute_offers"), schema=COMPUTE_OFFERS_BRONZE_SCHEMA,
-                                   partition_spec=PartitionSpec())
+            sync_table(
+                catalog,
+                ("bronze_sources", "compute_offers"),
+                schema=COMPUTE_OFFERS_BRONZE_SCHEMA,
+                partition_spec=PartitionSpec(),
+            )
         self.assertEqual(catalog.created_tables, [("bronze_sources", "compute_offers")])
+
 
 class TestSyncSchemaEvolution(unittest.TestCase):
     """An existing table gains the columns its schema lacks, where the schema puts them."""
+
     TABLE = ("bronze_sources", "compute_offers")
 
     def setUp(self):
         self.catalog = _FakeCatalog()
 
     def _sync(self, schema: Schema) -> None:
-        sync_table(self.catalog, ("bronze_sources", "compute_offers"), schema=schema,
-                               partition_spec=PartitionSpec())
+        sync_table(self.catalog, ("bronze_sources", "compute_offers"), schema=schema, partition_spec=PartitionSpec())
 
     def test_existing_table_gains_missing_columns_in_schema_order(self):
         # The Bronze table as created before ADR-020, then synced with the schema that adds the slice columns.
@@ -106,6 +117,7 @@ class TestSyncSchemaEvolution(unittest.TestCase):
 
 class TestSyncConverges(unittest.TestCase):
     """Every run makes the table look like its declaration: adds, drops, type widening, order, partition spec (ADR-022)."""
+
     TABLE = ("bronze_sources", "compute_offers")
     OLD_SCHEMA = Schema(
         NestedField(field_id=1, name="id", field_type=StringType(), required=False),
@@ -137,12 +149,17 @@ class TestSyncConverges(unittest.TestCase):
 
     def _old_table_with_rows(self) -> None:
         table = self._sync(self.OLD_SCHEMA, self._spec(self.OLD_SCHEMA, HourTransform(), "snapshot_at_hour"))
-        table.append(pa.table({
-            "id": ["a", "b"],
-            "price_usd": pa.array([1, 2], pa.int32()),
-            "junk": ["x", "y"],
-            "snapshot_at": [datetime(2026, 10, 1, tzinfo=UTC), datetime(2026, 10, 2, tzinfo=UTC)],
-        }, schema=table.schema().as_arrow()))
+        table.append(
+            pa.table(
+                {
+                    "id": ["a", "b"],
+                    "price_usd": pa.array([1, 2], pa.int32()),
+                    "junk": ["x", "y"],
+                    "snapshot_at": [datetime(2026, 10, 1, tzinfo=UTC), datetime(2026, 10, 2, tzinfo=UTC)],
+                },
+                schema=table.schema().as_arrow(),
+            )
+        )
 
     def _converge(self) -> Table:
         return self._sync(self.NEW_SCHEMA, self._spec(self.NEW_SCHEMA, DayTransform(), "snapshot_at_day"))
@@ -150,8 +167,10 @@ class TestSyncConverges(unittest.TestCase):
     def test_schema_becomes_the_declared_one(self):
         self._old_table_with_rows()
         table = self._converge()
-        self.assertEqual([(f.name, str(f.field_type)) for f in table.schema().fields],
-                         [("snapshot_at", "timestamptz"), ("id", "string"), ("price_usd", "long"), ("extra", "double")])
+        self.assertEqual(
+            [(f.name, str(f.field_type)) for f in table.schema().fields],
+            [("snapshot_at", "timestamptz"), ("id", "string"), ("price_usd", "long"), ("extra", "double")],
+        )
 
     def test_existing_values_survive_widening_and_new_columns_are_empty(self):
         self._old_table_with_rows()
@@ -168,14 +187,21 @@ class TestSyncConverges(unittest.TestCase):
     def test_converged_table_is_left_alone(self):
         self._old_table_with_rows()
         table = self._converge()
-        schema_id, spec_id, snapshot_id = table.schema().schema_id, table.spec().spec_id, table.current_snapshot().snapshot_id
+        schema_id, spec_id, snapshot_id = (
+            table.schema().schema_id,
+            table.spec().spec_id,
+            table.current_snapshot().snapshot_id,
+        )
         table = self._converge()
-        self.assertEqual((table.schema().schema_id, table.spec().spec_id, table.current_snapshot().snapshot_id),
-                         (schema_id, spec_id, snapshot_id))
+        self.assertEqual(
+            (table.schema().schema_id, table.spec().spec_id, table.current_snapshot().snapshot_id),
+            (schema_id, spec_id, snapshot_id),
+        )
 
 
 class TestWriteBeforeSync(unittest.TestCase):
     """Ingest no longer syncs (#41): rows with a column the table lacks fail the write and change nothing."""
+
     TABLE = ("bronze_sources", "exchange_rates")
     SYNCED = Schema(NestedField(field_id=1, name="rate", field_type=DoubleType(), required=False))
 

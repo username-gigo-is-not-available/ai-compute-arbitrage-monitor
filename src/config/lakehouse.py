@@ -4,7 +4,7 @@ from pydantic import BaseModel
 from pyiceberg.catalog.rest import RestCatalog
 
 from common.classes import Dataset
-from common.enums import DataStageType, DatasetType
+from common.enums import DatasetType, DataStageType
 from config.auth import GCPAuthentication
 
 
@@ -40,8 +40,11 @@ class GCPLakehouseConfig(BaseModel):
         return f"{self.catalog_id}.{ns}.{tbl}"
 
     def open_catalog(self) -> RestCatalog:
-        return RestCatalog(self.catalog_id, **{
-            **self.catalog_props(),
-            "token": GCPAuthentication().access_token,
-            "py-io-impl": "pyiceberg.io.pyarrow.PyArrowFileIO",
-        })
+        return RestCatalog(
+            self.catalog_id,
+            **{
+                **self.catalog_props(),
+                "token": GCPAuthentication().access_token,
+                "py-io-impl": "pyiceberg.io.pyarrow.PyArrowFileIO",
+            },
+        )

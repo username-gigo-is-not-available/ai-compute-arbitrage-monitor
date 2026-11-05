@@ -1,12 +1,12 @@
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from functools import partial
-from typing import Callable
 
 from pyspark.sql import DataFrame
 
-from refine.assets.cleaning import trim_whitespace, replace_substring, empty_to_null
-from refine.assets.filtering import keep_latest_per_group
+from refine.assets.cleaning import empty_to_null, replace_substring, trim_whitespace
 from refine.assets.extraction import extract_valid_from_date
+from refine.assets.filtering import keep_latest_per_group
 from refine.assets.imputation import fill_from_group
 from refine.base import Pipeline
 
@@ -23,6 +23,7 @@ def fill_label(df: DataFrame) -> DataFrame:
 def fill_metric(df: DataFrame) -> DataFrame:
     return fill_from_group(df, group_by=["valid_from", "consumer_category"], fill_column="metric")
 
+
 def normalize_tariff_tier(df: DataFrame) -> DataFrame:
     """Normalize tariff_tier: collapse Cyrillic lookalikes to Latin, strip internal whitespace.
 
@@ -38,15 +39,18 @@ def normalize_tariff_tier(df: DataFrame) -> DataFrame:
     df = replace_substring(df, column="tariff_tier", current=r"\s+", replacement="")
     return df
 
+
 @dataclass
 class ElectricityTariffTiersPipeline(Pipeline):
-    transform_steps: list[Callable[[DataFrame], DataFrame]] = field(default_factory=lambda: [
-        trim_whitespace,
-        empty_to_null,
-        replace_decimal_separator,
-        extract_valid_from_date,
-        partial(keep_latest_per_group, group_by="valid_from", order_by="ingested_at"),
-        fill_label,
-        fill_metric,
-        normalize_tariff_tier
-    ])
+    transform_steps: list[Callable[[DataFrame], DataFrame]] = field(
+        default_factory=lambda: [
+            trim_whitespace,
+            empty_to_null,
+            replace_decimal_separator,
+            extract_valid_from_date,
+            partial(keep_latest_per_group, group_by="valid_from", order_by="ingested_at"),
+            fill_label,
+            fill_metric,
+            normalize_tariff_tier,
+        ]
+    )

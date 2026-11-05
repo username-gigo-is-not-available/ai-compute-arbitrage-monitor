@@ -33,8 +33,9 @@ TRANSFORM = LocalTransformStrategy(dbt_adapter=_FakeDbtAdapter())
 def test_marts_dag_waits_on_exactly_the_assets_the_dataset_dags_emit():
     emitted = set()
     for config in PIPELINE_CONFIGS:
-        dag = DagFactory(pipeline_config=config, spark_job_strategy=LocalSparkJobStrategy(),
-                         transform_strategy=TRANSFORM).build()
+        dag = DagFactory(
+            pipeline_config=config, spark_job_strategy=LocalSparkJobStrategy(), transform_strategy=TRANSFORM
+        ).build()
         emitted |= {asset.name for task in dag.tasks for asset in task.outlets}
 
     marts = MartsDagFactory(pipeline_configs=PIPELINE_CONFIGS, transform_strategy=TRANSFORM).build()

@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from typing import Any
 
 from ingest.base import Ingestor
@@ -25,5 +25,5 @@ class ExchangeRateIngestor(Ingestor):
             from_currency=self.config.from_currency,
             to_currency=to_currency,
             value=float(data["conversion_rates"][to_currency]),
-            timestamp=datetime.strptime(data["time_last_update_utc"], self.timestamp_format)
+            timestamp=datetime.strptime(data["time_last_update_utc"], self.timestamp_format),
         )

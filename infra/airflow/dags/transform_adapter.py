@@ -14,9 +14,12 @@ class DbtAdapter:
     @property
     def base_args(self) -> list[str]:
         return [
-            "--project-dir", self.dbt_config.project_directory_path,
-            "--profiles-dir", self.dbt_config.profiles_directory_path,
-            "--target-path", self.dbt_config.target_directory_path,
+            "--project-dir",
+            self.dbt_config.project_directory_path,
+            "--profiles-dir",
+            self.dbt_config.profiles_directory_path,
+            "--target-path",
+            self.dbt_config.target_directory_path,
         ]
 
     def base_flags(self) -> str:
