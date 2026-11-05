@@ -1,7 +1,6 @@
 """Setup and refine both run a package's main.py with the dataset name, locally and on Dataproc.
 
-Needs Airflow, which CI does not install (the dev dependency group), so it is skipped there and runs locally:
-    uv run pytest tests/test_spark_job_strategy.py
+Needs Airflow (the dev dependency group): skipped without it; CI runs it in the Airflow DAGs job.
 """
 
 import sys
