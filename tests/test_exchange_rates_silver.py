@@ -14,6 +14,7 @@ from pyspark.sql import SparkSession
 
 from common.classes import Dataset
 from common.enums import DatasetName, DatasetType
+from lakehouse.partition import Partition
 from refine.load_strategy import OverwriteByPartition, SilverTable
 from refine.schemas.exchange_rates import EXCHANGE_RATES_SILVER_SCHEMA
 from refine.sources.exchange_rates import ExchangeRatesPipeline
@@ -39,7 +40,7 @@ class TestExchangeRatesSilver(unittest.TestCase):
             dataset=Dataset(dataset_name=DatasetName.EXCHANGE_RATES, dataset_type=DatasetType.SOURCES),
             config=None,
             lakehouse_config=None,
-            silver_table=SilverTable(EXCHANGE_RATES_SILVER_SCHEMA, OverwriteByPartition(column="timestamp")),
+            silver_table=SilverTable(EXCHANGE_RATES_SILVER_SCHEMA, OverwriteByPartition(Partition("timestamp"))),
         )
 
     def test_retry_keeps_the_latest_ingest_of_each_rate(self):

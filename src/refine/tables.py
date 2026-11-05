@@ -1,6 +1,7 @@
 from pyiceberg.transforms import DayTransform
 
 from common.enums import DatasetName
+from lakehouse.partition import Partition
 from refine.load_strategy import OverwriteByPartition, SilverTable
 from refine.schemas.compute_offers import COMPUTE_OFFERS_SILVER_SCHEMA
 from refine.schemas.electricity_tariff_blocks import ELECTRICITY_TARIFF_BLOCKS_SILVER_SCHEMA
@@ -13,9 +14,9 @@ from refine.schemas.exchange_rates import EXCHANGE_RATES_SILVER_SCHEMA
 # Imports only schemas, pyspark types and pyiceberg, never the pipelines.
 SILVER_TABLES: dict[DatasetName, SilverTable] = {
     DatasetName.COMPUTE_OFFERS:
-        SilverTable(COMPUTE_OFFERS_SILVER_SCHEMA, OverwriteByPartition(column="snapshot_at", transform=DayTransform())),
+        SilverTable(COMPUTE_OFFERS_SILVER_SCHEMA, OverwriteByPartition(Partition("snapshot_at", DayTransform()))),
     DatasetName.EXCHANGE_RATES:
-        SilverTable(EXCHANGE_RATES_SILVER_SCHEMA, OverwriteByPartition(column="timestamp")),
+        SilverTable(EXCHANGE_RATES_SILVER_SCHEMA, OverwriteByPartition(Partition("timestamp"))),
     DatasetName.ELECTRICITY_TARIFF_TIERS:
         SilverTable(ELECTRICITY_TARIFF_TIERS_SILVER_SCHEMA, OverwriteByPartition()),
     DatasetName.ELECTRICITY_TARIFF_FEES:
