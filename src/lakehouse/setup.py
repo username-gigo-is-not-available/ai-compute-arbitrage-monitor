@@ -18,7 +18,15 @@ def run_setup(dataset: str) -> None:
     lakehouse = loader.get_lakehouse()
     catalog = lakehouse.open_catalog()
     bronze, silver = BRONZE_TABLES[name], SILVER_TABLES[name]
-    sync_table(catalog, lakehouse.table_id(DataStageType.BRONZE, declaration.dataset),
-               schema=bronze.schema, partition_spec=bronze.partition_spec())
-    sync_table(catalog, lakehouse.table_id(DataStageType.SILVER, declaration.dataset),
-               schema=silver.iceberg_schema(), partition_spec=silver.partition_spec())
+    sync_table(
+        catalog,
+        lakehouse.table_id(DataStageType.BRONZE, declaration.dataset),
+        schema=bronze.schema,
+        partition_spec=bronze.partition_spec(),
+    )
+    sync_table(
+        catalog,
+        lakehouse.table_id(DataStageType.SILVER, declaration.dataset),
+        schema=silver.iceberg_schema(),
+        partition_spec=silver.partition_spec(),
+    )

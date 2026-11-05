@@ -30,7 +30,6 @@ def _rates(session: SparkSession, rows: str):
 
 
 class TestExchangeRatesSilver(unittest.TestCase):
-
     @classmethod
     def setUpClass(cls):
         os.environ.setdefault("PYSPARK_PYTHON", sys.executable)
@@ -46,30 +45,42 @@ class TestExchangeRatesSilver(unittest.TestCase):
     def test_retry_keeps_the_latest_ingest_of_each_rate(self):
         # The provider publishes one rate a day, so a retry fetches the same value again; ingested_at picks the
         # later fetch. Another day's rate and another pair are separate rows.
-        bronze = _rates(self.session,
-                        "('EUR', 'USD', 1.08, '2026-10-12 00:00:00', '2026-10-12 00:00:05'), "
-                        "('EUR', 'USD', 1.08, '2026-10-12 00:00:00', '2026-10-12 00:30:00'), "
-                        "('EUR', 'USD', 1.07, '2026-10-13 00:00:00', '2026-10-13 00:00:04'), "
-                        "('MKD', 'USD', 0.0175, '2026-10-12 00:00:00', '2026-10-12 00:00:05')")
-        rows = {(r["from_currency"], str(r["timestamp"].date()), r["value"], str(r["ingested_at"]))
-                for r in self.pipeline.transform(bronze).collect()}
-        self.assertEqual(rows, {("EUR", "2026-10-12", 1.08, "2026-10-12 00:30:00"),
-                                ("EUR", "2026-10-13", 1.07, "2026-10-13 00:00:04"),
-                                ("MKD", "2026-10-12", 0.0175, "2026-10-12 00:00:05")})
+        bronze = _rates(
+            self.session,
+            "('EUR', 'USD', 1.08, '2026-10-12 00:00:00', '2026-10-12 00:00:05'), "
+            "('EUR', 'USD', 1.08, '2026-10-12 00:00:00', '2026-10-12 00:30:00'), "
+            "('EUR', 'USD', 1.07, '2026-10-13 00:00:00', '2026-10-13 00:00:04'), "
+            "('MKD', 'USD', 0.0175, '2026-10-12 00:00:00', '2026-10-12 00:00:05')",
+        )
+        rows = {
+            (r["from_currency"], str(r["timestamp"].date()), r["value"], str(r["ingested_at"]))
+            for r in self.pipeline.transform(bronze).collect()
+        }
+        self.assertEqual(
+            rows,
+            {
+                ("EUR", "2026-10-12", 1.08, "2026-10-12 00:30:00"),
+                ("EUR", "2026-10-13", 1.07, "2026-10-13 00:00:04"),
+                ("MKD", "2026-10-12", 0.0175, "2026-10-12 00:00:05"),
+            },
+        )
 
     def test_currency_codes_are_trimmed_and_empty_becomes_null(self):
         # Silver does not drop the empty code: the not_null dbt test is what catches it.
-        bronze = _rates(self.session,
-                        "(' EUR ', 'USD ', 1.08, '2026-10-12 00:00:00', '2026-10-12 00:00:05'), "
-                        "('', 'USD', 0.0175, '2026-10-12 00:00:00', '2026-10-12 00:00:05')")
+        bronze = _rates(
+            self.session,
+            "(' EUR ', 'USD ', 1.08, '2026-10-12 00:00:00', '2026-10-12 00:00:05'), "
+            "('', 'USD', 0.0175, '2026-10-12 00:00:00', '2026-10-12 00:00:05')",
+        )
         rows = {(r["from_currency"], r["to_currency"]) for r in self.pipeline.transform(bronze).collect()}
         self.assertEqual(rows, {("EUR", "USD"), (None, "USD")})
 
     def test_output_has_the_silver_columns_in_order(self):
         bronze = _rates(self.session, "('EUR', 'USD', 1.08, '2026-10-12 00:00:00', '2026-10-12 00:00:05')")
         result = self.pipeline.transform(bronze)
-        self.assertEqual(result.columns,
-                         ["from_currency", "to_currency", "value", "timestamp", "ingested_at", "processed_at"])
+        self.assertEqual(
+            result.columns, ["from_currency", "to_currency", "value", "timestamp", "ingested_at", "processed_at"]
+        )
         self.assertIsNotNone(result.collect()[0]["processed_at"])
 
 

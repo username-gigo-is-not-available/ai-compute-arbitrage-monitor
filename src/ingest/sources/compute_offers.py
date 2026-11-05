@@ -57,13 +57,16 @@ class ComputeOffersIngestor(Ingestor):
         return list(pairwise(bounds))
 
     def request_range(self, start: int, end: int | None) -> list[dict[str, Any]]:
-        data: dict[str, Any] = self.http.get(self.config.url, headers=self.config.header,
-                                             params=self.config.params(start, end)).json()
+        data: dict[str, Any] = self.http.get(
+            self.config.url, headers=self.config.header, params=self.config.params(start, end)
+        ).json()
         time.sleep(self.config.request_interval_seconds)
         offers = data.get("offers", [])
         self.requests += 1
         self.rows_used += len(offers)
-        self.logger.info(f"Range [{start}, {end}): {len(offers)} offers; {self.rows_used} rows used in {self.requests} requests")
+        self.logger.info(
+            f"Range [{start}, {end}): {len(offers)} offers; {self.rows_used} rows used in {self.requests} requests"
+        )
         return offers
 
     def parse(self, data: dict[str, Any], ingested_at: datetime, offer_type: OfferType) -> VastAIOffer | None:

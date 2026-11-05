@@ -19,10 +19,12 @@ def deduplicate_compute_offers(df: DataFrame) -> DataFrame:
 
 @dataclass
 class ComputeOffersPipeline(Pipeline):
-    transform_steps: list[Callable[[DataFrame], DataFrame]] = field(default_factory=lambda: [
-        strip_non_ascii,
-        trim_whitespace,
-        empty_to_null,
-        strip_cpu_core_suffix,
-        deduplicate_compute_offers
-    ])
+    transform_steps: list[Callable[[DataFrame], DataFrame]] = field(
+        default_factory=lambda: [
+            strip_non_ascii,
+            trim_whitespace,
+            empty_to_null,
+            strip_cpu_core_suffix,
+            deduplicate_compute_offers,
+        ]
+    )

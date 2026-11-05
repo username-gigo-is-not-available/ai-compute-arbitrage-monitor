@@ -10,16 +10,18 @@ from ingest.write_strategy import AppendByDay, BronzeTable
 # What each Bronze table looks like: its schema and partition (the DDL half; ingest.registry is the DML half).
 # Imports only schemas and pyiceberg, so lakehouse.setup can read it without the ingestors' HTTP libraries.
 BRONZE_TABLES: dict[DatasetName, BronzeTable] = {
-    DatasetName.COMPUTE_OFFERS:
-        BronzeTable(COMPUTE_OFFERS_BRONZE_SCHEMA, AppendByDay(column="snapshot_at")),
-    DatasetName.EXCHANGE_RATES:
-        BronzeTable(EXCHANGE_RATES_BRONZE_SCHEMA, AppendByDay(column="timestamp")),
-    DatasetName.ELECTRICITY_TARIFF_TIERS:
-        BronzeTable(ELECTRICITY_TARIFF_TIERS_BRONZE_SCHEMA, AppendByDay(column="ingested_at")),
-    DatasetName.ELECTRICITY_TARIFF_FEES:
-        BronzeTable(ELECTRICITY_TARIFF_FEES_BRONZE_SCHEMA, AppendByDay(column="ingested_at")),
-    DatasetName.ELECTRICITY_TARIFF_BLOCKS:
-        BronzeTable(ELECTRICITY_TARIFF_BLOCKS_BRONZE_SCHEMA, AppendByDay(column="ingested_at")),
-    DatasetName.ELECTRICITY_TARIFF_WINDOW_SCHEDULE:
-        BronzeTable(ELECTRICITY_TARIFF_WINDOW_SCHEDULE_BRONZE_SCHEMA, AppendByDay(column="ingested_at")),
+    DatasetName.COMPUTE_OFFERS: BronzeTable(COMPUTE_OFFERS_BRONZE_SCHEMA, AppendByDay(column="snapshot_at")),
+    DatasetName.EXCHANGE_RATES: BronzeTable(EXCHANGE_RATES_BRONZE_SCHEMA, AppendByDay(column="timestamp")),
+    DatasetName.ELECTRICITY_TARIFF_TIERS: BronzeTable(
+        ELECTRICITY_TARIFF_TIERS_BRONZE_SCHEMA, AppendByDay(column="ingested_at")
+    ),
+    DatasetName.ELECTRICITY_TARIFF_FEES: BronzeTable(
+        ELECTRICITY_TARIFF_FEES_BRONZE_SCHEMA, AppendByDay(column="ingested_at")
+    ),
+    DatasetName.ELECTRICITY_TARIFF_BLOCKS: BronzeTable(
+        ELECTRICITY_TARIFF_BLOCKS_BRONZE_SCHEMA, AppendByDay(column="ingested_at")
+    ),
+    DatasetName.ELECTRICITY_TARIFF_WINDOW_SCHEDULE: BronzeTable(
+        ELECTRICITY_TARIFF_WINDOW_SCHEDULE_BRONZE_SCHEMA, AppendByDay(column="ingested_at")
+    ),
 }

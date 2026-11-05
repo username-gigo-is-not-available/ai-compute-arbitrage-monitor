@@ -23,7 +23,6 @@ def _config() -> GCPLakehouseConfig:
 
 
 class TestNamespace(unittest.TestCase):
-
     def test_sources(self):
         cfg = _config()
         ds = Dataset(dataset_name=DatasetName.COMPUTE_OFFERS, dataset_type=DatasetType.SOURCES)
@@ -38,7 +37,6 @@ class TestNamespace(unittest.TestCase):
 
 
 class TestTableId(unittest.TestCase):
-
     def test_tuple_form(self):
         cfg = _config()
         ds = Dataset(dataset_name=DatasetName.COMPUTE_OFFERS, dataset_type=DatasetType.SOURCES)
@@ -48,7 +46,6 @@ class TestTableId(unittest.TestCase):
 
 
 class TestSparkTable(unittest.TestCase):
-
     def test_format(self):
         cfg = _config()
         ds = Dataset(dataset_name=DatasetName.COMPUTE_OFFERS, dataset_type=DatasetType.SOURCES)
@@ -67,12 +64,13 @@ class TestSparkTable(unittest.TestCase):
 
 
 class TestStageNamespace(unittest.TestCase):
-
     def test_stage_namespace_matches_namespace(self):
         ds = Dataset(dataset_name=DatasetName.COMPUTE_OFFERS, dataset_type=DatasetType.SOURCES)
         self.assertEqual(GCPLakehouseConfig.stage_namespace(DataStageType.BRONZE, DatasetType.SEEDS), "bronze_seeds")
-        self.assertEqual(GCPLakehouseConfig.stage_namespace(DataStageType.BRONZE, DatasetType.SOURCES),
-                         _config().namespace(DataStageType.BRONZE, ds))
+        self.assertEqual(
+            GCPLakehouseConfig.stage_namespace(DataStageType.BRONZE, DatasetType.SOURCES),
+            _config().namespace(DataStageType.BRONZE, ds),
+        )
 
 
 if __name__ == "__main__":

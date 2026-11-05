@@ -21,13 +21,11 @@ def extract_low_tariff_window_hours(text: str) -> set[int]:
     return low_hours
 
 
-
 @dataclass
 class ElectricityTariffWindowSchedulePipeline(Pipeline):
-    transform_steps: list[Callable[[DataFrame], DataFrame]] = field(default_factory=lambda: [
-        trim_whitespace,
-        empty_to_null
-    ])
+    transform_steps: list[Callable[[DataFrame], DataFrame]] = field(
+        default_factory=lambda: [trim_whitespace, empty_to_null]
+    )
 
     def generate(self, df: DataFrame) -> DataFrame | None:
         # One hourly grid per tariff version: Bronze keeps every schedule EVN has published, and dbt needs them all
@@ -44,10 +42,13 @@ class ElectricityTariffWindowSchedulePipeline(Pipeline):
         return (
             days.crossJoin(hours)
             .withColumn("end_hour", F.col("start_hour") + 1)
-            .withColumn("tariff_window_type", F.when(
-                (F.col("day_of_week") == 7) | F.col("start_hour").isin(list(low_hours)),
-                TariffWindowType.LOW.value,
-            ).otherwise(TariffWindowType.HIGH.value))
+            .withColumn(
+                "tariff_window_type",
+                F.when(
+                    (F.col("day_of_week") == 7) | F.col("start_hour").isin(list(low_hours)),
+                    TariffWindowType.LOW.value,
+                ).otherwise(TariffWindowType.HIGH.value),
+            )
             .withColumn("valid_from", F.lit(version["valid_from"]))
             .withColumn("ingested_at", F.lit(version["ingested_at"]))
             .select("tariff_window_type", "day_of_week", "start_hour", "end_hour", "valid_from", "ingested_at")

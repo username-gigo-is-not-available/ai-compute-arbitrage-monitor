@@ -52,8 +52,7 @@ class HttpClient:
         )
 
     def should_retry(self, response: requests.Response) -> bool:
-        return (response.status_code != HTTPStatus.OK
-                and not self.config.retry_after_exceeds_budget(response.headers))
+        return response.status_code != HTTPStatus.OK and not self.config.retry_after_exceeds_budget(response.headers)
 
     def wait_before_retry(self, retry_state: RetryCallState) -> int:
         if retry_state.outcome.failed:

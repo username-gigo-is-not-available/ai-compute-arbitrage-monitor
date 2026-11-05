@@ -26,4 +26,3 @@ def empty_to_null(df: DataFrame, columns: list[str] | None = None) -> DataFrame:
     for column in columns:
         df = df.withColumn(column, F.when(F.col(column) != "", F.col(column)).otherwise(F.lit(None)))
     return df
-

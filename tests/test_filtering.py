@@ -16,7 +16,6 @@ from refine.assets.filtering import deduplicate_keep_latest
 
 
 class TestDeduplicateKeepLatest(unittest.TestCase):
-
     @classmethod
     def setUpClass(cls):
         os.environ.setdefault("PYSPARK_PYTHON", sys.executable)

@@ -65,4 +65,5 @@ COMPUTE_OFFERS_SILVER_SCHEMA = StructType(
         StructField("verification_flag", StringType(), nullable=False),
         StructField("rentable_flag", BooleanType(), nullable=False),
         StructField("rented_flag", BooleanType(), nullable=False),
-    ])
+    ]
+)

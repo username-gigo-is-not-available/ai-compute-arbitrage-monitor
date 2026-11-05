@@ -8,6 +8,5 @@ from ingest.base import Ingestor
 
 @dataclass
 class EVNBaseIngestor(Ingestor, ABC):
-
     def fetch_soup(self, url: str) -> BeautifulSoup:
         return BeautifulSoup(self.http.get(url).text, "html.parser")

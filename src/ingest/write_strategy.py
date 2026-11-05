@@ -23,7 +23,6 @@ class BronzeWriteStrategy(ABC):
 
 
 class AppendByDay(BronzeWriteStrategy):
-
     def __init__(self, column: str) -> None:
         super().__init__(Partition(column, DayTransform()))
 

@@ -132,7 +132,9 @@ def log_plan(stages: list[DataStageType], bucket: str, project: str, dataset: st
             logging.info(f"  - bq rm -r -f -d {project}:{dataset}")
         else:
             for namespace in stage_namespaces(stage):
-                logging.info(f"  - drop all Iceberg tables in {namespace}; gcloud storage rm -r gs://{bucket}/{namespace}/**")
+                logging.info(
+                    f"  - drop all Iceberg tables in {namespace}; gcloud storage rm -r gs://{bucket}/{namespace}/**"
+                )
 
 
 def confirm_or_exit() -> None:

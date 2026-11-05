@@ -8,4 +8,5 @@ ELECTRICITY_TARIFF_BLOCKS_SILVER_SCHEMA = StructType(
         StructField("lower_bound_kwh", IntegerType(), nullable=True),
         StructField("upper_bound_kwh", IntegerType(), nullable=True),
         StructField("valid_from", DateType(), nullable=False),
-    ])
+    ]
+)

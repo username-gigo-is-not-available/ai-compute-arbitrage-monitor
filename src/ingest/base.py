@@ -50,4 +50,3 @@ class Ingestor(ABC):
     def run(self) -> None:
         self.logger.info(f"Starting load for {self.name}...")
         self.handle_result(self.load())
-

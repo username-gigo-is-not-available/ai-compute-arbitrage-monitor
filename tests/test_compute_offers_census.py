@@ -31,12 +31,26 @@ from ingest.sources.compute_offers import ComputeOffersIngestor
 from ingest.write_strategy import AppendByDay, BronzeTable
 
 OFFER = {
-    "ask_contract_id": 8_936_325, "machine_id": 15_489, "host_id": 333,
-    "dph_base": 0.80, "discounted_dph_total": 0.8017, "min_bid": 0.7786, "dlperf_per_dphtotal": 12.0,
-    "gpu_arch": "nvidia", "gpu_name": "RTX 4090", "gpu_ram": 24_564, "cpu_ram": 96_000,
-    "num_gpus": 2, "gpu_frac": 0.4, "gpu_ids": [55_783, 55_784],
-    "disk_space": 512, "inet_down": 1000, "inet_up": 100,
-    "verification": "verified", "rentable": True, "rented": False,
+    "ask_contract_id": 8_936_325,
+    "machine_id": 15_489,
+    "host_id": 333,
+    "dph_base": 0.80,
+    "discounted_dph_total": 0.8017,
+    "min_bid": 0.7786,
+    "dlperf_per_dphtotal": 12.0,
+    "gpu_arch": "nvidia",
+    "gpu_name": "RTX 4090",
+    "gpu_ram": 24_564,
+    "cpu_ram": 96_000,
+    "num_gpus": 2,
+    "gpu_frac": 0.4,
+    "gpu_ids": [55_783, 55_784],
+    "disk_space": 512,
+    "inet_down": 1000,
+    "inet_up": 100,
+    "verification": "verified",
+    "rentable": True,
+    "rented": False,
 }
 
 
@@ -75,8 +89,14 @@ class FakeMarket:
 def _ingestor(send: Callable[..., FakeResponse]) -> ComputeOffersIngestor:
     return ComputeOffersIngestor(
         dataset=Dataset(dataset_name=DatasetName.COMPUTE_OFFERS, dataset_type=DatasetType.SOURCES),
-        config=VastAIConfig(enabled=True, base_url="https://console.vast.test/api/v0", limit=512, split_at=500,
-                            census_parts=32, request_interval_seconds=0),
+        config=VastAIConfig(
+            enabled=True,
+            base_url="https://console.vast.test/api/v0",
+            limit=512,
+            split_at=500,
+            census_parts=32,
+            request_interval_seconds=0,
+        ),
         lakehouse_config=GCPLakehouseConfig(catalog_id="test", project_id="test", warehouse="gs://test"),
         bronze_table=BronzeTable(
             Schema(NestedField(field_id=1, name="id", field_type=StringType(), required=False)),
@@ -92,7 +112,6 @@ def _queries(get_mock: mock.Mock) -> list[dict]:
 
 
 class TestComputeOffersCensus(unittest.TestCase):
-
     def test_requests_on_demand_offers_by_ask_contract_id_range(self):
         get_mock = mock.Mock(side_effect=[FakeResponse(offers=[OFFER])])
         offers = _ingestor(get_mock).load()
@@ -136,8 +155,7 @@ class TestComputeOffersCensus(unittest.TestCase):
         # The first range comes back full, so the census splits it; the second request is quota-exhausted.
         full_page = [{**OFFER, "ask_contract_id": i} for i in range(8_000_000, 8_000_512)]
         ingestor = _ingestor(mock.Mock(side_effect=[FakeResponse(offers=full_page), FakeResponse(status=429)]))
-        with mock.patch.object(ingestor, "store") as store_mock, \
-                self.assertRaises(requests.HTTPError) as raised:
+        with mock.patch.object(ingestor, "store") as store_mock, self.assertRaises(requests.HTTPError) as raised:
             ingestor.run()
         store_mock.assert_not_called()
         self.assertEqual(raised.exception.response.status_code, 429)

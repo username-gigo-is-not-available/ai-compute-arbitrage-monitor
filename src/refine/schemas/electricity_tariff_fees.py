@@ -7,4 +7,5 @@ ELECTRICITY_TARIFF_FEES_SILVER_SCHEMA = StructType(
         StructField("metric", StringType(), nullable=True),
         StructField("value", StringType(), nullable=True),
         StructField("valid_from", DateType(), nullable=False),
-    ])
+    ]
+)

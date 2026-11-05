@@ -14,7 +14,6 @@ from transform_adapter import DbtAdapter
 
 
 class TransformStrategy(ABC):
-
     @abstractmethod
     def build_run_operator(self, tag: str, task_id: str = "process") -> BaseOperator:
         raise NotImplementedError
@@ -36,7 +35,6 @@ class TransformStrategy(ABC):
 
 
 class LocalTransformStrategy(TransformStrategy):
-
     def __init__(self, dbt_adapter: DbtAdapter) -> None:
         self.dbt_adapter = dbt_adapter
 
@@ -48,7 +46,6 @@ class LocalTransformStrategy(TransformStrategy):
 
 
 class CloudRunTransformStrategy(TransformStrategy):
-
     def __init__(self, cloud_run_config: CloudRunConfig, dbt_adapter: DbtAdapter) -> None:
         self.cloud_run_config = cloud_run_config
         self.dbt_adapter = dbt_adapter

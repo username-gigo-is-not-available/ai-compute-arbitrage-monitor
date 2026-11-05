@@ -8,7 +8,6 @@ from transform_strategy import TransformStrategy
 
 
 class MartsDagFactory:
-
     def __init__(
         self,
         pipeline_configs: list[PipelineConfig],
@@ -21,15 +20,14 @@ class MartsDagFactory:
         pipeline_assets = [Asset(config.asset_name) for config in self.pipeline_configs]
 
         with DAG(
-                dag_id="ai-compute-arbitrage-monitor__marts",
-                description="Gold layer marts — triggered by new compute offers data",
-                schedule=AssetAny(*pipeline_assets),
-                catchup=False,
-                default_args=DEFAULT_ARGS,
-                tags=DAG_TAGS,
-                max_active_runs=1,
+            dag_id="ai-compute-arbitrage-monitor__marts",
+            description="Gold layer marts — triggered by new compute offers data",
+            schedule=AssetAny(*pipeline_assets),
+            catchup=False,
+            default_args=DEFAULT_ARGS,
+            tags=DAG_TAGS,
+            max_active_runs=1,
         ) as dag:
-
             t_dbt_run = self.transform_strategy.build_run_operator(tag="tag:marts")
             t_dbt_test = self.transform_strategy.build_test_operator(tag="tag:marts")
 

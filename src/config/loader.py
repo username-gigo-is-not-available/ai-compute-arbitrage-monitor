@@ -25,7 +25,6 @@ class ConfigLoader:
         self._raw = self._load_yaml(config_path or Path(os.getenv("SETTINGS_PATH", "settings.yaml")))
         self._setup_logging()
 
-
     def get_execution_type(self) -> ExecutionType:
         execution_type: ExecutionType = ExecutionType(self._raw.get("execution_type", "local"))
         try:
@@ -58,9 +57,7 @@ class ConfigLoader:
         return HttpConfig(**self._raw["http"])
 
     def get_bucket(self) -> GCSBucketConfig:
-        return GCSBucketConfig(
-            bucket_name=os.environ["GCS_BUCKET_NAME"]
-        )
+        return GCSBucketConfig(bucket_name=os.environ["GCS_BUCKET_NAME"])
 
     def get_dbt(self) -> DbtConfig:
         execution_type: ExecutionType = self.get_execution_type()
@@ -93,7 +90,7 @@ class ConfigLoader:
         logging.basicConfig(
             level=log_config.get("level", "INFO"),
             format=log_config.get("format", "%(asctime)s - %(name)s - %(levelname)s - %(message)s"),
-            force=True
+            force=True,
         )
 
     @staticmethod
@@ -107,4 +104,3 @@ class ConfigLoader:
         except Exception as e:
             logging.error(f"Could not load config file {path}: {e}")
             return {}
-

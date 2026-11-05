@@ -21,8 +21,14 @@ from spark_job_strategy import DataprocSparkJobStrategy, LocalSparkJobStrategy  
 
 CONFIG = PipelineConfig(dataset_name=DatasetName.ELECTRICITY_TARIFF_FEES)
 DATAPROC = DataprocSparkJobStrategy(
-    cluster_config=GCPClusterConfig(project_id="p", region_name="r", image_tag="i", runtime_packages=[],
-                                    subnetwork_name="s", service_account_email="sa"),
+    cluster_config=GCPClusterConfig(
+        project_id="p",
+        region_name="r",
+        image_tag="i",
+        runtime_packages=[],
+        subnetwork_name="s",
+        service_account_email="sa",
+    ),
     bucket_config=GCSBucketConfig(bucket_name="bucket"),
 )
 

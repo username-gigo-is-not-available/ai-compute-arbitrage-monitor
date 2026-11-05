@@ -25,17 +25,19 @@ NEW = "цените ќе се применуваат почнувајќи од 0
 
 
 class TestTariffSeedsSilver(unittest.TestCase):
-
     @classmethod
     def setUpClass(cls):
         os.environ.setdefault("PYSPARK_PYTHON", sys.executable)
         cls.session = SparkSession.builder.master("local[1]").appName("test").getOrCreate()
 
     def _pipeline(self, cls, name, schema):
-        return cls(session=self.session,
-                   dataset=Dataset(dataset_name=name, dataset_type=DatasetType.SEEDS),
-                   config=None, lakehouse_config=None,
-                   silver_table=SilverTable(schema, OverwriteByPartition()))
+        return cls(
+            session=self.session,
+            dataset=Dataset(dataset_name=name, dataset_type=DatasetType.SEEDS),
+            config=None,
+            lakehouse_config=None,
+            silver_table=SilverTable(schema, OverwriteByPartition()),
+        )
 
     def test_tier_labels_fill_from_their_own_version_whatever_the_row_order(self):
         # SQL VALUES instead of createDataFrame(list) so no Python worker is spawned (Windows).
@@ -49,8 +51,9 @@ class TestTariffSeedsSilver(unittest.TestCase):
             f"('household', 'New label', 'MWh', '4,0', 'ВТ 2', '{NEW}') "
             "AS t(consumer_category, label, metric, value, tariff_tier, valid_from_text)"
         )
-        pipeline = self._pipeline(ElectricityTariffTiersPipeline, DatasetName.ELECTRICITY_TARIFF_TIERS,
-                                  ELECTRICITY_TARIFF_TIERS_SILVER_SCHEMA)
+        pipeline = self._pipeline(
+            ElectricityTariffTiersPipeline, DatasetName.ELECTRICITY_TARIFF_TIERS, ELECTRICITY_TARIFF_TIERS_SILVER_SCHEMA
+        )
         rows = {(str(r["valid_from"]), r["label"], r["metric"]) for r in pipeline.transform(bronze).collect()}
         self.assertEqual(rows, {("2025-01-01", "Old label", "kWh"), ("2026-01-01", "New label", "MWh")})
 
@@ -66,9 +69,12 @@ class TestTariffSeedsSilver(unittest.TestCase):
             f"('household', 'New label', 'kWh', '4,5', 'ВТ2', '{NEW}', '2026-10-13 00:00:00') "
             "AS t(consumer_category, label, metric, value, tariff_tier, valid_from_text, fetched)"
         )
-        pipeline = self._pipeline(ElectricityTariffTiersPipeline, DatasetName.ELECTRICITY_TARIFF_TIERS,
-                                  ELECTRICITY_TARIFF_TIERS_SILVER_SCHEMA)
-        rows = {(str(r["valid_from"]), r["tariff_tier"], float(r["value"])) for r in pipeline.transform(bronze).collect()}
+        pipeline = self._pipeline(
+            ElectricityTariffTiersPipeline, DatasetName.ELECTRICITY_TARIFF_TIERS, ELECTRICITY_TARIFF_TIERS_SILVER_SCHEMA
+        )
+        rows = {
+            (str(r["valid_from"]), r["tariff_tier"], float(r["value"])) for r in pipeline.transform(bronze).collect()
+        }
         self.assertEqual(rows, {("2025-01-01", "BT1", 1.0), ("2026-01-01", "BT1", 3.5), ("2026-01-01", "BT2", 4.5)})
 
     def test_schedule_fetched_twice_gives_one_grid(self):
@@ -79,9 +85,11 @@ class TestTariffSeedsSilver(unittest.TestCase):
             f"('{text}', '{NEW}', '2026-10-13 00:00:00') "
             "AS t(schedule_text, valid_from_text, fetched)"
         )
-        pipeline = self._pipeline(ElectricityTariffWindowSchedulePipeline,
-                                  DatasetName.ELECTRICITY_TARIFF_WINDOW_SCHEDULE,
-                                  ELECTRICITY_TARIFF_WINDOW_SCHEDULE_SILVER_SCHEMA)
+        pipeline = self._pipeline(
+            ElectricityTariffWindowSchedulePipeline,
+            DatasetName.ELECTRICITY_TARIFF_WINDOW_SCHEDULE,
+            ELECTRICITY_TARIFF_WINDOW_SCHEDULE_SILVER_SCHEMA,
+        )
         rows = pipeline.generate(bronze).collect()
         self.assertEqual(len(rows), 7 * 24)
         self.assertEqual({str(r["ingested_at"]) for r in rows}, {"2026-10-13 00:00:00"})
@@ -94,8 +102,9 @@ class TestTariffSeedsSilver(unittest.TestCase):
             f"('household', 'Label B', '', '2,0', 'ВТ 2', '{NEW}') "
             "AS t(consumer_category, label, metric, value, tariff_tier, valid_from_text)"
         )
-        pipeline = self._pipeline(ElectricityTariffTiersPipeline, DatasetName.ELECTRICITY_TARIFF_TIERS,
-                                  ELECTRICITY_TARIFF_TIERS_SILVER_SCHEMA)
+        pipeline = self._pipeline(
+            ElectricityTariffTiersPipeline, DatasetName.ELECTRICITY_TARIFF_TIERS, ELECTRICITY_TARIFF_TIERS_SILVER_SCHEMA
+        )
         with self.assertRaisesRegex(ValueError, "label has more than one value"):
             pipeline.transform(bronze)
 
@@ -107,21 +116,30 @@ class TestTariffSeedsSilver(unittest.TestCase):
             f"('Ниската тарифа е од 13:00 до 15:00 часот секој ден, како и викенд.', '{NEW}') "
             "AS t(schedule_text, valid_from_text)"
         )
-        pipeline = self._pipeline(ElectricityTariffWindowSchedulePipeline,
-                                  DatasetName.ELECTRICITY_TARIFF_WINDOW_SCHEDULE,
-                                  ELECTRICITY_TARIFF_WINDOW_SCHEDULE_SILVER_SCHEMA)
+        pipeline = self._pipeline(
+            ElectricityTariffWindowSchedulePipeline,
+            DatasetName.ELECTRICITY_TARIFF_WINDOW_SCHEDULE,
+            ELECTRICITY_TARIFF_WINDOW_SCHEDULE_SILVER_SCHEMA,
+        )
         rows = pipeline.generate(bronze).collect()
         self.assertEqual(len(rows), 2 * 7 * 24)
-        monday_low = {(str(r["valid_from"]), r["start_hour"]) for r in rows
-                      if r["day_of_week"] == 1 and r["tariff_window_type"] == "low"}
-        self.assertEqual(monday_low, {("2025-01-01", h) for h in [*range(22, 24), *range(0, 7)]}
-                         | {("2026-01-01", h) for h in range(13, 15)})
+        monday_low = {
+            (str(r["valid_from"]), r["start_hour"])
+            for r in rows
+            if r["day_of_week"] == 1 and r["tariff_window_type"] == "low"
+        }
+        self.assertEqual(
+            monday_low,
+            {("2025-01-01", h) for h in [*range(22, 24), *range(0, 7)]} | {("2026-01-01", h) for h in range(13, 15)},
+        )
 
     def test_run_with_no_unseen_fetches_writes_nothing(self):
         # Most days Silver has seen every fetch (ADR-023), so the read is empty and there is no version to grid.
-        pipeline = self._pipeline(ElectricityTariffWindowSchedulePipeline,
-                                  DatasetName.ELECTRICITY_TARIFF_WINDOW_SCHEDULE,
-                                  ELECTRICITY_TARIFF_WINDOW_SCHEDULE_SILVER_SCHEMA)
+        pipeline = self._pipeline(
+            ElectricityTariffWindowSchedulePipeline,
+            DatasetName.ELECTRICITY_TARIFF_WINDOW_SCHEDULE,
+            ELECTRICITY_TARIFF_WINDOW_SCHEDULE_SILVER_SCHEMA,
+        )
         empty = self.session.sql(
             f"SELECT 'x' AS schedule_text, '{OLD}' AS valid_from_text, CAST(NULL AS TIMESTAMP) AS ingested_at"
         ).filter("false")

@@ -29,7 +29,6 @@ def _silver_schemas() -> dict[str, StructType]:
 
 
 class TestSilverSchemas(unittest.TestCase):
-
     def test_schemas_are_discovered(self):
         self.assertIn("exchange_rates.EXCHANGE_RATES_SILVER_SCHEMA", _silver_schemas())
 
