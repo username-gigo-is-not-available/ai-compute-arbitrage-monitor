@@ -12,7 +12,6 @@ dependencies = [
     "asyncio-throttle>=1.0.2",
     "python-dotenv>=1.2.2",
     "tenacity>=9.1.4",
-    "vastai-sdk>=1.0.8",
     "beautifulsoup4>=4.14.3",
     "google-cloud-storage>=2.4,<3.2",
     "pyarrow>=24.0.0",
@@ -24,7 +23,7 @@ dependencies = [
     "google-cloud-bigquery>=3.41.0",
     "google-cloud-pubsub>=2.37.0",
     "google-cloud-dataproc>=5.27.0",
-    "dbt-bigquery>=1.11.1",
+    "dbt-bigquery>=1.12.2",
     "diagrams>=0.25.1",
     "pyiceberg[pyiceberg-core]>=0.12.0",
 ]
