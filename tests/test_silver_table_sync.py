@@ -16,11 +16,12 @@ from pyspark.sql.pandas.types import to_arrow_schema
 
 from refine.schemas.compute_offers import COMPUTE_OFFERS_SILVER_SCHEMA
 from refine.schemas.electricity_tariff_tiers import ELECTRICITY_TARIFF_TIERS_SILVER_SCHEMA
+from lakehouse.partition import Partition
 from refine.load_strategy import OverwriteByPartition, SilverTable
 from lakehouse.sync import sync_table
 from test_lakehouse_sync import _FakeCatalog
 
-COMPUTE_OFFERS = SilverTable(COMPUTE_OFFERS_SILVER_SCHEMA, OverwriteByPartition(column="snapshot_at", transform=DayTransform()))
+COMPUTE_OFFERS = SilverTable(COMPUTE_OFFERS_SILVER_SCHEMA, OverwriteByPartition(Partition("snapshot_at", DayTransform())))
 TABLE = ("silver_sources", "compute_offers")
 
 

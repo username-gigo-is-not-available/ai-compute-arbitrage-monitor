@@ -18,9 +18,10 @@ from refine.schemas.compute_offers import COMPUTE_OFFERS_SILVER_SCHEMA
 from refine.sources.compute_offers import ComputeOffersPipeline, deduplicate_compute_offers
 from pyiceberg.transforms import DayTransform
 
+from lakehouse.partition import Partition
 from refine.load_strategy import OverwriteByPartition, SilverTable
 
-OVERWRITE_BY_DAY = OverwriteByPartition(column="snapshot_at", transform=DayTransform())
+OVERWRITE_BY_DAY = OverwriteByPartition(Partition("snapshot_at", DayTransform()))
 
 
 def _offers(session: SparkSession, rows: str):
