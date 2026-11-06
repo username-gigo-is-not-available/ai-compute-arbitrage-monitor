@@ -1,0 +1,30 @@
+# Weekly version PRs, grouped so minor/patch bumps arrive as one PR per ecosystem.
+# Security fixes come as their own PRs as soon as an advisory is published.
+version: 2
+updates:
+  - package-ecosystem: uv
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      python-minor-and-patch:
+        update-types: [minor, patch]
+    # Airflow follows the Composer image; it is bumped by hand (#72).
+    ignore:
+      - dependency-name: "apache-airflow*"
+        update-types: [version-update:semver-major, version-update:semver-minor]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ["*"]
+
+  - package-ecosystem: docker
+    directories: [/infra/docker]
+    schedule:
+      interval: weekly
+    ignore:
+      - dependency-name: "apache/airflow"

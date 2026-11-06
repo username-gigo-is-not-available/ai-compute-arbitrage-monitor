@@ -111,3 +111,29 @@ jobs:
 
       - name: Parse
         run: uv run --no-sync dbt --warn-error parse --profiles-dir . --no-partial-parse
+
+  audit:
+    name: Dependency audit
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+
+      # The packages the pipeline installs (no Airflow dev group: it is local only and tracked in #72).
+      - name: Export locked dependencies
+        run: uv export --frozen --no-dev --extra dev --no-hashes --no-emit-project -o requirements-audit.txt
+
+      # PYSEC-2026-4217: fsspec ReferenceFileSystem, which the code never opens; held back by the Airflow pin (#72).
+      - name: Audit for known vulnerabilities
+        run: >
+          uvx pip-audit==2.10.1 -r requirements-audit.txt --no-deps --disable-pip --progress-spinner off
+          --ignore-vuln PYSEC-2026-4217
