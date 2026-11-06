@@ -6,12 +6,14 @@ from ingest.models.electricity_tariff_window_schedule import ElectricityTariffWi
 
 
 @dataclass
-class ElectricityTariffWindowScheduleIngestor(EVNBaseIngestor):
+class ElectricityTariffWindowScheduleIngestor(EVNBaseIngestor[ElectricityTariffWindowSchedule]):
     def load(self) -> list[ElectricityTariffWindowSchedule]:
         parser = self.fetch_soup(self.config.tariff_tiers_url)
         ingested_at: datetime = datetime.now(UTC)
-        valid_from_text: str = parser.select_one(self.config.tariff_tiers_valid_from_text_selector).text.strip()
-        schedule_text: str = parser.select_one(self.config.schedule_text_selector).text.strip()
+        valid_from_text: str = self.select_required(
+            parser, self.config.tariff_tiers_valid_from_text_selector
+        ).text.strip()
+        schedule_text: str = self.select_required(parser, self.config.schedule_text_selector).text.strip()
 
         electricity_tariff_window_schedule: ElectricityTariffWindowSchedule = self.parse(
             schedule_text=schedule_text,

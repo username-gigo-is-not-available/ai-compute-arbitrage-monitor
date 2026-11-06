@@ -7,6 +7,7 @@ from typing import Any, cast
 
 import requests
 from tenacity import (
+    Future,
     RetryCallState,
     Retrying,
     before_sleep_log,
@@ -18,6 +19,13 @@ from tenacity import (
 from config.http import HttpConfig
 
 logger = logging.getLogger(__name__)
+
+
+# tenacity types outcome as optional; it is set by the time wait and retry_error_callback run (after an attempt)
+def finished(retry_state: RetryCallState) -> Future:
+    if retry_state.outcome is None:
+        raise RuntimeError("tenacity called back before an attempt finished")
+    return retry_state.outcome
 
 
 # Every ingestor's HTTP GET. A non-200 response or a transport error is retried up to retry_count attempts, waiting
@@ -55,12 +63,13 @@ class HttpClient:
         return response.status_code != HTTPStatus.OK and not self.config.retry_after_exceeds_budget(response.headers)
 
     def wait_before_retry(self, retry_state: RetryCallState) -> int:
-        if retry_state.outcome.failed:
+        outcome = finished(retry_state)
+        if outcome.failed:
             return self.config.retry_delay_seconds
-        return self.config.retry_wait_seconds(retry_state.outcome.result().headers)
+        return self.config.retry_wait_seconds(outcome.result().headers)
 
     # After the last attempt: return the last response, so get() raises its HTTPError, or re-raise the last
     # transport error
     @staticmethod
     def last_outcome(retry_state: RetryCallState) -> requests.Response:
-        return retry_state.outcome.result()
+        return finished(retry_state).result()

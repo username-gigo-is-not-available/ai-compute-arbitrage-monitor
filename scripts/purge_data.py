@@ -166,11 +166,12 @@ def main() -> None:
     if not args.confirm:
         confirm_or_exit()
 
-    catalog = open_catalog() if any(stage != DataStageType.GOLD for stage in stages) else None
+    catalog: Catalog | None = None  # opened only when a Bronze or Silver stage is purged
     for stage in stages:
         if stage == DataStageType.GOLD:
             purge_bigquery(project, dataset)
         else:
+            catalog = catalog or open_catalog()
             purge_iceberg_stage(catalog, bucket, stage)
 
     logging.info("Purge complete.")

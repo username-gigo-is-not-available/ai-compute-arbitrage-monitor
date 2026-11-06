@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import Any
 
 from common.classes import Snapshot
 from common.enums import DatasetName
@@ -20,7 +21,7 @@ from ingest.write_strategy import BronzeTable
 # shape is in ingest.tables; type and settings come from config.datasets.DATASETS.
 @dataclass(frozen=True)
 class IngestSpec:
-    ingestor: type[Ingestor]
+    ingestor: type[Ingestor[Any, Any]]
     bronze_table: BronzeTable
 
 

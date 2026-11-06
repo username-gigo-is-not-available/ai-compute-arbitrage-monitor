@@ -14,7 +14,7 @@ from refine.base import Pipeline
 
 
 def extract_low_tariff_window_hours(text: str) -> set[int]:
-    low_hours = set()
+    low_hours: set[int] = set()
     for s, e in re.findall(SCHEDULE_LOW_TARIFF_HOUR_PAIR_PATTERN, text):
         start, end = int(s[:2]), int(e[:2])
         low_hours.update(range(start, end) if end > start else [*range(start, 24), *range(end)])
