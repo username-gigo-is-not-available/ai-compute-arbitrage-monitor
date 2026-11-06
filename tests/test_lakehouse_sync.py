@@ -1,73 +1,25 @@
 """lakehouse.sync: a table converges on its declared schema and partition spec (ADR-022)."""
 
-import tempfile
 from datetime import UTC, datetime
-from pathlib import Path
 
 import pyarrow as pa
 import pytest
-from pyiceberg.io.pyarrow import PyArrowFileIO
+from fakes import FakeCatalog
 from pyiceberg.partitioning import PartitionField, PartitionSpec
 from pyiceberg.schema import Schema
-from pyiceberg.table import CommitTableResponse, Table
-from pyiceberg.table.metadata import new_table_metadata
-from pyiceberg.table.sorting import UNSORTED_SORT_ORDER
-from pyiceberg.table.update import update_table_metadata
+from pyiceberg.table import Table
 from pyiceberg.transforms import DayTransform, HourTransform
 from pyiceberg.types import DoubleType, IntegerType, LongType, NestedField, StringType, TimestamptzType
 
 from ingest.schemas.compute_offers import COMPUTE_OFFERS_BRONZE_SCHEMA
 from lakehouse.sync import sync_table
 
-
-class _FakeCatalog:
-    """Keeps real Iceberg table metadata in memory and applies commits with pyiceberg's own update logic.
-    Data files are written for real, to a temporary directory."""
-
-    def __init__(self, namespaces: set[str] | None = None):
-        self.namespaces = namespaces or set()
-        self.created_tables: list[tuple[str, str]] = []
-        self.metadata = {}
-        self.tmp = tempfile.TemporaryDirectory()
-        self.location = Path(self.tmp.name).as_posix()
-
-    def supports_server_side_planning(self) -> bool:
-        return False
-
-    def create_namespace_if_not_exists(self, namespace: str) -> None:
-        self.namespaces.add(namespace)
-
-    def create_table_if_not_exists(self, identifier, schema, partition_spec) -> Table:
-        if identifier not in self.metadata:
-            self.created_tables.append(identifier)
-            self.metadata[identifier] = new_table_metadata(
-                schema, partition_spec, UNSORTED_SORT_ORDER, location=self.location
-            )
-        return self.load_table(identifier)
-
-    def load_table(self, identifier) -> Table:
-        return Table(identifier, self.metadata[identifier], f"{self.location}/metadata.json", PyArrowFileIO(), self)
-
-    def commit_table(self, table, requirements, updates) -> CommitTableResponse:
-        self.metadata[table.name()] = update_table_metadata(self.metadata[table.name()], updates)
-        return CommitTableResponse(
-            metadata=self.metadata[table.name()], metadata_location=f"{self.location}/metadata.json"
-        )
-
-
 TABLE = ("bronze_sources", "compute_offers")
-
-
-@pytest.fixture
-def catalog():
-    catalog = _FakeCatalog()
-    yield catalog
-    catalog.tmp.cleanup()
 
 
 class TestSyncCreates:
     def test_existing_namespace_is_kept(self):
-        catalog = _FakeCatalog(namespaces={"silver_sources"})
+        catalog = FakeCatalog(namespaces={"silver_sources"})
         sync_table(catalog, ("silver_sources", "compute_offers"), COMPUTE_OFFERS_BRONZE_SCHEMA, PartitionSpec())
         assert catalog.namespaces == {"silver_sources"}
 
@@ -120,17 +72,17 @@ def _spec(schema: Schema, transform, name: str) -> PartitionSpec:
     return PartitionSpec(PartitionField(source_id=source_id, field_id=1000, transform=transform, name=name))
 
 
-def _sync(catalog: _FakeCatalog, schema: Schema, spec: PartitionSpec) -> Table:
+def _sync(catalog: FakeCatalog, schema: Schema, spec: PartitionSpec) -> Table:
     sync_table(catalog, TABLE, schema=schema, partition_spec=spec)
     return catalog.load_table(TABLE)
 
 
-def _converge(catalog: _FakeCatalog) -> Table:
+def _converge(catalog: FakeCatalog) -> Table:
     return _sync(catalog, NEW_SCHEMA, _spec(NEW_SCHEMA, DayTransform(), "snapshot_at_day"))
 
 
 @pytest.fixture
-def old_table(catalog) -> _FakeCatalog:
+def old_table(catalog) -> FakeCatalog:
     table = _sync(catalog, OLD_SCHEMA, _spec(OLD_SCHEMA, HourTransform(), "snapshot_at_hour"))
     table.append(
         pa.table(

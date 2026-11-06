@@ -11,6 +11,7 @@ from unittest import mock
 
 import pytest
 import requests
+from fakes import FakeResponse
 from pyiceberg.schema import Schema
 from pyiceberg.types import NestedField, StringType
 
@@ -49,21 +50,8 @@ OFFER = {
 }
 
 
-class FakeResponse:
-    def __init__(self, status: int = 200, offers: list[dict] | None = None) -> None:
-        self.status_code = status
-        self.headers = {}
-        self.offers = offers or []
-
-    def close(self) -> None:
-        pass
-
-    def raise_for_status(self) -> None:
-        if self.status_code != 200:
-            raise requests.HTTPError(f"{self.status_code} Error", response=self)
-
-    def json(self, **kwargs) -> dict:
-        return {"offers": self.offers}
+def _offers(offers: list[dict]) -> FakeResponse:
+    return FakeResponse(json_data={"offers": offers})
 
 
 class FakeMarket:
@@ -78,7 +66,7 @@ class FakeMarket:
         lo, hi = q["ask_contract_id"]["gte"], q["ask_contract_id"].get("lt")
         matches = [o for o in self.offers if o["ask_contract_id"] >= lo and (hi is None or o["ask_contract_id"] < hi)]
         limit = q["limit"]
-        return FakeResponse(offers=self.random.sample(matches, limit) if len(matches) > limit else matches)
+        return _offers(self.random.sample(matches, limit) if len(matches) > limit else matches)
 
 
 def _ingestor(send: Callable[..., FakeResponse]) -> ComputeOffersIngestor:
@@ -107,7 +95,7 @@ def _queries(get_mock: mock.Mock) -> list[dict]:
 
 
 def test_requests_on_demand_offers_by_ask_contract_id_range():
-    get_mock = mock.Mock(side_effect=[FakeResponse(offers=[OFFER])])
+    get_mock = mock.Mock(side_effect=[_offers([OFFER])])
     offers = _ingestor(get_mock).load()
     assert _queries(get_mock) == [{"type": "on-demand", "limit": 512, "ask_contract_id": {"gte": 0}}]
     assert [o.offer_id for o in offers] == [8_936_325]
@@ -144,7 +132,7 @@ def test_configured_census_costs_about_the_market_size():
 
 def test_bronze_rows_keep_the_slice_of_the_machine():
     # gpu_frac gives machine size (num_gpus / gpu_frac); gpu_ids shows which slices overlap (ADR-020).
-    row = _ingestor(mock.Mock(side_effect=[FakeResponse(offers=[OFFER])])).load()[0].to_row()
+    row = _ingestor(mock.Mock(side_effect=[_offers([OFFER])])).load()[0].to_row()
     assert row["gpu_fraction_of_machine"] == 0.4
     assert row["gpu_ids"] == [55_783, 55_784]
     assert {"gpu_fraction_of_machine", "gpu_ids"} <= set(COMPUTE_OFFERS_BRONZE_SCHEMA.column_names)
@@ -153,7 +141,7 @@ def test_bronze_rows_keep_the_slice_of_the_machine():
 def test_a_failed_range_writes_nothing_and_fails_the_run():
     # The first range comes back full, so the census splits it; the second request is quota-exhausted.
     full_page = [{**OFFER, "ask_contract_id": i} for i in range(8_000_000, 8_000_512)]
-    ingestor = _ingestor(mock.Mock(side_effect=[FakeResponse(offers=full_page), FakeResponse(status=429)]))
+    ingestor = _ingestor(mock.Mock(side_effect=[_offers(full_page), FakeResponse(status=429)]))
     with mock.patch.object(ingestor, "store") as store_mock, pytest.raises(requests.HTTPError) as raised:
         ingestor.run()
     store_mock.assert_not_called()

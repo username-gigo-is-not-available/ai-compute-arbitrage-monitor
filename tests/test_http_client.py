@@ -8,11 +8,11 @@ Run under pytest:   uv run --extra dev pytest tests/test_http_client.py
 from __future__ import annotations
 
 import logging
-from http import HTTPStatus
 from unittest import mock
 
 import pytest
 import requests
+from fakes import FakeResponse
 from pyiceberg.schema import Schema
 from pyiceberg.types import NestedField, StringType
 
@@ -28,29 +28,6 @@ from ingest.sources.exchange_rates import ExchangeRateIngestor
 from ingest.write_strategy import AppendByDay, BronzeTable
 
 RETRY_DELAY_SECONDS = 60
-
-
-class FakeResponse:
-    """Stands in for requests.Response at the level the ingestors use."""
-
-    def __init__(
-        self, status: int = HTTPStatus.OK, text: str = "", json_data: dict | None = None, headers: dict | None = None
-    ):
-        self.status_code = status
-        self.headers = headers or {}
-        self.text = text
-        self._json_data = json_data or {}
-        self.closed = False
-
-    def close(self) -> None:
-        self.closed = True
-
-    def raise_for_status(self) -> None:
-        if self.status_code != HTTPStatus.OK:
-            raise requests.HTTPError(f"{self.status_code} Error", response=self)
-
-    def json(self, **kwargs) -> dict:
-        return self._json_data
 
 
 class FakeServer:

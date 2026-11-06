@@ -7,6 +7,7 @@ real selectors from settings.yaml. No network.
 import re
 from pathlib import Path
 
+from fakes import FakeResponse
 from pyiceberg.schema import Schema
 from pyiceberg.types import NestedField, StringType
 
@@ -23,16 +24,6 @@ from ingest.seeds.electricity_tariff_window_schedule import ElectricityTariffWin
 from ingest.write_strategy import AppendByDay, BronzeTable
 
 FIXTURES = Path(__file__).parent / "fixtures"
-
-
-class FakePage:
-    def __init__(self, path: Path) -> None:
-        self.status_code = 200
-        self.headers = {}
-        self.text = path.read_text(encoding="utf-8")
-
-    def raise_for_status(self) -> None:
-        pass
 
 
 CONFIG = ConfigLoader().get_evn()
@@ -53,7 +44,7 @@ def _load(ingestor_class, name: DatasetName) -> list:
         ),
         http=HttpClient(
             HttpConfig(timeout_seconds=30, retry_count=1, retry_delay_seconds=0),
-            send=lambda url, **kwargs: FakePage(PAGES[url]),
+            send=lambda url, **kwargs: FakeResponse(text=PAGES[url].read_text(encoding="utf-8")),
         ),
         snapshot=Snapshot.from_scheduled_at(None),
     )

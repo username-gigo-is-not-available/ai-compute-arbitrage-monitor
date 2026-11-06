@@ -1,12 +1,10 @@
 """Silver tables are synced by the same sync_table as Bronze, from their Spark schema (ADR-022)."""
 
-import pytest
 from pyiceberg.catalog import Catalog
 from pyiceberg.partitioning import PartitionField, PartitionSpec
 from pyiceberg.schema import assign_fresh_schema_ids
 from pyiceberg.transforms import DayTransform, HourTransform
 from pyspark.sql.pandas.types import to_arrow_schema
-from test_lakehouse_sync import _FakeCatalog
 
 from lakehouse.partition import Partition
 from lakehouse.sync import sync_table
@@ -18,13 +16,6 @@ COMPUTE_OFFERS = SilverTable(
     COMPUTE_OFFERS_SILVER_SCHEMA, OverwriteByPartition(Partition("snapshot_at", DayTransform()))
 )
 TABLE = ("silver_sources", "compute_offers")
-
-
-@pytest.fixture
-def catalog():
-    catalog = _FakeCatalog()
-    yield catalog
-    catalog.tmp.cleanup()
 
 
 class TestIcebergSchema:
