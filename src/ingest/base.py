@@ -47,10 +47,17 @@ class Ingestor(ABC, Generic[ConfigT, RecordT]):
         # The setup task has already made the table match its declaration (lakehouse.setup); a table that does not
         # match fails this write
         catalog = self.lakehouse_config.open_catalog()
-        arrow_table = pa.Table.from_pylist([r.to_row() for r in data])
         table = catalog.load_table(self.lakehouse_config.table_id(DataStageType.BRONZE, self.dataset))
-        self.bronze_table.write(table, arrow_table)
-        self.logger.info(f"Written {len(arrow_table)} {self.name} records to Bronze")
+        rows = [r.to_row() for r in data]
+        schema = table.schema().as_arrow()
+        # from_pylist with a schema drops keys it does not name; a record field the table lacks must fail instead
+        undeclared = {column for row in rows for column in row} - set(schema.names)
+        if undeclared:
+            raise ValueError(f"{self.name} records have columns the Bronze table lacks: {sorted(undeclared)}")
+        # Types come from the table: inferred from the values, a column that is None in every record is a null
+        # type, which Iceberg v2 cannot store
+        self.bronze_table.write(table, pa.Table.from_pylist(rows, schema=schema))
+        self.logger.info(f"Written {len(rows)} {self.name} records to Bronze")
 
     def run(self) -> None:
         self.logger.info(f"Starting load for {self.name}...")
