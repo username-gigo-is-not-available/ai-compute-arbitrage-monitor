@@ -25,8 +25,9 @@ detected_changes as (
 
 changes_only as (
     select * from detected_changes
-    where value != prev_value
-       or prev_value is null
+    where
+        value != prev_value
+        or prev_value is null
 ),
 
 scd as (
@@ -36,12 +37,12 @@ scd as (
         to_currency,
         value,
         inverse_value,
-        cast(timestamp as date)                                         as valid_from,
+        cast(timestamp as date) as valid_from,
         coalesce(
             cast({{ valid_to('timestamp', 'from_currency, to_currency') }} as date),
             date '9999-12-31'
-        )                                                               as valid_to,
-        {{ is_latest('timestamp', 'from_currency, to_currency') }}     as is_latest
+        ) as valid_to,
+        {{ is_latest('timestamp', 'from_currency, to_currency') }} as is_latest
     from changes_only
 )
 

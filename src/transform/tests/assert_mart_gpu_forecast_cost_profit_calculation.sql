@@ -17,7 +17,8 @@ select
     cost_per_tflop_usd,
     profit_per_tflop_usd
 from {{ ref('mart_gpu_forecast') }}
-where abs(profit_per_gpu_usd_per_hr - (market_ask_per_gpu_usd_per_hr - cost_per_gpu_usd_per_hr)) > 1e-9
-   or abs(cost_per_tflop_usd - (cost_per_gpu_usd_per_hr / nullif(tflops_per_gpu, 0))) > 1e-9
-   or abs(profit_per_tflop_usd - (profit_per_gpu_usd_per_hr / nullif(tflops_per_gpu, 0))) > 1e-9
-   or cost_per_gpu_usd_per_hr < 0
+where
+    abs(profit_per_gpu_usd_per_hr - (market_ask_per_gpu_usd_per_hr - cost_per_gpu_usd_per_hr)) > 1e-9
+    or abs(cost_per_tflop_usd - (cost_per_gpu_usd_per_hr / nullif(tflops_per_gpu, 0))) > 1e-9
+    or abs(profit_per_tflop_usd - (profit_per_gpu_usd_per_hr / nullif(tflops_per_gpu, 0))) > 1e-9
+    or cost_per_gpu_usd_per_hr < 0

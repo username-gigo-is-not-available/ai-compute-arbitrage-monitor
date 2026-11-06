@@ -15,10 +15,14 @@
 --
 -- Failure output: the offending rows as the natural key plus BOTH (valid_from,
 -- valid_to) pairs of each overlapping pair of rows.
+{% macro test_assert_scd2_no_overlapping_ranges(
+    model,
+    natural_key_columns,
+    valid_from_column='valid_from',
+    valid_to_column='valid_to'
+) %}
 
-{% macro test_assert_scd2_no_overlapping_ranges(model, natural_key_columns, valid_from_column='valid_from', valid_to_column='valid_to') %}
-
-{%- set nk_partition = natural_key_columns | join(', ') -%}
+    {%- set nk_partition = natural_key_columns | join(', ') -%}
 
 with scd_rows as (
     select
@@ -35,9 +39,9 @@ select
     a.{{ col }},
     {%- endfor %}
     a.{{ valid_from_column }} as a_valid_from,
-    a.{{ valid_to_column }}   as a_valid_to,
+    a.{{ valid_to_column }} as a_valid_to,
     b.{{ valid_from_column }} as b_valid_from,
-    b.{{ valid_to_column }}   as b_valid_to
+    b.{{ valid_to_column }} as b_valid_to
 from scd_rows as a
 join scd_rows as b
     on a.scd_rn < b.scd_rn
@@ -47,9 +51,9 @@ join scd_rows as b
     and a.{{ valid_from_column }} < b.{{ valid_to_column }}
     and b.{{ valid_from_column }} < a.{{ valid_to_column }}
 order by
-    {%- for col in natural_key_columns %}
+{%- for col in natural_key_columns %}
     a.{{ col }},
-    {%- endfor %}
+{%- endfor %}
     a.scd_rn,
     b.scd_rn
 

@@ -23,11 +23,15 @@ select
     f.tariff_block_number,
     f.lower_bound_kwh,
     f.upper_bound_kwh
-from {{ ref('mart_gpu_forecast') }} f
-left join blocks b
-    on  b.consumer_category  = f.consumer_category
-    and b.tariff_window_type = f.scheduled_tariff_window_type
-where (f.tariff_block_number is not null and f.lower_bound_kwh is null)
-   or (f.tariff_block_number is not null and f.upper_bound_kwh is null
-       and f.tariff_block_number != b.last_block_number)
-   or (f.tariff_block_number is null and (f.lower_bound_kwh is not null or f.upper_bound_kwh is not null))
+from {{ ref('mart_gpu_forecast') }} as f
+left join blocks as b
+    on
+        b.consumer_category = f.consumer_category
+        and b.tariff_window_type = f.scheduled_tariff_window_type
+where
+    (f.tariff_block_number is not null and f.lower_bound_kwh is null)
+    or (
+        f.tariff_block_number is not null and f.upper_bound_kwh is null
+        and f.tariff_block_number != b.last_block_number
+    )
+    or (f.tariff_block_number is null and (f.lower_bound_kwh is not null or f.upper_bound_kwh is not null))

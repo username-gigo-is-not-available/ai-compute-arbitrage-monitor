@@ -14,5 +14,6 @@
 
 select *
 from {{ ref('dim_electricity_tariff_tiers') }} as t
-where t.tariff_block_number is not null
-  and not exists {{ expected_tariff_block_numbers('t.valid_from') }}
+where
+    t.tariff_block_number is not null
+    and not exists {{ expected_tariff_block_numbers('t.valid_from') }}

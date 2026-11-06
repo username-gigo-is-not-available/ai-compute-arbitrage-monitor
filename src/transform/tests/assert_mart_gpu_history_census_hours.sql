@@ -7,8 +7,8 @@
 
 with census_machines as (
     select
-        valid_from                  as census_at,
-        count(distinct machine_id)  as expected_count
+        valid_from as census_at,
+        count(distinct machine_id) as expected_count
     from {{ ref('fct_compute_offers') }}
     group by valid_from
 ),
@@ -17,16 +17,16 @@ with census_machines as (
 hour_counts as (
     select
         c.census_at,
-        cast(null as timestamp)        as history_hour,
-        'hour count'                   as failure,
+        cast(null as timestamp) as history_hour,
+        'hour count' as failure,
         count(distinct h.history_hour) as actual_count,
         any_value(timestamp_diff(
             timestamp(date_add({{ evn_date('c.census_at') }}, interval 1 day), '{{ var("evn_timezone") }}'),
             timestamp({{ evn_date('c.census_at') }}, '{{ var("evn_timezone") }}'),
             hour
-        ))                             as expected_count
-    from census_machines c
-    left join {{ ref('mart_gpu_history') }} h
+        )) as expected_count
+    from census_machines as c
+    left join {{ ref('mart_gpu_history') }} as h
         on h.census_at = c.census_at
     group by c.census_at
 ),
@@ -35,11 +35,11 @@ machine_counts as (
     select
         h.census_at,
         h.history_hour,
-        'machine count'             as failure,
-        sum(h.number_of_machines)   as actual_count,
+        'machine count' as failure,
+        sum(h.number_of_machines) as actual_count,
         any_value(c.expected_count) as expected_count
-    from {{ ref('mart_gpu_history') }} h
-    join census_machines c
+    from {{ ref('mart_gpu_history') }} as h
+    inner join census_machines as c
         on c.census_at = h.census_at
     group by h.census_at, h.history_hour, h.tariff_tier_skey
 ),
@@ -57,21 +57,25 @@ window_mismatches as (
     select
         l.census_at,
         l.history_hour,
-        'scheduled window'          as failure,
-        null                        as actual_count,
-        null                        as expected_count
-    from local_hours l
-    left join {{ ref('dim_electricity_tariff_window_schedule') }} s
-        on  s.day_of_week = mod(extract(dayofweek from l.local_history_datetime) + 5, 7) + 1
-        and s.hour        = extract(hour from l.local_history_datetime)
-        and l.history_hour >= s.valid_from
-        and l.history_hour <  s.valid_to
-    where s.tariff_window_type is null
-       or s.tariff_window_type != l.scheduled_tariff_window_type
+        'scheduled window' as failure,
+        null as actual_count,
+        null as expected_count
+    from local_hours as l
+    left join {{ ref('dim_electricity_tariff_window_schedule') }} as s
+        on
+            s.day_of_week = mod(extract(dayofweek from l.local_history_datetime) + 5, 7) + 1
+            and s.hour = extract(hour from l.local_history_datetime)
+            and l.history_hour >= s.valid_from
+            and l.history_hour < s.valid_to
+    where
+        s.tariff_window_type is null
+        or s.tariff_window_type != l.scheduled_tariff_window_type
 )
 
-select * from hour_counts where actual_count != expected_count
+select * from hour_counts
+where actual_count != expected_count
 union all
-select * from machine_counts where actual_count != expected_count
+select * from machine_counts
+where actual_count != expected_count
 union all
 select * from window_mismatches

@@ -14,7 +14,7 @@ with hours_spine as (
     select
         forecast_hour,
         {{ evn_day_of_week('forecast_hour') }} as day_of_week,
-        {{ evn_hour('forecast_hour') }}        as hour
+        {{ evn_hour('forecast_hour') }} as hour
     from unnest(
         generate_timestamp_array(
             timestamp_trunc(current_timestamp(), hour),
@@ -43,10 +43,11 @@ spine_with_window as (
         hs.day_of_week,
         hs.hour,
         s.tariff_window_type
-    from hours_spine hs
-    join schedule s
-        on  hs.day_of_week = s.day_of_week
-        and hs.hour        = s.hour
+    from hours_spine as hs
+    inner join schedule as s
+        on
+            hs.day_of_week = s.day_of_week
+            and hs.hour = s.hour
 ),
 
 
@@ -57,10 +58,10 @@ gpu_specs as (
     select
         gpu_model_name,
         gpu_memory_gb,
-        approx_quantiles(nullif(gpu_tdp_watts, 0), 100)[offset(50)]          as gpu_tdp_watts,
-        approx_quantiles(nullif(tflops_per_gpu, 0), 100)[offset(50)]         as tflops_per_gpu,
-        approx_quantiles(gpu_bandwidth_gbytes_per_sec, 100)[offset(50)]      as gpu_bandwidth_gbytes_per_sec,
-        approx_quantiles(gpu_max_cuda_version_supported, 100)[offset(50)]    as gpu_max_cuda_version_supported
+        approx_quantiles(nullif(gpu_tdp_watts, 0), 100)[offset(50)] as gpu_tdp_watts,
+        approx_quantiles(nullif(tflops_per_gpu, 0), 100)[offset(50)] as tflops_per_gpu,
+        approx_quantiles(gpu_bandwidth_gbytes_per_sec, 100)[offset(50)] as gpu_bandwidth_gbytes_per_sec,
+        approx_quantiles(gpu_max_cuda_version_supported, 100)[offset(50)] as gpu_max_cuda_version_supported
     from {{ ref('fct_compute_offers') }}
     where cast(valid_to as date) = date '9999-12-31'
     group by gpu_model_name, gpu_memory_gb
@@ -75,8 +76,9 @@ market_revenue as (
         gpu_memory_gb,
         approx_quantiles(revenue_per_gpu_usd_per_hr, 100)[offset(50)] as market_ask_per_gpu_usd_per_hr
     from {{ ref('fct_compute_offers') }}
-    where cast(valid_to as date) = date '9999-12-31'
-      and revenue_usd_per_hr > 0
+    where
+        cast(valid_to as date) = date '9999-12-31'
+        and revenue_usd_per_hr > 0
     group by gpu_model_name, gpu_memory_gb
 ),
 
@@ -92,8 +94,9 @@ tariff_rates as (
 exchange_rate as (
     select value as usd_to_mkd_rate
     from {{ ref('dim_exchange_rates') }}
-    where from_currency = 'USD'
-      and to_currency   = 'MKD'
+    where
+        from_currency = 'USD'
+        and to_currency = 'MKD'
     qualify row_number() over (order by valid_from desc) = 1
 ),
 
@@ -120,14 +123,15 @@ combined as (
         tr.distribution_fee,
         tr.vat_rate,
         er.usd_to_mkd_rate
-    from spine_with_window sw
-    cross join gpu_specs gs
-    join market_revenue mr
-        on  gs.gpu_model_name = mr.gpu_model_name
-        and gs.gpu_memory_gb  = mr.gpu_memory_gb
-    join tariff_rates tr
+    from spine_with_window as sw
+    cross join gpu_specs as gs
+    inner join market_revenue as mr
+        on
+            gs.gpu_model_name = mr.gpu_model_name
+            and gs.gpu_memory_gb = mr.gpu_memory_gb
+    inner join tariff_rates as tr
         on tr.tariff_window_type = sw.tariff_window_type
-    cross join exchange_rate er
+    cross join exchange_rate as er
 ),
 
 
@@ -143,8 +147,8 @@ metrics as (
 select
     forecast_hour,
     day_of_week,
-    hour                                                           as hour_of_day,
-    tariff_window_type                                             as scheduled_tariff_window_type,
+    hour as hour_of_day,
+    tariff_window_type as scheduled_tariff_window_type,
 
     gpu_model_name,
     gpu_tdp_watts,
@@ -157,9 +161,9 @@ select
     market_ask_per_gpu_usd_per_hr,
     cost_per_gpu_usd_per_hr,
     market_ask_per_gpu_usd_per_hr - cost_per_gpu_usd_per_hr as profit_per_gpu_usd_per_hr,
-    cost_per_gpu_usd_per_hr / nullif(tflops_per_gpu, 0)     as cost_per_tflop_usd,
+    cost_per_gpu_usd_per_hr / nullif(tflops_per_gpu, 0) as cost_per_tflop_usd,
     (market_ask_per_gpu_usd_per_hr - cost_per_gpu_usd_per_hr)
-        / nullif(tflops_per_gpu, 0)                                  as profit_per_tflop_usd,
+    / nullif(tflops_per_gpu, 0) as profit_per_tflop_usd,
 
     tariff_tier_skey,
     consumer_category,

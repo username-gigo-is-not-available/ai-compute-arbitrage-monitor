@@ -6,13 +6,14 @@
 
 with hours as (
     select
-        count(distinct forecast_hour)                              as number_of_hours,
+        count(distinct forecast_hour) as number_of_hours,
         timestamp_diff(max(forecast_hour), min(forecast_hour), hour) as span_hours
     from {{ ref('mart_gpu_forecast') }}
 )
 
 select *
 from hours
-where number_of_hours != {{ var('forecast_days') }} * 24 + 1
-   or span_hours is null
-   or span_hours != {{ var('forecast_days') }} * 24
+where
+    number_of_hours != {{ var('forecast_days') }} * 24 + 1
+    or span_hours is null
+    or span_hours != {{ var('forecast_days') }} * 24

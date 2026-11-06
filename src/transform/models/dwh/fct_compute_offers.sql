@@ -43,7 +43,7 @@ offers as (
     select * from {{ ref('int_compute_offers') }}
 
     {% if is_incremental() %}
-    where valid_from > (select max_valid_from from latest_fct_date)
+        where valid_from > (select max_valid_from from latest_fct_date)
     {% endif %}
 ),
 
@@ -54,8 +54,9 @@ exchange_rates as (
         valid_from,
         valid_to
     from {{ ref('dim_exchange_rates') }}
-    where from_currency = 'USD'
-      and to_currency   = 'MKD'
+    where
+        from_currency = 'USD'
+        and to_currency = 'MKD'
 ),
 
 joined as (
@@ -81,27 +82,29 @@ joined as (
         r.lower_bound_kwh,
         r.upper_bound_kwh
 
-    from offers o
+    from offers as o
 
-    join exchange_rates er
-        on  cast(o.valid_from as date) >= er.valid_from
-        and cast(o.valid_from as date) <  er.valid_to
+    inner join exchange_rates as er
+        on
+            cast(o.valid_from as date) >= er.valid_from
+            and cast(o.valid_from as date) < er.valid_to
 
     -- Tariff validity is a UTC instant (the start of EVN's local date, ADR-021), like the census time.
-    join {{ ref('int_electricity_tariff_rates') }} r
-        on  o.valid_from >= r.valid_from
-        and o.valid_from <  r.valid_to
+    inner join {{ ref('int_electricity_tariff_rates') }} as r
+        on
+            o.valid_from >= r.valid_from
+            and o.valid_from < r.valid_to
 ),
 
 calculations as (
     select
         *,
-        (gpu_tdp_watts * number_of_machine_gpus) / 1000.0        as total_system_kwh_per_hr,
+        (gpu_tdp_watts * number_of_machine_gpus) / 1000.0 as total_system_kwh_per_hr,
         (gpu_tdp_watts * number_of_machine_gpus) / 1000.0
-            / nullif(total_system_tflops, 0)                     as kwh_per_tflop,
-        total_price_usd_per_hr                                   as revenue_usd_per_hr,
+        / nullif(total_system_tflops, 0) as kwh_per_tflop,
+        total_price_usd_per_hr as revenue_usd_per_hr,
         total_price_usd_per_hr / nullif(number_of_machine_gpus, 0)
-                                                                 as revenue_per_gpu_usd_per_hr
+            as revenue_per_gpu_usd_per_hr
     from joined
 ),
 
@@ -109,7 +112,7 @@ calculations as (
 cost_metrics as (
     select
         *,
-        {{ cost_usd_per_hr('total_system_kwh_per_hr') }}                     as cost_usd_per_hr
+        {{ cost_usd_per_hr('total_system_kwh_per_hr') }} as cost_usd_per_hr
     from calculations
 )
 

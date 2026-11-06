@@ -21,7 +21,8 @@ with invariant_check as (
 
 select *
 from invariant_check
-where abs(profit_usd_per_hr - (revenue_usd_per_hr - cost_usd_per_hr)) > 1e-9
-   or abs(cost_per_tflop_usd - (cost_usd_per_hr / nullif(total_system_tflops, 0))) > 1e-9
-   or abs(profit_per_tflop_usd - (profit_usd_per_hr / nullif(total_system_tflops, 0))) > 1e-9
-   or cost_usd_per_hr <= 0
+where
+    abs(profit_usd_per_hr - (revenue_usd_per_hr - cost_usd_per_hr)) > 1e-9
+    or abs(cost_per_tflop_usd - (cost_usd_per_hr / nullif(total_system_tflops, 0))) > 1e-9
+    or abs(profit_per_tflop_usd - (profit_usd_per_hr / nullif(total_system_tflops, 0))) > 1e-9
+    or cost_usd_per_hr <= 0
