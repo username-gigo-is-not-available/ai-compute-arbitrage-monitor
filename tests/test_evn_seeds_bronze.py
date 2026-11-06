@@ -2,14 +2,9 @@
 
 The pages in tests/fixtures are copies of the live EVN pages (2026-10-21, scripts and styles stripped), read with the
 real selectors from settings.yaml. No network.
-
-Run directly:   uv run python tests/test_evn_seeds_bronze.py
-Under pytest:   uv run --extra dev pytest tests/test_evn_seeds_bronze.py
 """
 
-from __future__ import annotations
-
-import unittest
+import re
 from pathlib import Path
 
 from pyiceberg.schema import Schema
@@ -40,65 +35,61 @@ class FakePage:
         pass
 
 
-class TestEVNSeedsBronze(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        cls.config = ConfigLoader().get_evn()
-        cls.pages = {
-            cls.config.tariff_tiers_url: FIXTURES / "evn_invoices.html",
-            cls.config.tariff_system_url: FIXTURES / "evn_tariff_system.html",
-        }
-
-    def _load(self, ingestor_class, name: DatasetName) -> list:
-        ingestor = ingestor_class(
-            dataset=Dataset(dataset_name=name, dataset_type=DatasetType.SEEDS),
-            config=self.config,
-            lakehouse_config=GCPLakehouseConfig(catalog_id="test", project_id="test", warehouse="gs://test"),
-            bronze_table=BronzeTable(
-                Schema(NestedField(field_id=1, name="id", field_type=StringType(), required=False)),
-                AppendByDay(column="ingested_at"),
-            ),
-            http=HttpClient(
-                HttpConfig(timeout_seconds=30, retry_count=1, retry_delay_seconds=0),
-                send=lambda url, **kwargs: FakePage(self.pages[url]),
-            ),
-            snapshot=Snapshot.from_scheduled_at(None),
-        )
-        return ingestor.load()
-
-    def test_tiers_read_both_consumer_tables(self):
-        tiers = self._load(ElectricityTariffTiersIngestor, DatasetName.ELECTRICITY_TARIFF_TIERS)
-        self.assertEqual(len(tiers), 7)
-        self.assertEqual(
-            {t.consumer_category for t in tiers}, {ConsumerCategoryType.HOUSEHOLD, ConsumerCategoryType.BUSINESS}
-        )
-        self.assertTrue(all(t.value for t in tiers), "every tier has a price")
-
-    def test_fees_read_four_cells(self):
-        fees = self._load(ElectricityTariffFeesIngestor, DatasetName.ELECTRICITY_TARIFF_FEES)
-        self.assertEqual(len(fees), 4)
-        self.assertEqual(
-            sorted(f.consumer_category for f in fees),
-            sorted([ConsumerCategoryType.HOUSEHOLD, ConsumerCategoryType.BUSINESS] * 2),
-        )
-
-    def test_blocks_read_each_block_with_its_kwh_bounds(self):
-        blocks = self._load(ElectricityTariffBlocksIngestor, DatasetName.ELECTRICITY_TARIFF_BLOCKS)
-        self.assertEqual(len(blocks), 4)
-        self.assertTrue(all(b.kwh_boundaries_text for b in blocks))
-
-    def test_schedule_is_one_record(self):
-        schedules = self._load(ElectricityTariffWindowScheduleIngestor, DatasetName.ELECTRICITY_TARIFF_WINDOW_SCHEDULE)
-        self.assertEqual(len(schedules), 1)
-        self.assertTrue(schedules[0].schedule_text)
-
-    def test_every_record_of_one_fetch_shares_ingested_at_and_valid_from_text(self):
-        # Silver keeps the latest fetch per valid_from by ingested_at, so one fetch must carry one timestamp.
-        tiers = self._load(ElectricityTariffTiersIngestor, DatasetName.ELECTRICITY_TARIFF_TIERS)
-        self.assertEqual(len({t.ingested_at for t in tiers}), 1)
-        self.assertEqual(len({t.valid_from_text for t in tiers}), 1)
-        self.assertRegex(tiers[0].valid_from_text, r"\d{2}\.\d{2}\.\d{4}")
+CONFIG = ConfigLoader().get_evn()
+PAGES = {
+    CONFIG.tariff_tiers_url: FIXTURES / "evn_invoices.html",
+    CONFIG.tariff_system_url: FIXTURES / "evn_tariff_system.html",
+}
 
 
-if __name__ == "__main__":
-    unittest.main()
+def _load(ingestor_class, name: DatasetName) -> list:
+    ingestor = ingestor_class(
+        dataset=Dataset(dataset_name=name, dataset_type=DatasetType.SEEDS),
+        config=CONFIG,
+        lakehouse_config=GCPLakehouseConfig(catalog_id="test", project_id="test", warehouse="gs://test"),
+        bronze_table=BronzeTable(
+            Schema(NestedField(field_id=1, name="id", field_type=StringType(), required=False)),
+            AppendByDay(column="ingested_at"),
+        ),
+        http=HttpClient(
+            HttpConfig(timeout_seconds=30, retry_count=1, retry_delay_seconds=0),
+            send=lambda url, **kwargs: FakePage(PAGES[url]),
+        ),
+        snapshot=Snapshot.from_scheduled_at(None),
+    )
+    return ingestor.load()
+
+
+def test_tiers_read_both_consumer_tables():
+    tiers = _load(ElectricityTariffTiersIngestor, DatasetName.ELECTRICITY_TARIFF_TIERS)
+    assert len(tiers) == 7
+    assert {t.consumer_category for t in tiers} == {ConsumerCategoryType.HOUSEHOLD, ConsumerCategoryType.BUSINESS}
+    assert all(t.value for t in tiers), "every tier has a price"
+
+
+def test_fees_read_four_cells():
+    fees = _load(ElectricityTariffFeesIngestor, DatasetName.ELECTRICITY_TARIFF_FEES)
+    assert len(fees) == 4
+    assert sorted(f.consumer_category for f in fees) == sorted(
+        [ConsumerCategoryType.HOUSEHOLD, ConsumerCategoryType.BUSINESS] * 2
+    )
+
+
+def test_blocks_read_each_block_with_its_kwh_bounds():
+    blocks = _load(ElectricityTariffBlocksIngestor, DatasetName.ELECTRICITY_TARIFF_BLOCKS)
+    assert len(blocks) == 4
+    assert all(b.kwh_boundaries_text for b in blocks)
+
+
+def test_schedule_is_one_record():
+    schedules = _load(ElectricityTariffWindowScheduleIngestor, DatasetName.ELECTRICITY_TARIFF_WINDOW_SCHEDULE)
+    assert len(schedules) == 1
+    assert schedules[0].schedule_text
+
+
+def test_every_record_of_one_fetch_shares_ingested_at_and_valid_from_text():
+    # Silver keeps the latest fetch per valid_from by ingested_at, so one fetch must carry one timestamp.
+    tiers = _load(ElectricityTariffTiersIngestor, DatasetName.ELECTRICITY_TARIFF_TIERS)
+    assert len({t.ingested_at for t in tiers}) == 1
+    assert len({t.valid_from_text for t in tiers}) == 1
+    assert re.search(r"\d{2}\.\d{2}\.\d{4}", tiers[0].valid_from_text)
