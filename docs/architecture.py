@@ -1,11 +1,11 @@
 from diagrams import Cluster, Diagram, Edge
 from diagrams.gcp.analytics import BigQuery, Looker
+from diagrams.gcp.network import NAT, FirewallRules, Router, VirtualPrivateCloud
 from diagrams.gcp.storage import GCS
-from diagrams.gcp.network import VirtualPrivateCloud, Router, NAT, FirewallRules
-from diagrams.onprem.workflow import Airflow
-from diagrams.onprem.database import PostgreSQL
 from diagrams.onprem.analytics import Dbt, Spark
+from diagrams.onprem.database import PostgreSQL
 from diagrams.onprem.network import Internet
+from diagrams.onprem.workflow import Airflow
 from diagrams.programming.language import Python
 
 graph_attr = {
@@ -19,10 +19,10 @@ graph_attr = {
 }
 
 with Diagram(
-        "GPU Compute Arbitrage — Architecture",
-        filename="gpu_arbitrage_architecture",
-        graph_attr=graph_attr,
-        show=False,
+    "GPU Compute Arbitrage — Architecture",
+    filename="gpu_arbitrage_architecture",
+    graph_attr=graph_attr,
+    show=False,
 ):
     # ── Col 1: External sources ────────────────────────────────────────
     with Cluster("External Sources"):
@@ -45,8 +45,8 @@ with Diagram(
             evn_ingest = Python("TariffScheduleSeed\nsync")
 
     # External sources → ingest apps
-    vast_api >>  vast_ingest
-    exchange_api >>  exchange_ingest
+    vast_api >> vast_ingest
+    exchange_api >> exchange_ingest
     erc_web >> erc_ingest
     evn_web >> evn_ingest
 
@@ -65,17 +65,16 @@ with Diagram(
     evn_ingest >> bronze
 
     # ── Col 4: GCP — VPC + Dataproc ───────────────────────────────────
-    with Cluster("GCP — europe-west3"):
-        with Cluster("VPC — 10.0.0.0/24"):
-            vpc = VirtualPrivateCloud("VPC")
-            with Cluster("Subnet — 10.0.0.0/24"):
-                fw = FirewallRules("Firewall\nallow-internal")
-                router = Router("Cloud Router")
-                nat = NAT("Cloud NAT")
-                router >> nat
-                with Cluster("Dataproc\ngpu-arbitrage-cluster"):
-                    spark = Spark("PySpark\nClean · Cast · Dedup")
-                fw - Edge(style="invis") - spark
+    with Cluster("GCP — europe-west3"), Cluster("VPC — 10.0.0.0/24"):
+        vpc = VirtualPrivateCloud("VPC")
+        with Cluster("Subnet — 10.0.0.0/24"):
+            fw = FirewallRules("Firewall\nallow-internal")
+            router = Router("Cloud Router")
+            nat = NAT("Cloud NAT")
+            router >> nat
+            with Cluster("Dataproc\ngpu-arbitrage-cluster"):
+                spark = Spark("PySpark\nClean · Cast · Dedup")
+            fw - Edge(style="invis") - spark
 
     silver = GCS("Silver\nIceberg\nLakehouse catalog")
 
@@ -104,11 +103,15 @@ with Diagram(
         marts_run >> marts_test
 
     # dbt test publishes Asset → triggers Marts DAG (AssetAny)
-    dbt_test >> Edge(
-        label="Asset published\n(AssetAny trigger)",
-        style="dashed",
-        color="orange",
-    ) >> marts_run
+    (
+        dbt_test
+        >> Edge(
+            label="Asset published\n(AssetAny trigger)",
+            style="dashed",
+            color="orange",
+        )
+        >> marts_run
+    )
 
     marts_test >> Edge(reverse=True) >> bq
 
