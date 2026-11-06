@@ -91,5 +91,5 @@ testpaths = ["tests"]
 
 [dependency-groups]
 dev = [
-    "apache-airflow[google]==3.1.7",
+    "apache-airflow[google]==3.1.8",
 ]
