@@ -137,3 +137,27 @@ jobs:
         run: >
           uvx pip-audit==2.10.1 -r requirements-audit.txt --no-deps --disable-pip --progress-spinner off
           --ignore-vuln PYSEC-2026-4217
+
+  types:
+    name: Type check
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+          enable-cache: true
+
+      # With Airflow: mypy also checks the DAG folder against Airflow's types.
+      - name: Install dependencies with Airflow
+        run: uv sync --locked --extra dev
+
+      - name: mypy
+        run: uv run --no-sync mypy
