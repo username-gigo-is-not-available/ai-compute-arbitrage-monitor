@@ -18,6 +18,7 @@ from config.http import HttpConfig
 from config.lakehouse import GCPLakehouseConfig
 
 load_dotenv()
+logger = logging.getLogger(__name__)
 
 
 class ConfigLoader:
@@ -30,7 +31,7 @@ class ConfigLoader:
         try:
             return ExecutionType(execution_type)
         except ValueError:
-            logging.warning(f"Unknown execution type '{execution_type}', falling back to local.")
+            logger.warning(f"Unknown execution type '{execution_type}', falling back to local.")
             return ExecutionType.LOCAL
 
     def get_evn(self) -> EVNConfig:
@@ -99,8 +100,8 @@ class ConfigLoader:
             with open(path, encoding="utf-8") as f:
                 return yaml.safe_load(f)
         except FileNotFoundError:
-            logging.warning(f"Config file not found at {path}, using defaults.")
+            logger.warning(f"Config file not found at {path}, using defaults.")
             return {}
-        except Exception as e:
-            logging.error(f"Could not load config file {path}: {e}")
+        except (OSError, yaml.YAMLError) as e:
+            logger.error(f"Could not load config file {path}: {e}")
             return {}

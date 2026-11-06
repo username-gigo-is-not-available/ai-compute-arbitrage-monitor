@@ -130,7 +130,7 @@ class TestTariffSeedsSilver(unittest.TestCase):
         }
         self.assertEqual(
             monday_low,
-            {("2025-01-01", h) for h in [*range(22, 24), *range(0, 7)]} | {("2026-01-01", h) for h in range(13, 15)},
+            {("2025-01-01", h) for h in [*range(22, 24), *range(7)]} | {("2026-01-01", h) for h in range(13, 15)},
         )
 
     def test_run_with_no_unseen_fetches_writes_nothing(self):

@@ -7,12 +7,12 @@ import pytest
 
 pytest.importorskip("airflow")
 
-from airflow.models.dagbag import DagBag  # noqa: E402
+from airflow.models.dagbag import DagBag
 
 DAG_FOLDER = Path(__file__).resolve().parents[1] / "infra" / "airflow" / "dags"
 sys.path.insert(0, str(DAG_FOLDER))
 
-from pipeline_config import PIPELINE_CONFIGS  # noqa: E402
+from pipeline_config import PIPELINE_CONFIGS
 
 
 # The import timeout uses SIGALRM, which Windows lacks; without it every file fails and import_errors stays empty.
