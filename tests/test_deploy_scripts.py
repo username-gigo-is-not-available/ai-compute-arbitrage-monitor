@@ -21,193 +21,113 @@ The ``purge_data`` helper additionally verifies that the purge script:
   * issues the expected ``gcloud storage rm`` / ``bq rm`` commands per stage.
 """
 
-import builtins
 import importlib.util
-import os
-import shutil
+import itertools
+import logging
 import subprocess
-import sys
-import tempfile
-from contextlib import contextmanager
 from pathlib import Path
+from types import ModuleType
+
+import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SCRIPTS_DIR = REPO_ROOT / "scripts"
-SETTINGS_PATH = str(REPO_ROOT / "config" / "settings.yaml")
 EXPECTED_BUCKET = "ai-compute-arbitrage-monitor-bucket"
 EXPECTED_PROJECT = "graphic-mission-505412-j7"
 EXPECTED_DATASET = "ai_compute_arbitrage_monitor_dataset"
 
-_ENV_KEYS = ("SETTINGS_PATH", "GCS_BUCKET_NAME", "GCP_PROJECT_ID", "BQ_DATASET_NAME")
-_ENV_SAVED = {k: os.environ.get(k) for k in _ENV_KEYS}
+_script_ids = itertools.count(1)
 
 
-def _restore_env() -> None:
-    for k in _ENV_KEYS:
-        if _ENV_SAVED[k] is None:
-            os.environ.pop(k, None)
-        else:
-            os.environ[k] = _ENV_SAVED[k]
-
-
-def _set_env(bucket: str | None = EXPECTED_BUCKET, dataset: str | None = EXPECTED_DATASET) -> None:
-    os.environ["SETTINGS_PATH"] = SETTINGS_PATH
-    os.environ["GCP_PROJECT_ID"] = EXPECTED_PROJECT
-    if bucket is None:
-        os.environ.pop("GCS_BUCKET_NAME", None)
-    else:
-        os.environ["GCS_BUCKET_NAME"] = bucket
-    if dataset is None:
-        os.environ.pop("BQ_DATASET_NAME", None)
-    else:
-        os.environ["BQ_DATASET_NAME"] = dataset
-
-
-@contextmanager
-def _chdir(path: Path):
-    cwd = os.getcwd()
-    try:
-        os.chdir(path)
-        yield
-    finally:
-        os.chdir(cwd)
-
-
-@contextmanager
-def _patched(module, **attrs):
-    originals = {k: getattr(module, k) for k in attrs}
-    for k, v in attrs.items():
-        setattr(module, k, v)
-    try:
-        yield
-    finally:
-        for k, v in originals.items():
-            setattr(module, k, v)
-
-
-_SCRIPT_COUNTER = [0]
-
-
-def _load_script(name: str):
+def _load_script(name: str) -> ModuleType:
     """Import a standalone script (scripts/ is not a package). Executes load_dotenv().
 
-    ``name`` is the real script filename (no extension); each invocation gets a
-    unique module name so tests never collide in ``sys.modules``.
+    Each load gets a unique module name, so tests never share a script's module state.
     """
-    _SCRIPT_COUNTER[0] += 1
-    module_name = f"_deploy_script_{_SCRIPT_COUNTER[0]:03d}"
-    spec = importlib.util.spec_from_file_location(module_name, SCRIPTS_DIR / f"{name}.py")
+    spec = importlib.util.spec_from_file_location(f"_deploy_script_{next(_script_ids):03d}", SCRIPTS_DIR / f"{name}.py")
     module = importlib.util.module_from_spec(spec)
-    sys.modules[module_name] = module
     spec.loader.exec_module(module)
     return module
 
 
+@pytest.fixture
+def env(monkeypatch: pytest.MonkeyPatch) -> pytest.MonkeyPatch:
+    """The repo root as working directory and every variable the scripts read; all undone after the test."""
+    monkeypatch.chdir(REPO_ROOT)
+    monkeypatch.setenv("SETTINGS_PATH", str(REPO_ROOT / "config" / "settings.yaml"))
+    monkeypatch.setenv("GCS_BUCKET_NAME", EXPECTED_BUCKET)
+    monkeypatch.setenv("GCP_PROJECT_ID", EXPECTED_PROJECT)
+    monkeypatch.setenv("BQ_DATASET_NAME", EXPECTED_DATASET)
+    return monkeypatch
+
+
 # ---------------------------------------------------------------------------
-# Tests
+# package_dataproc_modules / sync_composer_modules
 # ---------------------------------------------------------------------------
 
 
-def test_dataproc_builds_correct_gcs_destinations() -> None:
+def test_dataproc_builds_correct_gcs_destinations(env) -> None:
     """Valid packages + bucket set -> exactly the three jobs/ blobs, correct gs:// path."""
     script = _load_script("package_dataproc_modules")
     calls: list[tuple[str, str]] = []
-    try:
-        _set_env()
-        with (
-            _chdir(REPO_ROOT),
-            _patched(
-                script,
-                gcs_cp=lambda src, dst: calls.append((src, dst)),
-                zip_packages=lambda _packages: None,
-            ),
-        ):
-            script.main()
-    finally:
-        _restore_env()
-    expected = [
+    env.setattr(script, "gcs_cp", lambda src, dst: calls.append((src, dst)))
+    env.setattr(script, "zip_packages", lambda _packages: None)
+    script.main()
+    assert calls == [
         ("src/lakehouse/", f"gs://{EXPECTED_BUCKET}/jobs/lakehouse/"),
         ("src/refine/", f"gs://{EXPECTED_BUCKET}/jobs/refine/"),
         ("modules.zip", f"gs://{EXPECTED_BUCKET}/jobs/modules.zip"),
         ("config/settings.yaml", f"gs://{EXPECTED_BUCKET}/jobs/config/settings.yaml"),
     ]
-    assert calls == expected, calls
 
 
-def test_composer_builds_correct_gcs_destinations() -> None:
+def test_composer_builds_correct_gcs_destinations(env) -> None:
     """Valid packages + bucket set -> dags/ root + one dir per package + settings.yaml."""
     script = _load_script("sync_composer_modules")
     calls: list[tuple[str, str]] = []
-    try:
-        _set_env()
-        with _chdir(REPO_ROOT), _patched(script, gcs_cp=lambda src, dst: calls.append((src, dst))):
-            script.main()
-    finally:
-        _restore_env()
-    expected = [
+    env.setattr(script, "gcs_cp", lambda src, dst: calls.append((src, dst)))
+    script.main()
+    assert calls == [
         ("infra/airflow/dags/*", f"gs://{EXPECTED_BUCKET}/dags/"),
         ("src/common/*", f"gs://{EXPECTED_BUCKET}/dags/common/"),
         ("src/config/*", f"gs://{EXPECTED_BUCKET}/dags/config/"),
         ("src/ingest/*", f"gs://{EXPECTED_BUCKET}/dags/ingest/"),
         ("config/settings.yaml", f"gs://{EXPECTED_BUCKET}/dags/config/settings.yaml"),
     ]
-    assert calls == expected, calls
 
 
-def test_missing_bucket_env_raises_keyerror() -> None:
+def test_missing_bucket_env_raises_keyerror(env) -> None:
     """GCS_BUCKET_NAME unset -> KeyError naming the var (no silent degrade)."""
-    os.environ.pop("GCS_BUCKET_NAME", None)
     script = _load_script("package_dataproc_modules")
-    try:
-        _set_env(bucket=None)
-        with _chdir(REPO_ROOT), _patched(script, gcs_cp=lambda src, dst: None, zip_packages=lambda _p: None):
-            script.main()
-        raise AssertionError("expected KeyError('GCS_BUCKET_NAME')")
-    except KeyError as e:
-        assert e.args == ("GCS_BUCKET_NAME",), e.args
-    finally:
-        _restore_env()
+    env.delenv("GCS_BUCKET_NAME")
+    env.setattr(script, "gcs_cp", lambda src, dst: None)
+    env.setattr(script, "zip_packages", lambda _packages: None)
+    with pytest.raises(KeyError) as raised:
+        script.main()
+    assert raised.value.args == ("GCS_BUCKET_NAME",)
 
 
-def test_missing_package_dir_exits_nonzero() -> None:
+def test_missing_package_dir_exits_nonzero(env, tmp_path) -> None:
     """Referenced package dir missing under src/ -> exits(1), never calls gcloud."""
     script = _load_script("package_dataproc_modules")
-    try:
-        _set_env()
-        with tempfile.TemporaryDirectory() as tmp, _chdir(Path(tmp)):
-            try:
-                script.main()
-            except SystemExit as e:
-                assert e.code == 1, e.code
-            else:
-                raise AssertionError("expected SystemExit(1) for missing package dir")
-    finally:
-        _restore_env()
+    env.chdir(tmp_path)
+    with pytest.raises(SystemExit) as raised:
+        script.main()
+    assert raised.value.code == 1
 
 
-def test_gcs_cp_issues_expected_gcloud_command() -> None:
+def test_gcs_cp_issues_expected_gcloud_command(monkeypatch) -> None:
     """gcs_cp() shells out to `gcloud storage cp -r <src> <dst>`."""
     script = _load_script("package_dataproc_modules")
-    captured: dict[str, object] = {}
-    real_run = subprocess.run
+    commands: list[list[str]] = []
+    monkeypatch.setattr(subprocess, "run", lambda cmd, **kwargs: commands.append(cmd))
+    script.gcs_cp("src/refine/", f"gs://{EXPECTED_BUCKET}/jobs/refine/")
+    assert commands == [["gcloud", "storage", "cp", "-r", "src/refine/", f"gs://{EXPECTED_BUCKET}/jobs/refine/"]]
 
-    def fake_run(cmd, **kwargs):
-        captured["cmd"] = cmd
 
-    try:
-        with _patched(subprocess, run=fake_run):
-            script.gcs_cp("src/refine/", f"gs://{EXPECTED_BUCKET}/jobs/refine/")
-    finally:
-        _restore_env()
-        subprocess.run = real_run
-    assert captured.get("cmd") == [
-        "gcloud",
-        "storage",
-        "cp",
-        "-r",
-        "src/refine/",
-        f"gs://{EXPECTED_BUCKET}/jobs/refine/",
-    ]
+# ---------------------------------------------------------------------------
+# purge_data
+# ---------------------------------------------------------------------------
 
 
 class _FakeCatalog:
@@ -234,251 +154,134 @@ def _expected_stage(stage: str) -> list[list[str]]:
     return expected
 
 
-def _run_purge(
-    argv: list[str],
-    confirm: str | None = None,
-    fail: bool = False,
-) -> tuple[list[list[str]], int | None]:
-    """Run purge_data.main() with a stubbed subprocess.run.
+GOLD_DROP = ["bq", "rm", "-r", "-f", "-d", f"{EXPECTED_PROJECT}:{EXPECTED_DATASET}"]
 
-    Returns ``(calls, exit_code)``: ``calls`` is the list of commands issued
-    (empty when ``fail`` is True), ``exit_code`` is the SystemExit code if the
-    run exited, else None. ``confirm`` feeds the interactive prompt; pass None
-    to append ``--confirm`` instead.
-    """
+
+@pytest.fixture
+def purge(env) -> tuple[ModuleType, list[list[str]]]:
+    """purge_data with every gcloud/bq command and catalog drop recorded instead of run, in the order issued."""
     script = _load_script("purge_data")
     calls: list[list[str]] = []
-    real_run = subprocess.run
+    env.setattr(subprocess, "run", lambda cmd, **kwargs: calls.append(list(cmd)))
+    env.setattr("shutil.which", lambda _name: None)
+    env.setattr(script, "open_catalog", lambda: _FakeCatalog(calls))
+    # basicConfig(force=True) would remove pytest's log capture handler; logging setup is not under test.
+    env.setattr(script, "_setup_logging", lambda *_args: None)
+    return script, calls
 
-    def fake_run(cmd, **kwargs):
-        if fail:
-            raise subprocess.CalledProcessError(returncode=1, cmd=cmd)
-        calls.append(list(cmd))
 
-    argv = [*argv, "--confirm"] if confirm is None else argv
-    exit_code: int | None = None
+def _run_purge(env, script, *args: str, answer: str | None = None) -> int | None:
+    """Run purge_data.main() with ``args``; ``answer`` is typed at the prompt. Returns the exit code, or None."""
+    env.setattr("sys.argv", ["purge_data.py", *args])
+    if answer is not None:
+        env.setattr("builtins.input", lambda _prompt: answer)
     try:
-        _set_env()
-        with (
-            _chdir(REPO_ROOT),
-            _patched(subprocess, run=fake_run),
-            _patched(sys, argv=["purge_data.py", *argv]),
-            _patched(shutil, which=lambda _name: None),
-            _patched(script, open_catalog=lambda: _FakeCatalog([] if fail else calls)),
-        ):
-            try:
-                if confirm is None:
-                    script.main()
-                else:
-                    with _patched(builtins, input=lambda _prompt: confirm):
-                        script.main()
-            except SystemExit as e:
-                exit_code = e.code if isinstance(e.code, int) else 1
-    finally:
-        _restore_env()
-        subprocess.run = real_run
-    return calls, exit_code
+        script.main()
+    except SystemExit as e:
+        return e.code if isinstance(e.code, int) else 1
+    return None
 
 
-def test_purge_no_flags_exits_nonzero_and_purges_nothing() -> None:
-    """No stage flag -> argparse usage error, exit 2, no gcloud/bq command issued."""
-    calls, exit_code = _run_purge([])
-    assert exit_code == 2, exit_code
-    assert calls == [], calls
+@pytest.mark.parametrize("args", [[], ["--bronze", "--silver"]], ids=["no stage", "two stages"])
+def test_purge_without_exactly_one_stage_is_a_usage_error(env, purge, args) -> None:
+    """No stage flag, or two -> argparse usage error, exit 2, nothing purged."""
+    script, calls = purge
+    assert _run_purge(env, script, *args, "--confirm") == 2
+    assert calls == []
 
 
-def test_purge_conflicting_flags_exits_nonzero_and_purges_nothing() -> None:
-    """Two stage flags together -> argparse usage error, exit 2, no gcloud/bq command issued."""
-    calls, exit_code = _run_purge(["--bronze", "--silver"])
-    assert exit_code == 2, exit_code
-    assert calls == [], calls
-
-
-def test_purge_bronze_confirm_drops_tables_then_deletes_namespace_prefixes() -> None:
+def test_purge_bronze_confirm_drops_tables_then_deletes_namespace_prefixes(env, purge) -> None:
     """--bronze --confirm -> per Bronze namespace: drop Iceberg tables, then `gcloud storage rm` its prefix."""
-    calls, exit_code = _run_purge(["--bronze"])
-    assert calls == _expected_stage("bronze"), calls
-    assert exit_code is None, exit_code
+    script, calls = purge
+    assert _run_purge(env, script, "--bronze", "--confirm") is None
+    assert calls == _expected_stage("bronze")
 
 
-def test_purge_bucket_with_trailing_slash_is_stripped() -> None:
+def test_purge_bucket_with_trailing_slash_is_stripped(env, purge) -> None:
     """GCS_BUCKET_NAME with a trailing slash -> no double slash in the gs:// target."""
-    script = _load_script("purge_data")
-    calls: list[list[str]] = []
-    real_run = subprocess.run
-
-    def fake_run(cmd, **kwargs):
-        calls.append(list(cmd))
-
-    try:
-        _set_env(bucket=f"{EXPECTED_BUCKET}/")
-        with (
-            _chdir(REPO_ROOT),
-            _patched(subprocess, run=fake_run),
-            _patched(shutil, which=lambda _name: None),
-            _patched(sys, argv=["purge_data.py", "--bronze", "--confirm"]),
-            _patched(script, open_catalog=lambda: _FakeCatalog(calls)),
-        ):
-            script.main()
-    finally:
-        _restore_env()
-        subprocess.run = real_run
-    assert calls == _expected_stage("bronze"), calls
+    script, calls = purge
+    env.setenv("GCS_BUCKET_NAME", f"{EXPECTED_BUCKET}/")
+    _run_purge(env, script, "--bronze", "--confirm")
+    assert calls == _expected_stage("bronze")
 
 
-def test_purge_gold_confirm_issues_expected_bq_command() -> None:
+def test_purge_gold_confirm_issues_expected_bq_command(env, purge) -> None:
     """--gold --confirm -> exactly `bq rm -r -f -d <project>:<dataset>`."""
-    calls, exit_code = _run_purge(["--gold"])
-    assert calls == [["bq", "rm", "-r", "-f", "-d", f"{EXPECTED_PROJECT}:{EXPECTED_DATASET}"]], calls
-    assert exit_code is None, exit_code
+    script, calls = purge
+    assert _run_purge(env, script, "--gold", "--confirm") is None
+    assert calls == [GOLD_DROP]
 
 
-def test_purge_all_confirm_issues_expected_commands_in_order() -> None:
+def test_purge_all_confirm_issues_expected_commands_in_order(env, purge) -> None:
     """--all --confirm -> bronze, then silver, then gold dataset drop."""
-    calls, exit_code = _run_purge(["--all"])
-    assert calls == [
-        *_expected_stage("bronze"),
-        *_expected_stage("silver"),
-        ["bq", "rm", "-r", "-f", "-d", f"{EXPECTED_PROJECT}:{EXPECTED_DATASET}"],
-    ], calls
-    assert exit_code is None, exit_code
+    script, calls = purge
+    assert _run_purge(env, script, "--all", "--confirm") is None
+    assert calls == [*_expected_stage("bronze"), *_expected_stage("silver"), GOLD_DROP]
 
 
-def test_purge_declined_prompt_exits_nonzero_and_purges_nothing() -> None:
-    """No --confirm + 'no' answer -> exit 1, zero gcloud/bq commands issued."""
-    calls, exit_code = _run_purge(["--bronze"], confirm="no")
-    assert exit_code == 1, exit_code
-    assert calls == [], calls
+def test_purge_declined_prompt_exits_nonzero_and_purges_nothing(env, purge) -> None:
+    """No --confirm + 'no' answer -> exit 1, nothing purged."""
+    script, calls = purge
+    assert _run_purge(env, script, "--bronze", answer="no") == 1
+    assert calls == []
 
 
-def test_purge_confirmed_interactively_executes() -> None:
+def test_purge_confirmed_interactively_executes(env, purge) -> None:
     """No --confirm + 'yes' answer -> proceeds with the delete."""
-    calls, exit_code = _run_purge(["--silver"], confirm="yes")
-    assert exit_code is None, exit_code
-    assert calls == _expected_stage("silver"), calls
+    script, calls = purge
+    assert _run_purge(env, script, "--silver", answer="yes") is None
+    assert calls == _expected_stage("silver")
 
 
-def test_purge_subprocess_failure_exits_nonzero() -> None:
-    """gcloud failure -> the script exits 1 (the harness stubs subprocess)."""
-    calls, exit_code = _run_purge(["--bronze"], fail=True)
-    assert exit_code == 1, exit_code
-    assert calls == [], calls
-
-
-def test_purge_uses_logging_not_print() -> None:
-    """Progress and errors go through the logging module, never print()."""
-    script = _load_script("purge_data")
-    calls: list[list[str]] = []
-    records: list[tuple[str, str]] = []
-    real_run = subprocess.run
-
-    def fake_run(cmd, **kwargs):
-        calls.append(list(cmd))
-
-    def capture_info(msg, *args, **kwargs):
-        records.append(("INFO", msg % args if args else msg))
-
-    def capture_error(msg, *args, **kwargs):
-        records.append(("ERROR", msg % args if args else msg))
-
-    try:
-        _set_env()
-        with (
-            _chdir(REPO_ROOT),
-            _patched(subprocess, run=fake_run),
-            _patched(shutil, which=lambda _name: None),
-            _patched(sys, argv=["purge_data.py", "--bronze", "--confirm"]),
-            _patched(script.logger, info=capture_info, error=capture_error),
-            _patched(script, open_catalog=lambda: _FakeCatalog(calls)),
-        ):
-            script.main()
-    finally:
-        _restore_env()
-        subprocess.run = real_run
-    assert calls == _expected_stage("bronze"), calls
-    assert any(level == "INFO" and "bronze" in msg for level, msg in records), records
-    assert any(level == "INFO" and "Purge complete" in msg for level, msg in records), records
-    assert not any(level not in ("INFO", "ERROR") for level, _msg in records), records
-
-
-def test_purge_missing_project_env_raises_keyerror() -> None:
-    """GCP_PROJECT_ID unset -> KeyError naming the var (no silent degrade)."""
-    script = _load_script("purge_data")
-    try:
-        _set_env()
-        os.environ.pop("GCP_PROJECT_ID", None)
-        with _chdir(REPO_ROOT), _patched(sys, argv=["purge_data.py", "--bronze", "--confirm"]):
-            script.main()
-        raise AssertionError("expected KeyError('GCP_PROJECT_ID')")
-    except KeyError as e:
-        assert e.args == ("GCP_PROJECT_ID",), e.args
-    finally:
-        _restore_env()
-
-
-def test_purge_missing_dataset_env_raises_keyerror() -> None:
-    """BQ_DATASET_NAME unset -> KeyError naming the var (no silent degrade)."""
-    script = _load_script("purge_data")
-    try:
-        _set_env()
-        os.environ.pop("BQ_DATASET_NAME", None)
-        with _chdir(REPO_ROOT), _patched(sys, argv=["purge_data.py", "--gold", "--confirm"]):
-            script.main()
-        raise AssertionError("expected KeyError('BQ_DATASET_NAME')")
-    except KeyError as e:
-        assert e.args == ("BQ_DATASET_NAME",), e.args
-    finally:
-        _restore_env()
-
-
-def test_purge_missing_settings_exits_nonzero() -> None:
-    """SETTINGS_PATH points at a missing settings.yaml -> exit 1, no commands."""
-    script = _load_script("purge_data")
-    try:
-        _set_env()
-        with (
-            tempfile.TemporaryDirectory() as tmp,
-            _chdir(Path(tmp)),
-            _patched(sys, argv=["purge_data.py", "--bronze", "--confirm"]),
-        ):
-            os.environ["SETTINGS_PATH"] = str(Path(tmp) / "no-such-settings.yaml")
-            try:
-                script.main()
-            except SystemExit as e:
-                assert e.code == 1, e.code
-            else:
-                raise AssertionError("expected SystemExit(1) for missing settings")
-    finally:
-        _restore_env()
-
-
-def test_purge_prompt_eof_exits_nonzero_and_purges_nothing() -> None:
-    """No --confirm + stdin EOF -> exit 1, zero gcloud/bq commands issued."""
-    script = _load_script("purge_data")
-    calls: list[list[str]] = []
-    real_run = subprocess.run
-
-    def fake_run(cmd, **kwargs):
-        calls.append(list(cmd))
+def test_purge_prompt_eof_exits_nonzero_and_purges_nothing(env, purge) -> None:
+    """No --confirm + stdin EOF -> exit 1, nothing purged."""
+    script, calls = purge
 
     def raise_eof(_prompt):
         raise EOFError
 
-    try:
-        _set_env()
-        with (
-            _chdir(REPO_ROOT),
-            _patched(subprocess, run=fake_run),
-            _patched(sys, argv=["purge_data.py", "--bronze"]),
-            _patched(builtins, input=raise_eof),
-        ):
-            try:
-                script.main()
-            except SystemExit as e:
-                assert e.code == 1, e.code
-            else:
-                raise AssertionError("expected SystemExit(1) on prompt EOF")
-    finally:
-        _restore_env()
-        subprocess.run = real_run
-    assert calls == [], calls
+    env.setattr("builtins.input", raise_eof)
+    assert _run_purge(env, script, "--bronze") == 1
+    assert calls == []
+
+
+def test_purge_subprocess_failure_exits_nonzero(env, purge) -> None:
+    """gcloud failure -> the script exits 1."""
+    script, _calls = purge
+
+    def fail(cmd, **kwargs):
+        raise subprocess.CalledProcessError(returncode=1, cmd=cmd)
+
+    env.setattr(subprocess, "run", fail)
+    assert _run_purge(env, script, "--bronze", "--confirm") == 1
+
+
+def test_purge_uses_logging_not_print(env, purge, caplog, capsys) -> None:
+    """Progress goes through the logging module, never print()."""
+    script, calls = purge
+    caplog.set_level(logging.INFO)
+    _run_purge(env, script, "--bronze", "--confirm")
+    assert calls == _expected_stage("bronze")
+    messages = [r.getMessage() for r in caplog.records]
+    assert any("bronze" in m for m in messages), messages
+    assert "Purge complete." in messages
+    assert capsys.readouterr().out == ""
+
+
+@pytest.mark.parametrize(("variable", "stage"), [("GCP_PROJECT_ID", "--bronze"), ("BQ_DATASET_NAME", "--gold")])
+def test_purge_missing_identity_env_raises_keyerror(env, purge, variable, stage) -> None:
+    """GCP_PROJECT_ID or BQ_DATASET_NAME unset -> KeyError naming the var (no silent degrade)."""
+    script, _calls = purge
+    env.delenv(variable)
+    env.setattr("sys.argv", ["purge_data.py", stage, "--confirm"])
+    with pytest.raises(KeyError) as raised:
+        script.main()
+    assert raised.value.args == (variable,)
+
+
+def test_purge_missing_settings_exits_nonzero(env, purge, tmp_path) -> None:
+    """SETTINGS_PATH points at a missing settings.yaml -> exit 1, nothing purged."""
+    script, calls = purge
+    env.setenv("SETTINGS_PATH", str(tmp_path / "no-such-settings.yaml"))
+    assert _run_purge(env, script, "--bronze", "--confirm") == 1
+    assert calls == []
