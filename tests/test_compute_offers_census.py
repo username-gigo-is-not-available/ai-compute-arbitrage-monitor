@@ -131,3 +131,11 @@ def test_a_failed_range_writes_nothing_and_fails_the_run():
         ingestor.run()
     store_mock.assert_not_called()
     assert raised.value.response.status_code == 429
+
+
+def test_run_appends_the_offers_to_bronze(bronze):
+    # OFFER has no storage_total_cost, so that column is None in every record: written empty, typed by the table
+    rows = bronze(_ingestor(mock.Mock(side_effect=[_offers([OFFER])]))).to_pylist()
+    assert [(r["offer_id"], r["gpu_ids"], r["storage_cost_usd_per_hr"]) for r in rows] == [
+        (8_936_325, [55_783, 55_784], None)
+    ]
