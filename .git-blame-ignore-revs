@@ -1,3 +1,5 @@
 # Formatting-only commits; git blame skips them (git config blame.ignoreRevsFile .git-blame-ignore-revs).
 # ruff format
 dede3f25a83a4a4cba2ae14efddc5ccf775cdf49
+# end-of-file / trailing whitespace
+f38e0d945ecb2b9ca8628218ef40597c9e2c1477
