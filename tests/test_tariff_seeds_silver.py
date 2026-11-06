@@ -1,10 +1,12 @@
 """Silver tariff seeds handle every tariff version in Bronze, independent of row order."""
 
 import pytest
+from fakes import RecordedWrite, ViewNames
 from pyspark.sql import SparkSession
 
 from common.classes import Dataset
 from common.enums import DatasetName, DatasetType
+from lakehouse.partition import Partition
 from refine.load_strategy import OverwriteByPartition, SilverTable
 from refine.schemas.electricity_tariff_tiers import ELECTRICITY_TARIFF_TIERS_SILVER_SCHEMA
 from refine.schemas.electricity_tariff_window_schedule import ELECTRICITY_TARIFF_WINDOW_SCHEDULE_SILVER_SCHEMA
@@ -125,3 +127,29 @@ def test_run_with_no_unseen_fetches_writes_nothing(spark):
     pipeline.save = saved.append
     pipeline.run()
     assert saved == []
+
+
+def test_run_writes_the_generated_grid_to_silver(spark):
+    # An empty Silver has seen no fetch, so the whole Bronze schedule is read and becomes one week of hours.
+    spark.sql("SELECT CAST(NULL AS TIMESTAMP) AS ingested_at").filter("false").createOrReplaceTempView(
+        "silver_electricity_tariff_window_schedule"
+    )
+    spark.sql(
+        "SELECT schedule_text, valid_from_text, CAST('2026-10-12 00:00:00' AS TIMESTAMP) AS ingested_at FROM VALUES "
+        f"('Ниската тарифа е од 22:00 до 07:00 часот секој ден, како и викенд.', '{NEW}') "
+        "AS t(schedule_text, valid_from_text)"
+    ).createOrReplaceTempView("bronze_electricity_tariff_window_schedule")
+    load = RecordedWrite(Partition("valid_from"))
+    pipeline = ElectricityTariffWindowSchedulePipeline(
+        session=spark,
+        dataset=Dataset(dataset_name=DatasetName.ELECTRICITY_TARIFF_WINDOW_SCHEDULE, dataset_type=DatasetType.SEEDS),
+        config=None,
+        lakehouse_config=ViewNames(),
+        silver_table=SilverTable(ELECTRICITY_TARIFF_WINDOW_SCHEDULE_SILVER_SCHEMA, load),
+    )
+
+    pipeline.run()
+
+    rows = load.written["silver_electricity_tariff_window_schedule"]
+    assert len(rows) == 7 * 24
+    assert {str(r["valid_from"]) for r in rows} == {"2026-01-01"}
