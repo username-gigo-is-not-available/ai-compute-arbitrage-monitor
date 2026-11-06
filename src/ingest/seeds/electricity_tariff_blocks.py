@@ -9,15 +9,15 @@ from ingest.models.electricity_tariff_block import ElectricityTariffBlock
 
 
 @dataclass
-class ElectricityTariffBlocksIngestor(EVNBaseIngestor):
+class ElectricityTariffBlocksIngestor(EVNBaseIngestor[ElectricityTariffBlock]):
     def load(self) -> list[ElectricityTariffBlock]:
         parser = self.fetch_soup(self.config.tariff_system_url)
         ingested_at: datetime = datetime.now(UTC)
-        valid_from_text: str = parser.select_one(self.config.tariff_blocks_valid_from_selector).text.strip()
+        valid_from_text: str = self.select_required(parser, self.config.tariff_blocks_valid_from_selector).text.strip()
 
         electricity_tariff_blocks: list[ElectricityTariffBlock] = []
 
-        paragraph_element: Tag = parser.select_one(self.config.tariff_blocks_paragraph_selector)
+        paragraph_element: Tag = self.select_required(parser, self.config.tariff_blocks_paragraph_selector)
         rows: list[Tag] = paragraph_element.find_all(self.config.tariff_blocks_strong_selector)[
             : self.config.tariff_blocks_limit
         ]
@@ -37,6 +37,6 @@ class ElectricityTariffBlocksIngestor(EVNBaseIngestor):
             consumer_category=ConsumerCategoryType.HOUSEHOLD,
             tariff_window_type=TariffWindowType.HIGH,
             tariff_block_number_text=row.text,
-            kwh_boundaries_text=row.next_sibling.text,
+            kwh_boundaries_text=self.next_sibling_required(row).text,
             valid_from_text=valid_from_text,
         )

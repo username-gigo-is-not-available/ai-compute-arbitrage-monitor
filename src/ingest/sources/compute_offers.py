@@ -1,18 +1,18 @@
 import time
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from itertools import pairwise
 from typing import Any
 
 from pydantic import ValidationError
 
 from common.enums import OfferType
+from config.apis.vast_ai import VastAIConfig
 from ingest.base import Ingestor
 from ingest.models.vast_ai_offer import VastAIOffer
 
 
 @dataclass
-class ComputeOffersIngestor(Ingestor):
+class ComputeOffersIngestor(Ingestor[VastAIConfig, VastAIOffer]):
     rows_used: int = field(init=False, default=0)
     requests: int = field(init=False, default=0)
 
@@ -53,8 +53,8 @@ class ComputeOffersIngestor(Ingestor):
         ids = sorted(sample_ids)
         step = max(1, len(ids) // self.config.census_parts)
         cuts = ids[step::step]
-        bounds = [0, *cuts, None]
-        return list(pairwise(bounds))
+        ends: list[int | None] = [*cuts, None]
+        return list(zip([0, *cuts], ends, strict=True))
 
     def request_range(self, start: int, end: int | None) -> list[dict[str, Any]]:
         data: dict[str, Any] = self.http.get(

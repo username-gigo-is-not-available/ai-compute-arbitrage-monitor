@@ -20,11 +20,13 @@ class TableSpecification:
 
 
 @dataclass
-class ElectricityTariffTiersIngestor(EVNBaseIngestor):
+class ElectricityTariffTiersIngestor(EVNBaseIngestor[ElectricityTariffTier]):
     def load(self) -> list[ElectricityTariffTier]:
         parser = self.fetch_soup(self.config.tariff_tiers_url)
         ingested_at: datetime = datetime.now(UTC)
-        valid_from_text: str = parser.select_one(self.config.tariff_tiers_valid_from_text_selector).text.strip()
+        valid_from_text: str = self.select_required(
+            parser, self.config.tariff_tiers_valid_from_text_selector
+        ).text.strip()
 
         table_specifications: list[TableSpecification] = [
             TableSpecification(
@@ -50,7 +52,7 @@ class ElectricityTariffTiersIngestor(EVNBaseIngestor):
         electricity_tariff_tiers: list[ElectricityTariffTier] = []
 
         for table_specification in table_specifications:
-            table_element: Tag = parser.select_one(table_specification.selector)
+            table_element: Tag = self.select_required(parser, table_specification.selector)
             cells: list[Tag] = table_element.select(self.config.table_cells_selector)
             rows = [
                 cells[i : i + table_specification.row_width]

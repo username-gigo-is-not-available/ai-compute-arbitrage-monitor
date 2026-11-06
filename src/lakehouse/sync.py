@@ -44,7 +44,7 @@ def update_schema_order(update: UpdateSchema, schema: Schema) -> None:
 
 def partition_fields(partition_spec: PartitionSpec, schema: Schema) -> list[tuple[str, str]]:
     return [
-        (schema.find_column_name(partition_field.source_id), str(partition_field.transform))
+        (schema.find_field(partition_field.source_id).name, str(partition_field.transform))
         for partition_field in partition_spec.fields
     ]
 
@@ -57,7 +57,7 @@ def update_partition_spec(table: Table, schema: Schema, partition_spec: Partitio
             update.remove_field(partition_field.name)
         for partition_field in partition_spec.fields:
             update.add_field(
-                schema.find_column_name(partition_field.source_id), partition_field.transform, partition_field.name
+                schema.find_field(partition_field.source_id).name, partition_field.transform, partition_field.name
             )
 
 

@@ -334,7 +334,6 @@ gpu-arbitrage-monitor/
 │   │   ├── models/                 # Pydantic models (VastAIOffer, ExchangeRate, etc.)
 │   │   │   ├── base.py             # BaseRecord (ingested_at)
 │   │   │   ├── enums.py            # All enums
-│   │   │   ├── types.py            # DatasetConfig, IngestorRecord type aliases
 │   │   │   ├── vast_ai_offer.py
 │   │   │   ├── exchange_rate.py
 │   │   │   ├── electricity_tariff_price.py

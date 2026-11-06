@@ -10,4 +10,6 @@ class GCPAuthentication(BaseModel):
     def access_token(self) -> str:
         creds, _ = gcp_default(scopes=[self.cloud_platform_url])
         creds.refresh(GcpRequest())
+        if not creds.token:
+            raise RuntimeError("Google credentials refreshed without an access token")
         return creds.token

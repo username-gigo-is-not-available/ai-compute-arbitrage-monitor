@@ -2,12 +2,13 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Any
 
+from config.apis.exchange_rate import ExchangeRateConfig
 from ingest.base import Ingestor
 from ingest.models.exchange_rate import ExchangeRate
 
 
 @dataclass
-class ExchangeRateIngestor(Ingestor):
+class ExchangeRateIngestor(Ingestor[ExchangeRateConfig, ExchangeRate]):
     timestamp_format: str = field(init=False)
 
     def __post_init__(self) -> None:

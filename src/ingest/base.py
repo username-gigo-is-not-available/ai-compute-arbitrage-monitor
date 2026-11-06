@@ -1,6 +1,7 @@
 import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
+from typing import Generic, TypeVar
 
 import pyarrow as pa
 
@@ -9,14 +10,18 @@ from common.enums import DataStageType
 from common.types import DatasetConfig
 from config.lakehouse import GCPLakehouseConfig
 from ingest.http_client import HttpClient
-from ingest.models.types import IngestorRecord
+from ingest.models.base import BaseRecord
 from ingest.write_strategy import BronzeTable
 
+ConfigT = TypeVar("ConfigT", bound=DatasetConfig)
+RecordT = TypeVar("RecordT", bound=BaseRecord)
 
+
+# Each ingestor names its config and record type, e.g. Ingestor[VastAIConfig, VastAIOffer].
 @dataclass
-class Ingestor(ABC):
+class Ingestor(ABC, Generic[ConfigT, RecordT]):
     dataset: Dataset
-    config: DatasetConfig
+    config: ConfigT
     lakehouse_config: GCPLakehouseConfig
     bronze_table: BronzeTable
     http: HttpClient  # retries live here, not in the ingestor
@@ -29,16 +34,16 @@ class Ingestor(ABC):
         self.logger = logging.getLogger(self.name)
 
     @abstractmethod
-    def load(self) -> list[IngestorRecord]:
+    def load(self) -> list[RecordT]:
         raise NotImplementedError
 
-    def handle_result(self, data: list[IngestorRecord]) -> None:
+    def handle_result(self, data: list[RecordT]) -> None:
         if not data:
             raise RuntimeError(f"{self.name} fetched no records")
         self.logger.info(f"{self.name} fetched {len(data)} records")
         self.store(data)
 
-    def store(self, data: list[IngestorRecord]) -> None:
+    def store(self, data: list[RecordT]) -> None:
         # The setup task has already made the table match its declaration (lakehouse.setup); a table that does not
         # match fails this write
         catalog = self.lakehouse_config.open_catalog()
