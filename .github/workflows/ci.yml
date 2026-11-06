@@ -42,10 +42,15 @@ jobs:
         run: uv run --no-sync ruff format --check src tests infra/airflow/dags scripts
 
       # Locally SETTINGS_PATH comes from the gitignored .env.
+      # Fails below [tool.coverage.report] fail_under; the table goes to the run's summary page.
       - name: Test
-        run: uv run --no-sync pytest
+        run: uv run --no-sync pytest --cov
         env:
           SETTINGS_PATH: config/settings.yaml
+
+      - name: Coverage summary
+        if: always()
+        run: uv run --no-sync coverage report --format=markdown >> "$GITHUB_STEP_SUMMARY"
 
   airflow:
     name: Airflow DAGs

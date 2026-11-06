@@ -26,3 +26,8 @@ infra/**/.terraform.tfstate.lock.info
 
 # Personal study notes
 docs/notes/
+
+# coverage
+.coverage
+.coverage.*
+htmlcov/
