@@ -49,8 +49,8 @@ select
 
     -- revenue / cost / profit (USD/hr per GPU): electricity only, the access fee is paid anyway (ADR-025)
     revenue_per_gpu_usd_per_hr,
-    cost_usd_per_hr / nullif(number_of_machine_gpus, 0)    as cost_per_gpu_usd_per_hr,
-    profit_usd_per_hr / nullif(number_of_machine_gpus, 0)  as profit_per_gpu_usd_per_hr,
+    cost_usd_per_hr / nullif(number_of_machine_gpus, 0) as cost_per_gpu_usd_per_hr,
+    profit_usd_per_hr / nullif(number_of_machine_gpus, 0) as profit_per_gpu_usd_per_hr,
 
     -- per TFLOP (USD)
     cost_per_tflop_usd,

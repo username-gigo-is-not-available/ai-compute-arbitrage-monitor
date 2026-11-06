@@ -6,11 +6,11 @@
 -- row in force at each census; mart_gpu_forecast takes the current one (valid_to = 9999-12-31).
 with tariff_tiers as (
     select
-        skey   as tariff_tier_skey,
+        skey as tariff_tier_skey,
         consumer_category,
         tariff_type,
         metric as tariff_metric,
-        value  as tariff_value,
+        value as tariff_value,
         tariff_window_type,
         tariff_block_number,
         valid_from,
@@ -52,21 +52,23 @@ select
     tf.distribution_fee,
     tb.lower_bound_kwh,
     tb.upper_bound_kwh,
-    {{ vat_rate('tt.consumer_category') }}                                             as vat_rate,
+    {{ vat_rate('tt.consumer_category') }} as vat_rate,
 
     -- The period in which the tier, its fee and its block are all valid. Tiers without a block (low tariff,
     -- business) take the tier's own period.
-    greatest(tt.valid_from, tf.valid_from, coalesce(tb.valid_from, tt.valid_from))     as valid_from,
-    least(tt.valid_to, tf.valid_to, coalesce(tb.valid_to, tt.valid_to))                as valid_to
+    greatest(tt.valid_from, tf.valid_from, coalesce(tb.valid_from, tt.valid_from)) as valid_from,
+    least(tt.valid_to, tf.valid_to, coalesce(tb.valid_to, tt.valid_to)) as valid_to
 
-from tariff_tiers tt
-join tariff_fees tf
-    on  tf.consumer_category = tt.consumer_category
-    and tf.valid_from < tt.valid_to
-    and tt.valid_from < tf.valid_to
-left join tariff_blocks tb
-    on  tb.consumer_category   = tt.consumer_category
-    and tb.tariff_window_type  = tt.tariff_window_type
-    and tb.tariff_block_number = tt.tariff_block_number
-    and tb.valid_from < tt.valid_to
-    and tt.valid_from < tb.valid_to
+from tariff_tiers as tt
+inner join tariff_fees as tf
+    on
+        tf.consumer_category = tt.consumer_category
+        and tf.valid_from < tt.valid_to
+        and tt.valid_from < tf.valid_to
+left join tariff_blocks as tb
+    on
+        tb.consumer_category = tt.consumer_category
+        and tb.tariff_window_type = tt.tariff_window_type
+        and tb.tariff_block_number = tt.tariff_block_number
+        and tb.valid_from < tt.valid_to
+        and tt.valid_from < tb.valid_to

@@ -1,0 +1,17 @@
+[sqlfluff]
+dialect = bigquery
+templater = jinja
+max_line_length = 120
+# RF04: source columns are named timestamp, value, hour. AM04: models select * from CTEs on purpose.
+# ST07: USING joins are fine in BigQuery. ST06 would reorder select columns, i.e. the tables' columns.
+# ST09: join conditions read in the order they are written.
+exclude_rules = RF04, AM04, ST07, ST06, ST09
+
+[sqlfluff:templater:jinja]
+apply_dbt_builtins = True
+load_macros_from_path = macros
+library_path = sqlfluff_libs
+
+
+[sqlfluff:rules:references.qualification]
+subqueries_ignore_external_references = True

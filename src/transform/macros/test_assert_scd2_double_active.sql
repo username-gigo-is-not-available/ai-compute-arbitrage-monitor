@@ -11,10 +11,15 @@
 -- Failure output: the offending rows as the natural key plus BOTH (valid_from,
 -- valid_to) pairs of each offending pair of active rows, so the real shape of a
 -- violation is visible in the run log.
+{% macro test_assert_scd2_double_active(
+    model,
+    natural_key_columns,
+    active_value,
+    valid_from_column='valid_from',
+    valid_to_column='valid_to'
+) %}
 
-{% macro test_assert_scd2_double_active(model, natural_key_columns, active_value, valid_from_column='valid_from', valid_to_column='valid_to') %}
-
-{%- set nk_partition = natural_key_columns | join(', ') -%}
+    {%- set nk_partition = natural_key_columns | join(', ') -%}
 
 with scd_active as (
     select
@@ -32,9 +37,9 @@ select
     a.{{ col }},
     {%- endfor %}
     a.{{ valid_from_column }} as a_valid_from,
-    a.{{ valid_to_column }}   as a_valid_to,
+    a.{{ valid_to_column }} as a_valid_to,
     b.{{ valid_from_column }} as b_valid_from,
-    b.{{ valid_to_column }}   as b_valid_to
+    b.{{ valid_to_column }} as b_valid_to
 from scd_active as a
 join scd_active as b
     on a.scd_rn < b.scd_rn
@@ -42,9 +47,9 @@ join scd_active as b
     and a.{{ col }} is not distinct from b.{{ col }}
     {%- endfor %}
 order by
-    {%- for col in natural_key_columns %}
+{%- for col in natural_key_columns %}
     a.{{ col }},
-    {%- endfor %}
+{%- endfor %}
     a.scd_rn,
     b.scd_rn
 

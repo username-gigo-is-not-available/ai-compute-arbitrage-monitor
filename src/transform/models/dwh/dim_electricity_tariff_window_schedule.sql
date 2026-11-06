@@ -16,8 +16,8 @@ scd as (
         coalesce(
             {{ valid_to('valid_from', 'day_of_week, hour') }},
             timestamp '9999-12-31'
-        )                                                               as valid_to,
-        {{ is_latest('valid_from', 'day_of_week, hour') }}             as is_latest
+        ) as valid_to,
+        {{ is_latest('valid_from', 'day_of_week, hour') }} as is_latest
     from source
 )
 

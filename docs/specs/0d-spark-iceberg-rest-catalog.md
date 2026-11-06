@@ -369,4 +369,3 @@ and catalog `spike_iceberg_15ac3e23` were left untouched.
 `_0d_submit_rest.ps1` (winner submit path), `spike_0d_local.py`, `spike_0d_pyiceberg_read.py`,
 `spike_0d_batch.py`. Dataproc driver output lives under
 `gs://spike-iceberg-test-15ac3e23/google-cloud-dataproc-metainfo/<uid>/jobs/<batch-id>/driveroutput.*`.
-

@@ -82,7 +82,7 @@ jobs:
           SETTINGS_PATH: config/settings.yaml
 
   dbt:
-    name: dbt parse
+    name: dbt parse & SQL lint
     runs-on: ubuntu-latest
 
     permissions:
@@ -109,13 +109,17 @@ jobs:
           enable-cache: true
 
       - name: Install dependencies
-        run: uv sync --locked --no-dev
+        run: uv sync --locked --no-dev --extra dev
 
       - name: Install dbt packages
         run: uv run --no-sync dbt deps --profiles-dir .
 
       - name: Parse
         run: uv run --no-sync dbt --warn-error parse --profiles-dir . --no-partial-parse
+
+      # Rules and exclusions in src/transform/.sqlfluff; renders jinja without dbt (dbt_utils stand-ins in sqlfluff_libs)
+      - name: SQL lint
+        run: uv run --no-sync sqlfluff lint models macros tests
 
   audit:
     name: Dependency audit

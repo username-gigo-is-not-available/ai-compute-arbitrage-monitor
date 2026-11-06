@@ -140,7 +140,7 @@ print(Fernet.generate_key().decode())
 `AIRFLOW_SECRET_KEY`:
 Airflow uses 16-bit hexadecimal key for session signing
 
-```python 
+```python
 import secrets
 
 print(secrets.token_hex(16))
@@ -149,7 +149,7 @@ print(secrets.token_hex(16))
 `AIRFLOW_JWT_SECRET`:
 Airflow uses 32-bit hexadecimal key for signing JWT tokens for API access
 
-```python 
+```python
 import secrets
 
 print(secrets.token_hex(32))

@@ -13,13 +13,17 @@ with local_hours as (
     from {{ ref('mart_gpu_forecast') }}
 )
 
-select l.*, s.tariff_window_type as expected_tariff_window_type
-from local_hours l
-left join {{ ref('dim_electricity_tariff_window_schedule') }} s
-    on  s.is_latest = true
-    and s.day_of_week = mod(extract(dayofweek from l.local_forecast_datetime) + 5, 7) + 1
-    and s.hour        = extract(hour from l.local_forecast_datetime)
-where s.tariff_window_type is null
-   or s.tariff_window_type != l.scheduled_tariff_window_type
-   or l.day_of_week        != mod(extract(dayofweek from l.local_forecast_datetime) + 5, 7) + 1
-   or l.hour_of_day        != extract(hour from l.local_forecast_datetime)
+select
+    l.*,
+    s.tariff_window_type as expected_tariff_window_type
+from local_hours as l
+left join {{ ref('dim_electricity_tariff_window_schedule') }} as s
+    on
+        s.is_latest = true
+        and s.day_of_week = mod(extract(dayofweek from l.local_forecast_datetime) + 5, 7) + 1
+        and s.hour = extract(hour from l.local_forecast_datetime)
+where
+    s.tariff_window_type is null
+    or s.tariff_window_type != l.scheduled_tariff_window_type
+    or l.day_of_week != mod(extract(dayofweek from l.local_forecast_datetime) + 5, 7) + 1
+    or l.hour_of_day != extract(hour from l.local_forecast_datetime)
