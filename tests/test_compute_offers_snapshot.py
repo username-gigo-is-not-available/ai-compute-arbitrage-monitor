@@ -3,17 +3,12 @@
 from datetime import UTC, datetime, timedelta
 from unittest import mock
 
-from pyiceberg.schema import Schema
-from pyiceberg.types import NestedField, StringType
+from fakes import build_ingestor
 
-from common.classes import Dataset, Snapshot
+from common.classes import Snapshot
 from common.enums import DatasetName, DatasetType, OfferType
 from config.apis.vast_ai import VastAIConfig
-from config.http import HttpConfig
-from config.lakehouse import GCPLakehouseConfig
-from ingest.http_client import HttpClient
 from ingest.sources.compute_offers import ComputeOffersIngestor
-from ingest.write_strategy import AppendByDay, BronzeTable
 
 OFFER = {
     "ask_contract_id": 111,
@@ -35,23 +30,22 @@ OFFER = {
 }
 
 
+VAST_AI = VastAIConfig(
+    enabled=True,
+    base_url="https://console.vast.test/api/v0",
+    limit=512,
+    split_at=500,
+    census_parts=4,
+    request_interval_seconds=0,
+)
+
+
 def _ingestor(snapshot_at: datetime) -> ComputeOffersIngestor:
-    return ComputeOffersIngestor(
-        dataset=Dataset(dataset_name=DatasetName.COMPUTE_OFFERS, dataset_type=DatasetType.SOURCES),
-        config=VastAIConfig(
-            enabled=True,
-            base_url="https://console.vast.test/api/v0",
-            limit=512,
-            split_at=500,
-            census_parts=4,
-            request_interval_seconds=0,
-        ),
-        lakehouse_config=GCPLakehouseConfig(catalog_id="test", project_id="test", warehouse="gs://test"),
-        bronze_table=BronzeTable(
-            Schema(NestedField(field_id=1, name="id", field_type=StringType(), required=False)),
-            AppendByDay(column="snapshot_at"),
-        ),
-        http=HttpClient(HttpConfig(timeout_seconds=30, retry_count=1, retry_delay_seconds=0)),
+    return build_ingestor(
+        ComputeOffersIngestor,
+        DatasetName.COMPUTE_OFFERS,
+        DatasetType.SOURCES,
+        VAST_AI,
         snapshot=Snapshot(at=snapshot_at),
     )
 

@@ -7,21 +7,14 @@ real selectors from settings.yaml. No network.
 import re
 from pathlib import Path
 
-from fakes import FakeResponse
-from pyiceberg.schema import Schema
-from pyiceberg.types import NestedField, StringType
+from fakes import FakeResponse, build_ingestor
 
-from common.classes import Dataset, Snapshot
 from common.enums import ConsumerCategoryType, DatasetName, DatasetType
-from config.http import HttpConfig
-from config.lakehouse import GCPLakehouseConfig
 from config.loader import ConfigLoader
-from ingest.http_client import HttpClient
 from ingest.seeds.electricity_tariff_blocks import ElectricityTariffBlocksIngestor
 from ingest.seeds.electricity_tariff_fees import ElectricityTariffFeesIngestor
 from ingest.seeds.electricity_tariff_tiers import ElectricityTariffTiersIngestor
 from ingest.seeds.electricity_tariff_window_schedule import ElectricityTariffWindowScheduleIngestor
-from ingest.write_strategy import AppendByDay, BronzeTable
 
 FIXTURES = Path(__file__).parent / "fixtures"
 
@@ -34,21 +27,10 @@ PAGES = {
 
 
 def _load(ingestor_class, name: DatasetName) -> list:
-    ingestor = ingestor_class(
-        dataset=Dataset(dataset_name=name, dataset_type=DatasetType.SEEDS),
-        config=CONFIG,
-        lakehouse_config=GCPLakehouseConfig(catalog_id="test", project_id="test", warehouse="gs://test"),
-        bronze_table=BronzeTable(
-            Schema(NestedField(field_id=1, name="id", field_type=StringType(), required=False)),
-            AppendByDay(column="ingested_at"),
-        ),
-        http=HttpClient(
-            HttpConfig(timeout_seconds=30, retry_count=1, retry_delay_seconds=0),
-            send=lambda url, **kwargs: FakeResponse(text=PAGES[url].read_text(encoding="utf-8")),
-        ),
-        snapshot=Snapshot.from_scheduled_at(None),
-    )
-    return ingestor.load()
+    def send(url: str, **kwargs) -> FakeResponse:
+        return FakeResponse(text=PAGES[url].read_text(encoding="utf-8"))
+
+    return build_ingestor(ingestor_class, name, DatasetType.SEEDS, CONFIG, send).load()
 
 
 def test_tiers_read_both_consumer_tables():

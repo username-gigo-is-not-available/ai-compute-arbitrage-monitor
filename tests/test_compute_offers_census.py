@@ -6,25 +6,17 @@ The ingestor's HttpClient sends through a fake market instead of requests.get; n
 import json
 import random
 from collections.abc import Callable
-from datetime import UTC, datetime
 from unittest import mock
 
 import pytest
 import requests
-from fakes import FakeResponse
-from pyiceberg.schema import Schema
-from pyiceberg.types import NestedField, StringType
+from fakes import FakeResponse, build_ingestor
 
-from common.classes import Dataset, Snapshot
 from common.enums import DatasetName, DatasetType
 from config.apis.vast_ai import VastAIConfig
-from config.http import HttpConfig
-from config.lakehouse import GCPLakehouseConfig
 from config.loader import ConfigLoader
-from ingest.http_client import HttpClient
 from ingest.schemas.compute_offers import COMPUTE_OFFERS_BRONZE_SCHEMA
 from ingest.sources.compute_offers import ComputeOffersIngestor
-from ingest.write_strategy import AppendByDay, BronzeTable
 
 OFFER = {
     "ask_contract_id": 8_936_325,
@@ -69,25 +61,18 @@ class FakeMarket:
         return _offers(self.random.sample(matches, limit) if len(matches) > limit else matches)
 
 
+VAST_AI = VastAIConfig(
+    enabled=True,
+    base_url="https://console.vast.test/api/v0",
+    limit=512,
+    split_at=500,
+    census_parts=32,
+    request_interval_seconds=0,
+)
+
+
 def _ingestor(send: Callable[..., FakeResponse]) -> ComputeOffersIngestor:
-    return ComputeOffersIngestor(
-        dataset=Dataset(dataset_name=DatasetName.COMPUTE_OFFERS, dataset_type=DatasetType.SOURCES),
-        config=VastAIConfig(
-            enabled=True,
-            base_url="https://console.vast.test/api/v0",
-            limit=512,
-            split_at=500,
-            census_parts=32,
-            request_interval_seconds=0,
-        ),
-        lakehouse_config=GCPLakehouseConfig(catalog_id="test", project_id="test", warehouse="gs://test"),
-        bronze_table=BronzeTable(
-            Schema(NestedField(field_id=1, name="id", field_type=StringType(), required=False)),
-            AppendByDay(column="snapshot_at"),
-        ),
-        http=HttpClient(HttpConfig(timeout_seconds=30, retry_count=1, retry_delay_seconds=0), send=send),
-        snapshot=Snapshot(at=datetime.now(UTC).replace(hour=0, minute=0, second=0, microsecond=0)),
-    )
+    return build_ingestor(ComputeOffersIngestor, DatasetName.COMPUTE_OFFERS, DatasetType.SOURCES, VAST_AI, send)
 
 
 def _queries(get_mock: mock.Mock) -> list[dict]:

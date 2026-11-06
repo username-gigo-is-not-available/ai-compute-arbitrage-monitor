@@ -12,20 +12,15 @@ from unittest import mock
 
 import pytest
 import requests
-from fakes import FakeResponse
-from pyiceberg.schema import Schema
-from pyiceberg.types import NestedField, StringType
+from fakes import FakeResponse, build_ingestor
 
-from common.classes import Dataset, Snapshot
 from common.enums import DatasetName, DatasetType
 from config.apis.evn import EVNConfig
 from config.apis.exchange_rate import ExchangeRateConfig
 from config.http import HttpConfig
-from config.lakehouse import GCPLakehouseConfig
 from ingest.evn_base import EVNBaseIngestor
 from ingest.http_client import HttpClient
 from ingest.sources.exchange_rates import ExchangeRateIngestor
-from ingest.write_strategy import AppendByDay, BronzeTable
 
 RETRY_DELAY_SECONDS = 60
 
@@ -162,62 +157,48 @@ def test_a_retry_after_missing_or_not_in_seconds_waits_the_delay(headers):
 # What the ingestors still own: reading the response and refusing an empty fetch
 # ---------------------------------------------------------------------------
 
-_DUMMY_BRONZE_TABLE = BronzeTable(
-    Schema(NestedField(field_id=1, name="id", field_type=StringType(), required=False)),
-    AppendByDay(column="ingested_at"),
-)
-_LAKEHOUSE = GCPLakehouseConfig(catalog_id="test", project_id="test", warehouse="gs://test")
-
 
 class _EVNTestIngestor(EVNBaseIngestor):
     def load(self):
         return []
 
 
-def _evn(client: HttpClient) -> _EVNTestIngestor:
-    return _EVNTestIngestor(
-        dataset=Dataset(dataset_name=DatasetName.ELECTRICITY_TARIFF_TIERS, dataset_type=DatasetType.SEEDS),
-        config=EVNConfig(enabled=True, tariff_tiers_url="https://evn.test/", tariff_system_url="https://evn.test/"),
-        lakehouse_config=_LAKEHOUSE,
-        bronze_table=_DUMMY_BRONZE_TABLE,
-        http=client,
-        snapshot=Snapshot.from_scheduled_at(None),
+def _evn(server: FakeServer) -> _EVNTestIngestor:
+    config = EVNConfig(enabled=True, tariff_tiers_url="https://evn.test/", tariff_system_url="https://evn.test/")
+    return build_ingestor(
+        _EVNTestIngestor, DatasetName.ELECTRICITY_TARIFF_TIERS, DatasetType.SEEDS, config, server.send
     )
 
 
 def test_evn_parses_the_page_the_client_returns():
-    client = FakeServer(FakeResponse(text="<html><body><h1>tariffs</h1></body></html>")).client()
-    assert _evn(client).fetch_soup("https://evn.test/").select_one("h1").text == "tariffs"
+    server = FakeServer(FakeResponse(text="<html><body><h1>tariffs</h1></body></html>"))
+    assert _evn(server).fetch_soup("https://evn.test/").select_one("h1").text == "tariffs"
 
 
 def test_exchange_rates_parse_the_json_the_client_returns():
-    client = FakeServer(
+    server = FakeServer(
         FakeResponse(
             json_data={
                 "conversion_rates": {"MKD": 58.15},
                 "time_last_update_utc": "Tue, 03 Sep 2026 00:00:00 +0000",
             }
         )
-    ).client()
-    ingestor = ExchangeRateIngestor(
-        dataset=Dataset(dataset_name=DatasetName.EXCHANGE_RATES, dataset_type=DatasetType.SOURCES),
-        config=ExchangeRateConfig(
-            enabled=True,
-            base_url="https://exchangerate.test/",
-            from_currency="USD",
-            to_currency="MKD",
-            api_key="test-key",
-        ),
-        lakehouse_config=_LAKEHOUSE,
-        bronze_table=_DUMMY_BRONZE_TABLE,
-        http=client,
-        snapshot=Snapshot.from_scheduled_at(None),
+    )
+    config = ExchangeRateConfig(
+        enabled=True,
+        base_url="https://exchangerate.test/",
+        from_currency="USD",
+        to_currency="MKD",
+        api_key="test-key",
+    )
+    ingestor = build_ingestor(
+        ExchangeRateIngestor, DatasetName.EXCHANGE_RATES, DatasetType.SOURCES, config, server.send
     )
     assert [r.value for r in ingestor.load()] == [58.15]
 
 
 def test_an_empty_fetch_fails_the_run_instead_of_storing_nothing():
-    ingestor = _evn(FakeServer().client())
+    ingestor = _evn(FakeServer())
     with mock.patch.object(ingestor, "store") as store_mock, pytest.raises(RuntimeError, match="fetched no records"):
         ingestor.handle_result([])
     store_mock.assert_not_called()
