@@ -13,6 +13,4 @@ class Partition:
     def spec(self, schema: Schema) -> PartitionSpec:
         field_id = schema.find_field(self.column).field_id
         name = f"{self.column}_day" if isinstance(self.transform, DayTransform) else self.column
-        return PartitionSpec(
-            PartitionField(source_id=field_id, field_id=1000, transform=self.transform, name=name)  # noqa
-        )
+        return PartitionSpec(PartitionField(source_id=field_id, field_id=1000, transform=self.transform, name=name))

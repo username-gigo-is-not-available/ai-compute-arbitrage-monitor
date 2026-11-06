@@ -13,13 +13,14 @@ _SRC = Path(__file__).resolve().parents[1] / "src"
 if str(_SRC) not in sys.path:
     sys.path.insert(0, str(_SRC))
 
-from pyiceberg.catalog import Catalog  # noqa: E402
+from pyiceberg.catalog import Catalog
 
-from common.enums import DatasetType, DataStageType  # noqa: E402
-from config.lakehouse import GCPLakehouseConfig  # noqa: E402
-from config.loader import ConfigLoader  # noqa: E402
+from common.enums import DatasetType, DataStageType
+from config.lakehouse import GCPLakehouseConfig
+from config.loader import ConfigLoader
 
 load_dotenv()
+logger = logging.getLogger(__name__)
 
 _LOG_FORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 
@@ -92,27 +93,27 @@ def purge_iceberg_stage(catalog: Catalog, bucket: str, stage: DataStageType) -> 
     gcloud_bin = shutil.which("gcloud") or "gcloud"
     for namespace in stage_namespaces(stage):
         for identifier in catalog.list_tables(namespace):
-            logging.info(f"Dropping Iceberg table {'.'.join(identifier)}")
+            logger.info(f"Dropping Iceberg table {'.'.join(identifier)}")
             catalog.drop_table(identifier)
         target: str = f"gs://{bucket}/{namespace}/**"
-        logging.info(f"Purging GCS {stage.value} data - {target}")
+        logger.info(f"Purging GCS {stage.value} data - {target}")
         try:
             subprocess.run([gcloud_bin, "storage", "rm", "-r", target], check=True)
         except subprocess.CalledProcessError as e:
-            logging.error(f"gcloud failed for {target} - {e}")
+            logger.error(f"gcloud failed for {target} - {e}")
             sys.exit(1)
 
 
 def purge_bigquery(project: str, dataset: str) -> None:
     target: str = f"{project}:{dataset}"
     bq_bin = shutil.which("bq") or "bq"
-    logging.info(f"Purging BigQuery dataset (Gold layer) - {target} (tables are dropped with it)")
+    logger.info(f"Purging BigQuery dataset (Gold layer) - {target} (tables are dropped with it)")
     try:
         subprocess.run([bq_bin, "rm", "-r", "-f", "-d", target], check=True)
     except subprocess.CalledProcessError as e:
-        logging.error(f"bq failed for {target} - {e}")
+        logger.error(f"bq failed for {target} - {e}")
         sys.exit(1)
-    logging.info("BigQuery dataset dropped. Recreate tables with `make dbt-run` (dbt run).")
+    logger.info("BigQuery dataset dropped. Recreate tables with `make dbt-run` (dbt run).")
 
 
 def selected_stages(args: argparse.Namespace) -> list[DataStageType]:
@@ -126,13 +127,13 @@ def selected_stages(args: argparse.Namespace) -> list[DataStageType]:
 
 
 def log_plan(stages: list[DataStageType], bucket: str, project: str, dataset: str) -> None:
-    logging.info("The following destructive actions will be executed:")
+    logger.info("The following destructive actions will be executed:")
     for stage in stages:
         if stage == DataStageType.GOLD:
-            logging.info(f"  - bq rm -r -f -d {project}:{dataset}")
+            logger.info(f"  - bq rm -r -f -d {project}:{dataset}")
         else:
             for namespace in stage_namespaces(stage):
-                logging.info(
+                logger.info(
                     f"  - drop all Iceberg tables in {namespace}; gcloud storage rm -r gs://{bucket}/{namespace}/**"
                 )
 
@@ -143,7 +144,7 @@ def confirm_or_exit() -> None:
     except (EOFError, KeyboardInterrupt):
         answer = ""
     if answer != "yes":
-        logging.error("Aborted - nothing was deleted.")
+        logger.error("Aborted - nothing was deleted.")
         sys.exit(1)
 
 
@@ -153,7 +154,7 @@ def main() -> None:
     try:
         cfg: dict = load_settings()
     except FileNotFoundError as e:
-        logging.error(f"Could not load settings - {e}")
+        logger.error(f"Could not load settings - {e}")
         sys.exit(1)
     _setup_logging(cfg.get("logging"))
 
@@ -174,7 +175,7 @@ def main() -> None:
             catalog = catalog or open_catalog()
             purge_iceberg_stage(catalog, bucket, stage)
 
-    logging.info("Purge complete.")
+    logger.info("Purge complete.")
 
 
 def run() -> None:

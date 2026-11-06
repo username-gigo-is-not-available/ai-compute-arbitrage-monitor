@@ -34,7 +34,6 @@ from __future__ import annotations
 import builtins
 import contextlib
 import importlib.util
-import logging
 import os
 import shutil
 import subprocess
@@ -206,7 +205,6 @@ def test_gcs_cp_issues_expected_gcloud_command() -> None:
 
     def fake_run(cmd, **kwargs):
         captured["cmd"] = cmd
-        return None
 
     try:
         with _patched(subprocess, run=fake_run):
@@ -268,7 +266,6 @@ def _run_purge(
         if fail:
             raise subprocess.CalledProcessError(returncode=1, cmd=cmd)
         calls.append(list(cmd))
-        return None
 
     argv = [*argv, "--confirm"] if confirm is None else argv
     exit_code: int | None = None
@@ -324,7 +321,6 @@ def test_purge_bucket_with_trailing_slash_is_stripped() -> None:
 
     def fake_run(cmd, **kwargs):
         calls.append(list(cmd))
-        return None
 
     try:
         _set_env(bucket=f"{EXPECTED_BUCKET}/")
@@ -390,7 +386,6 @@ def test_purge_uses_logging_not_print() -> None:
 
     def fake_run(cmd, **kwargs):
         calls.append(list(cmd))
-        return None
 
     def capture_info(msg, *args, **kwargs):
         records.append(("INFO", msg % args if args else msg))
@@ -405,7 +400,7 @@ def test_purge_uses_logging_not_print() -> None:
             _patched(subprocess, run=fake_run),
             _patched(shutil, which=lambda _name: None),
             _patched(sys, argv=["purge_data.py", "--bronze", "--confirm"]),
-            _patched(logging, info=capture_info, error=capture_error),
+            _patched(script.logger, info=capture_info, error=capture_error),
             _patched(script, open_catalog=lambda: _FakeCatalog(calls)),
         ):
             script.main()
@@ -477,7 +472,6 @@ def test_purge_prompt_eof_exits_nonzero_and_purges_nothing() -> None:
 
     def fake_run(cmd, **kwargs):
         calls.append(list(cmd))
-        return None
 
     def raise_eof(_prompt):
         raise EOFError

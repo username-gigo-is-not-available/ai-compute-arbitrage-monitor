@@ -11,11 +11,11 @@ import pytest
 pytest.importorskip("airflow")
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "infra" / "airflow" / "dags"))
 
-from core_dag_factory import DagFactory  # noqa: E402
-from marts_dag_factory import MartsDagFactory  # noqa: E402
-from pipeline_config import PIPELINE_CONFIGS  # noqa: E402
-from spark_job_strategy import LocalSparkJobStrategy  # noqa: E402
-from transform_strategy import LocalTransformStrategy  # noqa: E402
+from core_dag_factory import DagFactory
+from marts_dag_factory import MartsDagFactory
+from pipeline_config import PIPELINE_CONFIGS
+from spark_job_strategy import LocalSparkJobStrategy
+from transform_strategy import LocalTransformStrategy
 
 
 class _FakeDbtAdapter:
