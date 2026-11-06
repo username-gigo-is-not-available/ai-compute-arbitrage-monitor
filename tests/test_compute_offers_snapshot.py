@@ -1,26 +1,14 @@
-"""ComputeOffersIngestor stamps offers with the scheduled snapshot_at and refuses backfills (ADR-019).
+"""ComputeOffersIngestor stamps offers with the scheduled snapshot_at and refuses backfills (ADR-019)."""
 
-Run directly:   uv run python tests/test_compute_offers_snapshot.py
-Under pytest:   uv run --extra dev pytest tests/test_compute_offers_snapshot.py
-"""
-
-from __future__ import annotations
-
-import unittest
 from datetime import UTC, datetime, timedelta
 from unittest import mock
 
-from pyiceberg.schema import Schema
-from pyiceberg.types import NestedField, StringType
+from fakes import build_ingestor
 
-from common.classes import Dataset, Snapshot
+from common.classes import Snapshot
 from common.enums import DatasetName, DatasetType, OfferType
 from config.apis.vast_ai import VastAIConfig
-from config.http import HttpConfig
-from config.lakehouse import GCPLakehouseConfig
-from ingest.http_client import HttpClient
 from ingest.sources.compute_offers import ComputeOffersIngestor
-from ingest.write_strategy import AppendByDay, BronzeTable
 
 OFFER = {
     "ask_contract_id": 111,
@@ -42,52 +30,48 @@ OFFER = {
 }
 
 
+VAST_AI = VastAIConfig(
+    enabled=True,
+    base_url="https://console.vast.test/api/v0",
+    limit=512,
+    split_at=500,
+    census_parts=4,
+    request_interval_seconds=0,
+)
+
+
 def _ingestor(snapshot_at: datetime) -> ComputeOffersIngestor:
-    return ComputeOffersIngestor(
-        dataset=Dataset(dataset_name=DatasetName.COMPUTE_OFFERS, dataset_type=DatasetType.SOURCES),
-        config=VastAIConfig(
-            enabled=True,
-            base_url="https://console.vast.test/api/v0",
-            limit=512,
-            split_at=500,
-            census_parts=4,
-            request_interval_seconds=0,
-        ),
-        lakehouse_config=GCPLakehouseConfig(catalog_id="test", project_id="test", warehouse="gs://test"),
-        bronze_table=BronzeTable(
-            Schema(NestedField(field_id=1, name="id", field_type=StringType(), required=False)),
-            AppendByDay(column="snapshot_at"),
-        ),
-        http=HttpClient(HttpConfig(timeout_seconds=30, retry_count=1, retry_delay_seconds=0)),
+    return build_ingestor(
+        ComputeOffersIngestor,
+        DatasetName.COMPUTE_OFFERS,
+        DatasetType.SOURCES,
+        VAST_AI,
         snapshot=Snapshot(at=snapshot_at),
     )
 
 
-class TestSnapshotAt(unittest.TestCase):
-    def test_parse_stamps_scheduled_snapshot_at_and_real_ingested_at(self):
-        snapshot_at = datetime(2026, 10, 1, 14, tzinfo=UTC)
-        fetched = datetime(2026, 10, 1, 14, 0, 7, tzinfo=UTC)
-        offer = _ingestor(snapshot_at).parse(data=OFFER, ingested_at=fetched, offer_type=OfferType.ON_DEMAND)
-        self.assertEqual(offer.snapshot_at, snapshot_at)
-        self.assertEqual(offer.ingested_at, fetched)
-        self.assertEqual(offer.to_row()["snapshot_at"], snapshot_at)
-
-    def test_backfill_is_skipped_without_fetching(self):
-        ingestor = _ingestor(datetime.now(UTC).replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(hours=25))
-        with mock.patch.object(ingestor, "load") as load_mock:
-            ingestor.run()
-        load_mock.assert_not_called()
-
-    def test_today_runs(self):
-        ingestor = _ingestor(datetime.now(UTC).replace(hour=0, minute=0, second=0, microsecond=0))
-
-        with (
-            mock.patch.object(ingestor, "load", return_value=[]),
-            mock.patch.object(ingestor, "handle_result") as handle_mock,
-        ):
-            ingestor.run()
-        handle_mock.assert_called_once_with([])
+def test_parse_stamps_scheduled_snapshot_at_and_real_ingested_at():
+    snapshot_at = datetime(2026, 10, 1, 14, tzinfo=UTC)
+    fetched = datetime(2026, 10, 1, 14, 0, 7, tzinfo=UTC)
+    offer = _ingestor(snapshot_at).parse(data=OFFER, ingested_at=fetched, offer_type=OfferType.ON_DEMAND)
+    assert offer.snapshot_at == snapshot_at
+    assert offer.ingested_at == fetched
+    assert offer.to_row()["snapshot_at"] == snapshot_at
 
 
-if __name__ == "__main__":
-    unittest.main()
+def test_backfill_is_skipped_without_fetching():
+    ingestor = _ingestor(datetime.now(UTC).replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(hours=25))
+    with mock.patch.object(ingestor, "load") as load_mock:
+        ingestor.run()
+    load_mock.assert_not_called()
+
+
+def test_today_runs():
+    ingestor = _ingestor(datetime.now(UTC).replace(hour=0, minute=0, second=0, microsecond=0))
+
+    with (
+        mock.patch.object(ingestor, "load", return_value=[]),
+        mock.patch.object(ingestor, "handle_result") as handle_mock,
+    ):
+        ingestor.run()
+    handle_mock.assert_called_once_with([])

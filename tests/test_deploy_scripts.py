@@ -19,27 +19,15 @@ The ``purge_data`` helper additionally verifies that the purge script:
   * exits non-zero when settings.yaml is missing and when the confirmation
     prompt hits EOF/declines, without issuing any gcloud/bq command,
   * issues the expected ``gcloud storage rm`` / ``bq rm`` commands per stage.
-
-Run directly (no deps added, no GCP touched)::
-
-    uv run python tests/test_deploy_scripts.py
-
-Run under pytest (optional, once the dev-extra is installed)::
-
-    uv run --extra dev pytest tests/test_deploy_scripts.py
 """
 
-from __future__ import annotations
-
 import builtins
-import contextlib
 import importlib.util
 import os
 import shutil
 import subprocess
 import sys
 import tempfile
-import traceback
 from contextlib import contextmanager
 from pathlib import Path
 
@@ -494,56 +482,3 @@ def test_purge_prompt_eof_exits_nonzero_and_purges_nothing() -> None:
         _restore_env()
         subprocess.run = real_run
     assert calls == [], calls
-
-
-# ---------------------------------------------------------------------------
-# Standalone runner (also collectable by pytest: the test_* functions above)
-# ---------------------------------------------------------------------------
-
-_TESTS = [
-    test_dataproc_builds_correct_gcs_destinations,
-    test_composer_builds_correct_gcs_destinations,
-    test_missing_bucket_env_raises_keyerror,
-    test_missing_package_dir_exits_nonzero,
-    test_gcs_cp_issues_expected_gcloud_command,
-    test_purge_no_flags_exits_nonzero_and_purges_nothing,
-    test_purge_conflicting_flags_exits_nonzero_and_purges_nothing,
-    test_purge_bronze_confirm_drops_tables_then_deletes_namespace_prefixes,
-    test_purge_bucket_with_trailing_slash_is_stripped,
-    test_purge_gold_confirm_issues_expected_bq_command,
-    test_purge_all_confirm_issues_expected_commands_in_order,
-    test_purge_declined_prompt_exits_nonzero_and_purges_nothing,
-    test_purge_confirmed_interactively_executes,
-    test_purge_subprocess_failure_exits_nonzero,
-    test_purge_uses_logging_not_print,
-    test_purge_missing_project_env_raises_keyerror,
-    test_purge_missing_dataset_env_raises_keyerror,
-    test_purge_missing_settings_exits_nonzero,
-    test_purge_prompt_eof_exits_nonzero_and_purges_nothing,
-]
-
-
-def _run_standalone() -> int:
-    # The scripts print a "→" (U+2192) which the Windows cp1252 console cannot
-    # encode; force UTF-8 output so the command-logic assertions are what run.
-    # (Linux/GitHub Actions already default to UTF-8.)
-    for _stream in (sys.stdout, sys.stderr):
-        with contextlib.suppress(AttributeError, ValueError):
-            _stream.reconfigure(encoding="utf-8")
-    failures = 0
-    for t in _TESTS:
-        try:
-            t()
-        except Exception:  # noqa: BLE001 - report all failures in the standalone run
-            failures += 1
-            print(f"FAIL  {t.__name__}")
-            traceback.print_exc()
-        else:
-            print(f"PASS  {t.__name__}")
-    total = len(_TESTS)
-    print(f"\n{total - failures}/{total} passed")
-    return 1 if failures else 0
-
-
-if __name__ == "__main__":
-    sys.exit(_run_standalone())

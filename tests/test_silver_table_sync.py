@@ -1,19 +1,10 @@
-"""Silver tables are synced by the same sync_table as Bronze, from their Spark schema (ADR-022).
-
-Run directly:   uv run python tests/test_silver_table_sync.py
-Under pytest:   uv run --extra dev pytest tests/test_silver_table_sync.py
-"""
-
-from __future__ import annotations
-
-import unittest
+"""Silver tables are synced by the same sync_table as Bronze, from their Spark schema (ADR-022)."""
 
 from pyiceberg.catalog import Catalog
 from pyiceberg.partitioning import PartitionField, PartitionSpec
 from pyiceberg.schema import assign_fresh_schema_ids
 from pyiceberg.transforms import DayTransform, HourTransform
 from pyspark.sql.pandas.types import to_arrow_schema
-from test_lakehouse_sync import _FakeCatalog
 
 from lakehouse.partition import Partition
 from lakehouse.sync import sync_table
@@ -27,60 +18,44 @@ COMPUTE_OFFERS = SilverTable(
 TABLE = ("silver_sources", "compute_offers")
 
 
-class TestIcebergSchema(unittest.TestCase):
+class TestIcebergSchema:
     def test_columns_follow_the_spark_schema_then_the_meta_columns(self):
         names = [f.name for f in COMPUTE_OFFERS.iceberg_schema().fields]
-        self.assertEqual(names, [f.name for f in COMPUTE_OFFERS_SILVER_SCHEMA.fields] + ["ingested_at", "processed_at"])
+        assert names == [f.name for f in COMPUTE_OFFERS_SILVER_SCHEMA.fields] + ["ingested_at", "processed_at"]
 
     def test_every_column_is_optional(self):
-        self.assertFalse(any(f.required for f in COMPUTE_OFFERS.iceberg_schema().fields))
+        assert not any(f.required for f in COMPUTE_OFFERS.iceberg_schema().fields)
 
     def test_types_carry_over(self):
         schema = COMPUTE_OFFERS.iceberg_schema()
-        self.assertEqual(str(schema.find_field("snapshot_at").field_type), "timestamptz")
-        self.assertEqual(str(schema.find_field("offer_id").field_type), "int")
-        self.assertEqual(str(schema.find_field("gpu_ids").field_type), "list<long>")
+        assert str(schema.find_field("snapshot_at").field_type) == "timestamptz"
+        assert str(schema.find_field("offer_id").field_type) == "int"
+        assert str(schema.find_field("gpu_ids").field_type) == "list<long>"
 
 
-class TestPartitionSpec(unittest.TestCase):
+class TestPartitionSpec:
     def test_day_transform_partitions_by_day(self):
         spec = COMPUTE_OFFERS.partition_spec()
-        self.assertEqual([(f.name, str(f.transform)) for f in spec.fields], [("snapshot_at_day", "day")])
+        assert [(f.name, str(f.transform)) for f in spec.fields] == [("snapshot_at_day", "day")]
 
     def test_default_transform_partitions_by_identity(self):
         spec = SilverTable(ELECTRICITY_TARIFF_TIERS_SILVER_SCHEMA, OverwriteByPartition()).partition_spec()
-        self.assertEqual([(f.name, str(f.transform)) for f in spec.fields], [("valid_from", "identity")])
+        assert [(f.name, str(f.transform)) for f in spec.fields] == [("valid_from", "identity")]
 
 
-class TestSyncSilverTable(unittest.TestCase):
-    def setUp(self):
-        self.catalog = _FakeCatalog()
+def test_existing_spark_created_table_converges(catalog):
+    # As Spark created it: required columns from nullable=False, partitioned by hour(snapshot_at)
+    spark_created = assign_fresh_schema_ids(
+        Catalog._convert_schema_if_needed(to_arrow_schema(COMPUTE_OFFERS.table_schema()))
+    )
+    source_id = spark_created.find_field("snapshot_at").field_id
+    hourly = PartitionSpec(
+        PartitionField(source_id=source_id, field_id=1000, transform=HourTransform(), name="snapshot_at_hour")
+    )
+    catalog.create_table_if_not_exists(TABLE, schema=spark_created, partition_spec=hourly)
 
-    def tearDown(self):
-        self.catalog.tmp.cleanup()
+    sync_table(catalog, TABLE, schema=COMPUTE_OFFERS.iceberg_schema(), partition_spec=COMPUTE_OFFERS.partition_spec())
 
-    def _sync(self) -> None:
-        sync_table(
-            self.catalog, TABLE, schema=COMPUTE_OFFERS.iceberg_schema(), partition_spec=COMPUTE_OFFERS.partition_spec()
-        )
-
-    def test_existing_spark_created_table_converges(self):
-        # As Spark created it: required columns from nullable=False, partitioned by hour(snapshot_at)
-        spark_created = assign_fresh_schema_ids(
-            Catalog._convert_schema_if_needed(to_arrow_schema(COMPUTE_OFFERS.table_schema()))
-        )
-        source_id = spark_created.find_field("snapshot_at").field_id
-        hourly = PartitionSpec(
-            PartitionField(source_id=source_id, field_id=1000, transform=HourTransform(), name="snapshot_at_hour")
-        )
-        self.catalog.create_table_if_not_exists(TABLE, schema=spark_created, partition_spec=hourly)
-
-        self._sync()
-
-        table = self.catalog.load_table(TABLE)
-        self.assertFalse(any(f.required for f in table.schema().fields))
-        self.assertEqual([(f.name, str(f.transform)) for f in table.spec().fields], [("snapshot_at_day", "day")])
-
-
-if __name__ == "__main__":
-    unittest.main()
+    table = catalog.load_table(TABLE)
+    assert not any(f.required for f in table.schema().fields)
+    assert [(f.name, str(f.transform)) for f in table.spec().fields] == [("snapshot_at_day", "day")]
