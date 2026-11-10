@@ -4,7 +4,6 @@ from datetime import datetime, timedelta
 from common.enums import DatasetName
 from config.datasets import DATASETS
 
-# Shared by every DAG: the dataset DAGs and the marts DAG
 DEFAULT_ARGS = {
     "owner": "gigo",
     "retries": 1,
@@ -14,8 +13,7 @@ DEFAULT_ARGS = {
 DAG_TAGS = {"ai", "compute", "arbitrage", "monitor", "capstone"}
 
 
-# How Airflow schedules one dataset. Every dataset runs on the same schedule today; give DatasetDeclaration a
-# schedule field once one needs a different one.
+# Every dataset runs on the same schedule today; give DatasetDeclaration a schedule field once one needs its own
 @dataclass(frozen=True)
 class PipelineConfig:
     dataset_name: DatasetName

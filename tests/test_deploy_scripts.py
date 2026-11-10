@@ -61,11 +61,6 @@ def env(monkeypatch: pytest.MonkeyPatch) -> pytest.MonkeyPatch:
     return monkeypatch
 
 
-# ---------------------------------------------------------------------------
-# package_dataproc_modules / sync_composer_modules
-# ---------------------------------------------------------------------------
-
-
 def test_dataproc_builds_correct_gcs_destinations(env) -> None:
     """Valid packages + bucket set -> exactly the three jobs/ blobs, correct gs:// path."""
     script = _load_script("package_dataproc_modules")
@@ -123,11 +118,6 @@ def test_gcs_cp_issues_expected_gcloud_command(monkeypatch) -> None:
     monkeypatch.setattr(subprocess, "run", lambda cmd, **kwargs: commands.append(cmd))
     script.gcs_cp("src/refine/", f"gs://{EXPECTED_BUCKET}/jobs/refine/")
     assert commands == [["gcloud", "storage", "cp", "-r", "src/refine/", f"gs://{EXPECTED_BUCKET}/jobs/refine/"]]
-
-
-# ---------------------------------------------------------------------------
-# purge_data
-# ---------------------------------------------------------------------------
 
 
 class _FakeCatalog:
