@@ -1,9 +1,9 @@
--- Test: Verify that the derived cost/profit metrics in fct_compute_offers are internally consistent (ADR-021).
+-- Verify that the derived cost/profit metrics in fct_compute_offers are internally consistent (ADR-021).
 --   1. profit = revenue_usd_per_hr - cost
 --   2. cost per TFLOP = cost / total_system_tflops
 --   3. profit per TFLOP = profit / total_system_tflops
 --   4. cost > 0 (electricity cost is always positive)
--- Floats are compared within 1e-9. If any row violates these invariants, it will be returned.
+-- Floats are compared within 1e-9.
 
 with invariant_check as (
     select

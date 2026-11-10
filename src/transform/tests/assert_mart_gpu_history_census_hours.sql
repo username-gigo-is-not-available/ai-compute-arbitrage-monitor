@@ -1,9 +1,8 @@
--- Test: mart_gpu_history prices each census at every local hour of its census date, with every machine (#40).
+-- mart_gpu_history prices each census at every local hour of its census date, with every machine (#40).
 --   1. Each census has one row set per local hour of its date: 24 hours, or 23/25 on a DST change day.
 --   2. Each (census, hour, tier) counts every machine of the census exactly once - no filters, nothing dropped.
 --   3. Each hour's window is the EVN schedule's window at that local hour, recomputed with datetime() independently
 --      of the evn_* macros (ADR-021).
--- If any census, hour or row breaks these rules, it will be returned.
 
 with census_machines as (
     select

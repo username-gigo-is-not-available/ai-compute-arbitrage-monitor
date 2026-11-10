@@ -1,10 +1,8 @@
--- Test: mart_gpu_forecast carries, for every hour, every GPU variant (model + memory) and every current tariff tier
+-- mart_gpu_forecast carries, for every hour, every GPU variant (model + memory) and every current tariff tier
 -- whose window matches the hour (ADR-021). The app picks the user's consumer category and walks the tariff blocks,
 -- so no tier may be dropped: a household high-tariff hour must carry all of its blocks, not just block 1. Expected
 -- counts are derived from dim_electricity_tariff_tiers and from the mart's own GPU variants, not hardcoded.
 -- Missing hours are caught by assert_mart_gpu_forecast_horizon.
--- If any hour has a different number of GPU variants, or any (GPU variant, hour) a different number of tiers, than
--- expected, it will be returned.
 
 with row_counts as (
     select

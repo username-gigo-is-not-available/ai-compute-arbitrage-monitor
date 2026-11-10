@@ -1,7 +1,6 @@
--- Test: Recompute fct_compute_offers' cost from its inputs (ADR-021, ADR-025).
+-- Recompute fct_compute_offers' cost from its inputs (ADR-021, ADR-025).
 --   cost = kWh x (tariff + distribution fee) x (1 + VAT) / USD->MKD rate
 -- VAT applies to households only: a VAT-registered business reclaims it.
--- If any row's cost differs from the recomputed one, it will be returned.
 
 with expected as (
     select
