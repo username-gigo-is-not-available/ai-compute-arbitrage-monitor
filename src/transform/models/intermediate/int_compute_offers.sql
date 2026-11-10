@@ -51,11 +51,9 @@ machines as (
 
 transformed as (
     select
-        -- ids
         machine_id,
         host_id,
 
-        -- prices for the whole machine: per GPU x GPUs in the machine
         total_price_per_gpu_usd_per_hr * number_of_machine_gpus as total_price_usd_per_hr,
         base_price_per_gpu_usd_per_hr * number_of_machine_gpus as gpu_price_usd_per_hr,
         deep_learning_score_per_usd,
@@ -64,7 +62,6 @@ transformed as (
         network_upload_cost_usd_per_gbit,
         network_download_cost_usd_per_gbit,
 
-        -- gpu
         gpu_architecture,
         gpu_model_name,
         cast({{ mb_to_gb(round_gpu_mb('gpu_memory_mb')) }} as int64) as gpu_memory_gb,
@@ -75,38 +72,31 @@ transformed as (
         tflops_per_gpu * number_of_machine_gpus as total_system_tflops,
         gpu_bandwidth_gbytes_per_sec,
 
-        -- cpu (as allocated to the largest offer)
         cpu_architecture,
         cpu_model_name,
         number_of_cpu_cores,
         cpu_clock_speed_ghz,
 
-        -- ram / disk (as allocated to the largest offer)
         {{ mb_to_gb('ram_mb') }} as ram_gb,
         disk_model_name,
         disk_space_gb,
         {{ mb_to_gb('disk_bandwidth_mbytes_per_sec') }} as disk_bandwidth_gbytes_per_sec,
 
-        -- pcie
         pcie_generation,
         pcie_bandwidth_gbytes_per_sec,
 
-        -- network
         network_download_mbits_per_sec,
         network_upload_mbits_per_sec,
 
-        -- scores (of the largest offer)
         reliability_score,
         deep_learning_score,
 
-        -- location
         {{ extract_country_code('geolocation') }} as country_code,
 
-        -- flags: available when any of its offers can be rented now; otherwise taken (CONTEXT.md)
+        -- Available when any of its offers can be rented now; otherwise taken (CONTEXT.md)
         verification_flag,
         any_offer_rentable as rentable_flag,
 
-        -- time
         snapshot_at as valid_from,
         cast('9999-12-31' as timestamp) as valid_to,
         processed_at
