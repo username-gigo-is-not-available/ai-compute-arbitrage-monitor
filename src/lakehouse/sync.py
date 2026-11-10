@@ -66,4 +66,5 @@ def repartition_existing_files(table: Table) -> None:
     if all(task.file.spec_id == current_spec_id for task in table.scan().plan_files()):
         return
     logger.info(f"Repartitioning {table.name()} into partition spec {current_spec_id}")
+    # Reads the whole table into memory: fine while tables are small, a big one would need a Spark rewrite
     table.overwrite(table.scan().to_arrow())

@@ -1,3 +1,4 @@
+{#- BT/HT are Macedonian ВТ (висока, high) and НТ (ниска, low); Silver turns the Cyrillic letters into Latin. -#}
 {% macro extract_tariff_window_type(col) %}
     case
         when array_reverse(split({{ col }}, ' '))[safe_offset(0)] in ('BT1', 'BT2', 'BT3', 'BT4', 'BT')

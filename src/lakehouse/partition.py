@@ -13,4 +13,5 @@ class Partition:
     def spec(self, schema: Schema) -> PartitionSpec:
         field_id = schema.find_field(self.column).field_id
         name = f"{self.column}_day" if isinstance(self.transform, DayTransform) else self.column
+        # Iceberg numbers partition fields from 1000
         return PartitionSpec(PartitionField(source_id=field_id, field_id=1000, transform=self.transform, name=name))
