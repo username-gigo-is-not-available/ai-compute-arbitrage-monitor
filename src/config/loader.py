@@ -27,7 +27,7 @@ class ConfigLoader:
         self._setup_logging()
 
     def get_execution_type(self) -> ExecutionType:
-        execution_type: ExecutionType = ExecutionType(self._raw.get("execution_type", "local"))
+        execution_type = self._raw.get("execution_type", "local")
         try:
             return ExecutionType(execution_type)
         except ValueError:
