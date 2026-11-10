@@ -17,7 +17,6 @@ ConfigT = TypeVar("ConfigT", bound=DatasetConfig)
 RecordT = TypeVar("RecordT", bound=BaseRecord)
 
 
-# Each ingestor names its config and record type, e.g. Ingestor[VastAIConfig, VastAIOffer].
 @dataclass
 class Ingestor(ABC, Generic[ConfigT, RecordT]):
     dataset: Dataset
@@ -44,8 +43,7 @@ class Ingestor(ABC, Generic[ConfigT, RecordT]):
         self.store(data)
 
     def store(self, data: list[RecordT]) -> None:
-        # The setup task has already made the table match its declaration (lakehouse.setup); a table that does not
-        # match fails this write
+        # lakehouse.setup has already synced the table to its declaration, so it is not synced here
         catalog = self.lakehouse_config.open_catalog()
         table = catalog.load_table(self.lakehouse_config.table_id(DataStageType.BRONZE, self.dataset))
         rows = [r.to_row() for r in data]

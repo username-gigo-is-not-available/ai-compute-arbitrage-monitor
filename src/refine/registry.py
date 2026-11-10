@@ -15,8 +15,7 @@ from refine.sources.exchange_rates import ExchangeRatesPipeline
 from refine.tables import SILVER_TABLES
 
 
-# The Silver side of each dataset that loads data (DML): which pipeline cleans it and which table it writes.
-# The table's shape is in refine.tables; type and settings come from config.datasets.DATASETS.
+# Loading only (DML): the table's shape is in refine.tables, type and settings in config.datasets
 @dataclass(frozen=True)
 class RefineSpec:
     pipeline: type[Pipeline]

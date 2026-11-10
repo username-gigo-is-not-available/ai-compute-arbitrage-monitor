@@ -28,10 +28,7 @@ def finished(retry_state: RetryCallState) -> Future:
     return retry_state.outcome
 
 
-# Every ingestor's HTTP GET. A non-200 response or a transport error is retried up to retry_count attempts, waiting
-# retry_delay_seconds, or the server's Retry-After when longer. A Retry-After beyond the whole retry budget (Vast.ai's
-# daily quota) is not waited out. After the last attempt a non-200 raises requests.HTTPError and a transport error
-# re-raises, so the Airflow task fails.
+# A Retry-After longer than the whole retry budget (Vast.ai's daily quota) is not waited out: the task fails now.
 @dataclass
 class HttpClient:
     config: HttpConfig
@@ -68,8 +65,7 @@ class HttpClient:
             return self.config.retry_delay_seconds
         return self.config.retry_wait_seconds(outcome.result().headers)
 
-    # After the last attempt: return the last response, so get() raises its HTTPError, or re-raise the last
-    # transport error
+    # Hands back the last response so get() raises its HTTPError (or re-raises the last transport error)
     @staticmethod
     def last_outcome(retry_state: RetryCallState) -> requests.Response:
         return finished(retry_state).result()

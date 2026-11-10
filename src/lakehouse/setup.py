@@ -6,9 +6,8 @@ from lakehouse.sync import sync_table
 from refine.tables import SILVER_TABLES
 
 
-# The DDL step: makes one dataset's Bronze and Silver tables match their declarations (ADR-022), before ingest and
-# refine load anything. Imports pyspark (through the Silver schemas), so the DAG starts it as a command and never
-# imports it: Composer does not have pyspark.
+# Imports pyspark (through the Silver schemas), so the DAG runs it as a command and never imports it: Composer has
+# no pyspark (ADR-022)
 def run_setup(dataset: str) -> None:
     name = DatasetName(dataset)
     declaration = DATASETS[name]

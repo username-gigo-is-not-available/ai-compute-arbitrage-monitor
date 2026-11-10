@@ -7,9 +7,7 @@ from common.types import DatasetConfig
 from config.loader import ConfigLoader
 
 
-# What every stage needs to know about a dataset: its type (which namespace it lives in), which settings block
-# configures it, and a one-line description (the Airflow DAG shows it). Each stage's registry (ingest.registry,
-# refine.registry) adds only its own parts; the DAG builds one pipeline per entry here.
+# The one list of datasets: each stage's registry adds only its own parts, and the DAG builds one pipeline per entry
 @dataclass(frozen=True)
 class DatasetDeclaration:
     name: DatasetName
