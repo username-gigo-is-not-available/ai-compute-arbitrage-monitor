@@ -29,7 +29,6 @@ normalized_offers as (
 )
 
 select
-    -- gpu
     gpu_architecture,
     gpu_model_name,
     gpu_memory_gb,
@@ -38,31 +37,25 @@ select
     gpu_max_cuda_version_supported,
     tflops_per_gpu,
 
-    -- efficiency
     kwh_per_tflop,
 
-    -- host
     verification_flag,
     rentable_flag,
     reliability_score,
     country_code,
 
-    -- revenue / cost / profit (USD/hr per GPU): electricity only, the access fee is paid anyway (ADR-025)
     revenue_per_gpu_usd_per_hr,
     cost_usd_per_hr / nullif(number_of_machine_gpus, 0) as cost_per_gpu_usd_per_hr,
     profit_usd_per_hr / nullif(number_of_machine_gpus, 0) as profit_per_gpu_usd_per_hr,
 
-    -- per TFLOP (USD)
     cost_per_tflop_usd,
     profit_per_tflop_usd,
 
-    -- tariff tier context
     tariff_tier_skey,
     consumer_category,
     tariff_window_type,
     tariff_block_number,
 
-    -- time
     valid_from
 from normalized_offers
 where rn = 1

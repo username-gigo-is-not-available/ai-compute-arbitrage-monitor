@@ -76,7 +76,6 @@ priced as (
 )
 
 select
-    -- time
     census_at,
     census_date,
     history_hour,
@@ -84,34 +83,29 @@ select
     hour_of_day,
     tariff_window_type as scheduled_tariff_window_type,
 
-    -- gpu variant
     gpu_architecture,
     gpu_model_name,
     gpu_memory_gb,
     approx_quantiles(nullif(gpu_tdp_watts, 0), 100)[offset(50)] as gpu_tdp_watts,
     approx_quantiles(nullif(tflops_per_gpu, 0), 100)[offset(50)] as tflops_per_gpu,
 
-    -- supply
     count(*) as number_of_machines,
     sum(number_of_machine_gpus) as total_number_of_machine_gpus,
 
-    -- revenue (USD/hr per GPU)
     approx_quantiles(revenue_per_gpu_usd_per_hr, 100)[offset(50)] as market_ask_per_gpu_usd_per_hr,
 
-    -- profit per GPU (USD/hr): electricity only, the access fee is paid anyway (ADR-025). The median is the typical
-    -- machine; the average is pulled up by a few overpriced listings (a 4090 at $40/hr on 10-21).
+    -- The median is the typical machine; the average is pulled up by a few overpriced listings (a 4090 at $40/hr
+    -- on 10-21).
     approx_quantiles(profit_per_gpu_usd_per_hr, 100)[offset(50)] as median_profit_per_gpu_usd_per_hr,
     avg(profit_per_gpu_usd_per_hr) as avg_profit_per_gpu_usd_per_hr,
     min(profit_per_gpu_usd_per_hr) as min_profit_per_gpu_usd_per_hr,
     max(profit_per_gpu_usd_per_hr) as max_profit_per_gpu_usd_per_hr,
 
-    -- profit per TFLOP (USD)
     approx_quantiles(profit_per_tflop_usd, 100)[offset(50)] as median_profit_per_tflop_usd,
     avg(profit_per_tflop_usd) as avg_profit_per_tflop_usd,
     min(profit_per_tflop_usd) as min_profit_per_tflop_usd,
     max(profit_per_tflop_usd) as max_profit_per_tflop_usd,
 
-    -- tariff tier context
     tariff_tier_skey,
     consumer_category,
     tariff_block_number

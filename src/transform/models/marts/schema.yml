@@ -137,7 +137,6 @@ models:
       - name: usd_to_mkd_rate
         description: "USD to MKD exchange rate locked at valid_from"
 
-      # tariff tier context
       - name: tariff_tier_skey
         description: "Surrogate key of the tariff tier this row represents"
         tests:
@@ -159,7 +158,6 @@ models:
       - name: tariff_block_number
         description: "Tariff block number within the consumer category (1-4 for household high, null for low/business)"
 
-      # cost / profit columns (tier-scoped): electricity only, the access fee is paid anyway (ADR-025)
       - name: cost_usd_per_hr
         description: "Cost in USD/hr for this tariff tier - electricity + distribution fee (+ household VAT)"
 
@@ -240,7 +238,6 @@ models:
       - name: revenue_per_gpu_usd_per_hr
         description: "Revenue per GPU in USD/hr"
 
-      # per-GPU cost / profit columns (tier-scoped): electricity only, the access fee is paid anyway (ADR-025)
       - name: cost_per_gpu_usd_per_hr
         description: "Cost per GPU in USD/hr for this tariff tier"
 
@@ -253,7 +250,6 @@ models:
       - name: profit_per_tflop_usd
         description: "Profit per TFLOP in USD for this tariff tier"
 
-      # tariff tier context
       - name: tariff_tier_skey
         description: "Surrogate key of the tariff tier this row represents"
         tests:
@@ -360,7 +356,6 @@ models:
       - name: market_ask_per_gpu_usd_per_hr
         description: "Median per-GPU ask of the variant's machines in USD/hr - the same measure as mart_gpu_forecast's"
 
-      # profit per GPU (USD/hr): electricity only, the access fee is paid anyway (ADR-025)
       - name: median_profit_per_gpu_usd_per_hr
         description: "Median per-GPU profit in USD/hr for this tariff tier - the typical machine; plot this, not the average"
       - name: avg_profit_per_gpu_usd_per_hr
@@ -370,7 +365,6 @@ models:
       - name: max_profit_per_gpu_usd_per_hr
         description: "Maximum per-GPU profit in USD/hr for this tariff tier"
 
-      # profit per TFLOP (USD)
       - name: median_profit_per_tflop_usd
         description: "Median profit per TFLOP in USD for this tariff tier - the typical machine"
       - name: avg_profit_per_tflop_usd
@@ -380,7 +374,6 @@ models:
       - name: max_profit_per_tflop_usd
         description: "Maximum profit per TFLOP in USD for this tariff tier"
 
-      # tariff tier context
       - name: tariff_tier_skey
         description: "Surrogate key of the tariff tier this row represents"
         tests:
@@ -475,7 +468,6 @@ models:
       - name: avg_reliability_score
         description: "Average host reliability score"
 
-      # tariff tier context
       - name: tariff_tier_skey
         description: "Surrogate key of the tariff tier this row represents"
         tests:
