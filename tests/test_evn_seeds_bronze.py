@@ -7,6 +7,7 @@ real selectors from settings.yaml. No network.
 import re
 from pathlib import Path
 
+import pytest
 from fakes import FakeResponse, build_ingestor
 
 from common.enums import ConsumerCategoryType, DatasetName, DatasetType
@@ -26,11 +27,16 @@ PAGES = {
 }
 
 
-def _load(ingestor_class, name: DatasetName) -> list:
-    def send(url: str, **kwargs) -> FakeResponse:
-        return FakeResponse(text=PAGES[url].read_text(encoding="utf-8"))
+def _send(url: str, **kwargs) -> FakeResponse:
+    return FakeResponse(text=PAGES[url].read_text(encoding="utf-8"))
 
-    return build_ingestor(ingestor_class, name, DatasetType.SEEDS, CONFIG, send).load()
+
+def _ingestor(ingestor_class, name: DatasetName):
+    return build_ingestor(ingestor_class, name, DatasetType.SEEDS, CONFIG, _send)
+
+
+def _load(ingestor_class, name: DatasetName) -> list:
+    return _ingestor(ingestor_class, name).load()
 
 
 def test_tiers_read_both_consumer_tables():
@@ -66,3 +72,17 @@ def test_every_record_of_one_fetch_shares_ingested_at_and_valid_from_text():
     assert len({t.ingested_at for t in tiers}) == 1
     assert len({t.valid_from_text for t in tiers}) == 1
     assert re.search(r"\d{2}\.\d{2}\.\d{4}", tiers[0].valid_from_text)
+
+
+@pytest.mark.parametrize(
+    ("ingestor_class", "name", "records"),
+    [
+        (ElectricityTariffTiersIngestor, DatasetName.ELECTRICITY_TARIFF_TIERS, 7),
+        (ElectricityTariffFeesIngestor, DatasetName.ELECTRICITY_TARIFF_FEES, 4),
+        (ElectricityTariffBlocksIngestor, DatasetName.ELECTRICITY_TARIFF_BLOCKS, 4),
+        (ElectricityTariffWindowScheduleIngestor, DatasetName.ELECTRICITY_TARIFF_WINDOW_SCHEDULE, 1),
+    ],
+    ids=lambda value: value.value if isinstance(value, DatasetName) else None,
+)
+def test_run_appends_every_record_to_bronze(bronze, ingestor_class, name, records):
+    assert bronze(_ingestor(ingestor_class, name)).num_rows == records

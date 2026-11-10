@@ -14,14 +14,17 @@ from pyiceberg.table.metadata import new_table_metadata
 from pyiceberg.table.sorting import UNSORTED_SORT_ORDER
 from pyiceberg.table.update import update_table_metadata
 from pyiceberg.types import NestedField, StringType
+from pyspark.sql import DataFrame
 
 from common.classes import Dataset, Snapshot
-from common.enums import DatasetName, DatasetType
+from common.enums import DatasetName, DatasetType, DataStageType
 from config.http import HttpConfig
 from config.lakehouse import GCPLakehouseConfig
 from ingest.base import Ingestor
 from ingest.http_client import HttpClient
 from ingest.write_strategy import AppendByDay, BronzeTable
+from lakehouse.partition import Partition
+from refine.load_strategy import OverwriteByPartition
 
 
 class FakeResponse:
@@ -109,3 +112,21 @@ def build_ingestor(
         http=HttpClient(HttpConfig(timeout_seconds=30, retry_count=1, retry_delay_seconds=0), send=send),
         snapshot=snapshot or Snapshot.from_scheduled_at(None),
     )
+
+
+class ViewNames:
+    """A Silver pipeline's lakehouse_config for Spark temp views, which cannot have catalog.namespace.table names."""
+
+    def spark_table(self, stage: DataStageType, dataset: Dataset) -> str:
+        return f"{stage}_{dataset.dataset_name}"
+
+
+class RecordedWrite(OverwriteByPartition):
+    """The real watermark read; the write is recorded instead of sent to the catalog."""
+
+    def __init__(self, partition: Partition) -> None:
+        super().__init__(partition)
+        self.written: dict[str, list] = {}
+
+    def write(self, df: DataFrame, table_name: str) -> None:
+        self.written[table_name] = df.collect()

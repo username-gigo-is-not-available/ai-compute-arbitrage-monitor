@@ -1,6 +1,7 @@
 """Silver for exchange_rates: one rate per currency pair and timestamp, latest ingest wins."""
 
 import pytest
+from fakes import RecordedWrite, ViewNames
 from pyspark.sql import DataFrame, SparkSession
 
 from common.classes import Dataset
@@ -67,3 +68,32 @@ def test_output_has_the_silver_columns_in_order(spark, pipeline):
     result = pipeline.transform(_rates(spark, "('EUR', 'USD', 1.08, '2026-10-12 00:00:00', '2026-10-12 00:00:05')"))
     assert result.columns == ["from_currency", "to_currency", "value", "timestamp", "ingested_at", "processed_at"]
     assert result.collect()[0]["processed_at"] is not None
+
+
+def test_run_writes_the_unseen_fetches_to_silver(spark):
+    # Silver has seen the 00:00:05 fetch; the 00:30 retry and the next day's fetch are new.
+    _rates(spark, "('EUR', 'USD', 1.08, '2026-10-12 00:00:00', '2026-10-12 00:00:05')").createOrReplaceTempView(
+        "silver_exchange_rates"
+    )
+    _rates(
+        spark,
+        "('EUR', 'USD', 1.08, '2026-10-12 00:00:00', '2026-10-12 00:00:05'), "
+        "('EUR', 'USD', 1.08, '2026-10-12 00:00:00', '2026-10-12 00:30:00'), "
+        "('EUR', 'USD', 1.07, '2026-10-13 00:00:00', '2026-10-13 00:00:04')",
+    ).createOrReplaceTempView("bronze_exchange_rates")
+    load = RecordedWrite(Partition("timestamp"))
+    pipeline = ExchangeRatesPipeline(
+        session=spark,
+        dataset=Dataset(dataset_name=DatasetName.EXCHANGE_RATES, dataset_type=DatasetType.SOURCES),
+        config=None,
+        lakehouse_config=ViewNames(),
+        silver_table=SilverTable(EXCHANGE_RATES_SILVER_SCHEMA, load),
+    )
+
+    pipeline.run()
+
+    assert list(load.written) == ["silver_exchange_rates"]
+    assert {(str(r["timestamp"].date()), str(r["ingested_at"])) for r in load.written["silver_exchange_rates"]} == {
+        ("2026-10-12", "2026-10-12 00:30:00"),
+        ("2026-10-13", "2026-10-13 00:00:04"),
+    }
