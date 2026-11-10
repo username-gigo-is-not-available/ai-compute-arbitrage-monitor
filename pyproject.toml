@@ -83,9 +83,9 @@ warn_redundant_casts = true
 source = ["src"]
 omit = ["src/transform/*"]
 
-# CI fails below this; raise it as tests are added (88% on 2026-11-06)
+# CI fails below this; raise it as tests are added (95% on 2026-11-10)
 [tool.coverage.report]
-fail_under = 85
+fail_under = 92
 skip_covered = true
 show_missing = true
 
