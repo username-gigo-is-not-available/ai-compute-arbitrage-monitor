@@ -8,7 +8,8 @@
 -- (ADR-020). The few that don't (13-20 per census, e.g. a 5090 next to four 4090s) are dropped rather than
 -- given one model or price that is wrong for part of the machine; assert_stg_compute_offers_machine_slices_agree
 -- reports them. A machine without a reported power draw (0 W, one per census) can't be costed and is dropped too;
--- assert_stg_compute_offers_gpu_tdp_reported reports it.
+-- assert_stg_compute_offers_gpu_tdp_reported reports it. A $0 ask is no price, so that machine is dropped as well;
+-- assert_stg_compute_offers_ask_reported reports it.
 with single_type_machines as (
     select
         machine_id,
@@ -105,4 +106,6 @@ transformed as (
 )
 
 select * from transformed
-where gpu_tdp_watts > 0
+where
+    gpu_tdp_watts > 0
+    and total_price_usd_per_hr > 0
