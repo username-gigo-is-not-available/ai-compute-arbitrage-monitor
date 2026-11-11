@@ -175,12 +175,13 @@ models:
         tests:
           - not_null
 
-  - name: mart_best_offers_by_gpu
+  - name: mart_gpu_profitability
     description: >
-      Best available machine per (GPU variant, tariff tier), from the latest census.
-      Filtered to verified, available machines. Selection is by profit_usd_per_hr / number_of_machine_gpus
-      within each (gpu_architecture, gpu_model_name, gpu_memory_gb, tariff_tier_skey) group.
-      One row per (gpu_architecture, gpu_model_name, gpu_memory_gb, tariff_tier_skey).
+      Which GPU is worth hosting: one row per GPU variant (model + memory) and tariff tier over the latest census,
+      with the medians of its machines rather than its best listing (a single listing is often an unsold
+      overpriced ask). Every current machine counts: available and taken, verified or not. No rank: the reader
+      orders the rows, using number_of_machines to judge how solid each median is. Cost is electricity only
+      (ADR-025).
     tests:
       - dbt_utils.unique_combination_of_columns:
           arguments:
@@ -204,52 +205,6 @@ models:
       - name: gpu_memory_gb
         description: "GPU VRAM in gigabytes"
 
-      - name: gpu_tdp_watts
-        description: "GPU TDP in watts"
-
-      - name: gpu_bandwidth_gbytes_per_sec
-        description: "GPU memory bandwidth in GB/s"
-
-      - name: gpu_max_cuda_version_supported
-        description: "Maximum CUDA version supported by the GPU driver"
-
-      - name: tflops_per_gpu
-        description: "TFLOPS per GPU"
-        tests:
-          - not_null:
-              config:
-                severity: warn
-
-      - name: kwh_per_tflop
-        description: "Energy efficiency ratio - kWh per TFLOP"
-
-      - name: verification_flag
-        description: "Vast.ai host verification status"
-
-      - name: rentable_flag
-        description: "Available: at least one of the machine's offers can be rented now (always true here)"
-
-      - name: reliability_score
-        description: "Vast.ai host reliability score"
-
-      - name: country_code
-        description: "ISO country code of the host"
-
-      - name: revenue_per_gpu_usd_per_hr
-        description: "Revenue per GPU in USD/hr"
-
-      - name: cost_per_gpu_usd_per_hr
-        description: "Cost per GPU in USD/hr for this tariff tier"
-
-      - name: profit_per_gpu_usd_per_hr
-        description: "Profit per GPU in USD/hr for this tariff tier - used for best-offer selection"
-
-      - name: cost_per_tflop_usd
-        description: "Cost per TFLOP in USD for this tariff tier"
-
-      - name: profit_per_tflop_usd
-        description: "Profit per TFLOP in USD for this tariff tier"
-
       - name: tariff_tier_skey
         description: "Surrogate key of the tariff tier this row represents"
         tests:
@@ -271,8 +226,43 @@ models:
       - name: tariff_block_number
         description: "Tariff block number within the consumer category"
 
+      - name: tflops_per_gpu
+        description: "Median TFLOPS per GPU across the variant's machines; a reported 0 is left out"
+        tests:
+          - not_null:
+              config:
+                severity: warn
+
+      - name: gpu_tdp_watts
+        description: "Median GPU TDP in watts across the variant's machines"
+
+      - name: number_of_machines
+        description: "Machines behind the medians; a median from a handful of machines is that handful's price"
+        tests:
+          - not_null
+
+      - name: median_revenue_per_gpu_usd_per_hr
+        description: "Median per-GPU ask across all the variant's machines"
+
+      - name: median_available_revenue_per_gpu_usd_per_hr
+        description: "Median per-GPU ask of the available machines: the competition (null when none are available)"
+
+      - name: median_taken_revenue_per_gpu_usd_per_hr
+        description: "Median per-GPU ask of the taken machines: rented, or switched off (null when none are taken)"
+
+      - name: median_cost_per_gpu_usd_per_hr
+        description: "Median per-GPU electricity cost in USD/hr for this tariff tier"
+
+      - name: median_profit_per_gpu_usd_per_hr
+        description: "Median of each machine's profit per GPU in USD/hr for this tariff tier"
+        tests:
+          - not_null
+
+      - name: median_profit_per_tflop_usd
+        description: "Median of each machine's profit per TFLOP in USD for this tariff tier"
+
       - name: valid_from
-        description: "Timestamp of the latest snapshot for this GPU variant and tier"
+        description: "Timestamp of the latest census for this GPU variant and tier"
         tests:
           - not_null
 
