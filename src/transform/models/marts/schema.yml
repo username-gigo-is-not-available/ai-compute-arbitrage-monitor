@@ -261,6 +261,15 @@ models:
       - name: median_profit_per_tflop_usd
         description: "Median of each machine's profit per TFLOP in USD for this tariff tier"
 
+      - name: pct_profitable
+        description: "Percentage of the variant's machines with profit_usd_per_hr > 0 for this tariff tier"
+        tests:
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: ">= 0 and pct_profitable <= 100"
+              config:
+                severity: warn
+
       - name: valid_from
         description: "Timestamp of the latest census for this GPU variant and tier"
         tests:
@@ -377,10 +386,10 @@ models:
 
   - name: mart_gpu_model_summary
     description: >
-      Summary statistics per GPU variant and tariff tier over the latest census, counting machines, not their
-      overlapping offers (ADR-020). Includes pct_profitable (share of
-      machines with positive profit for that tier, ADR-025), pct_available, host quality metrics, and per-GPU median asks split by available and taken
-      machines (#53). One row per (gpu_architecture, gpu_model_name, gpu_memory_gb, tariff_tier_skey).
+      The market of each GPU variant (model + memory) over the latest census, counting machines, not their
+      overlapping offers (ADR-020): machine and GPU counts, pct_verified, pct_available and host reliability.
+      Nothing here depends on the tariff, so there is no tier; prices and profit are in mart_gpu_profitability
+      (ADR-026). One row per (gpu_architecture, gpu_model_name, gpu_memory_gb).
     tests:
       - dbt_utils.unique_combination_of_columns:
           arguments:
@@ -388,7 +397,6 @@ models:
               - gpu_architecture
               - gpu_model_name
               - gpu_memory_gb
-              - tariff_tier_skey
     columns:
       - name: gpu_architecture
         description: "GPU architecture family"
@@ -419,24 +427,6 @@ models:
       - name: avg_kwh_per_tflop
         description: "Average energy efficiency ratio - kWh per TFLOP"
 
-      - name: median_revenue_per_gpu_usd_per_hr
-        description: "Median ask per GPU in USD/hr of all the variant's machines"
-
-      - name: median_available_revenue_per_gpu_usd_per_hr
-        description: "Median ask per GPU in USD/hr of available machines - the competition"
-
-      - name: median_taken_revenue_per_gpu_usd_per_hr
-        description: "Median ask per GPU in USD/hr of taken machines - prices being paid, or of switched-off machines"
-
-      - name: pct_profitable
-        description: "Percentage of machines with profit_usd_per_hr > 0 for this tariff tier"
-        tests:
-          - dbt_utils.expression_is_true:
-              arguments:
-                expression: ">= 0 and pct_profitable <= 100"
-              config:
-                severity: warn
-
       - name: pct_verified
         description: "Percentage of machines with verified hosts"
         tests:
@@ -457,27 +447,6 @@ models:
 
       - name: avg_reliability_score
         description: "Average host reliability score"
-
-      - name: tariff_tier_skey
-        description: "Surrogate key of the tariff tier this row represents"
-        tests:
-          - not_null
-
-      - name: consumer_category
-        description: "Consumer category for this tier e.g. household, business"
-        tests:
-          - not_null
-
-      - name: tariff_window_type
-        description: "Tariff window type for this tier - low or high"
-        tests:
-          - not_null
-          - accepted_values:
-              arguments:
-                values: [ 'low', 'high' ]
-
-      - name: tariff_block_number
-        description: "Tariff block number within the consumer category"
 
       - name: last_seen_at
         description: "Most recent ingest timestamp in this group"
