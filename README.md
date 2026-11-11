@@ -12,7 +12,7 @@ rates — then models them into analytical outputs that answer arbitrage questio
 | Question                                                                       | Where to look                  |
 |--------------------------------------------------------------------------------|--------------------------------|
 | Which GPU offers on Vast.AI are profitable right now, after electricity costs? | `mart_arbitrage_opportunities` |
-| Which GPU model gives the best profit per TFLOP at the current tariff?         | `mart_best_offers_by_gpu`      |
+| Which GPU is worth hosting, by its typical machine's profit per GPU?           | `mart_gpu_profitability`       |
 | Which GPU models have been consistently profitable historically?               | `mart_gpu_model_summary`       |
 | Does profitability change by time of day (high vs low tariff hours)?           | `mart_gpu_history`             |
 
@@ -226,14 +226,14 @@ After all four complete, `gpu_arbitrage__marts` will trigger automatically.
 
 ---
 
-### 2. Current Best Profit per GPU
+### 2. Typical Profit per GPU
 
 | Field        | Detail                                                              |
 | :----------- | :------------------------------------------------------------------ |
 | **Chart type**   | Bar chart                                                       |
-| **Name**         | Best offers bar                                                 |
-| **Mart source**  | `mart_best_offers_by_gpu`                                       |
-| **What it shows**| The single best profit opportunity per GPU model at the current moment |
+| **Name**         | Profitability bar                                               |
+| **Mart source**  | `mart_gpu_profitability`                                        |
+| **What it shows**| Median profit per GPU for each GPU variant now, with how many machines it rests on |
 
 ---
 
@@ -297,7 +297,7 @@ After all four complete, `gpu_arbitrage__marts` will trigger automatically.
 | Mart                         | Used by charts                                      |
 | :--------------------------- | :-------------------------------------------------- |
 | `mart_gpu_model_summary`     | GPU Profitability Rate by Offer Type                |
-| `mart_best_offers_by_gpu`    | Current Best Profit per GPU                         |
+| `mart_gpu_profitability`     | Typical Profit per GPU                              |
 | `mart_gpu_history`           | Profit Over Time by GPU, Profit by Day and Hour     |
 | `mart_arbitrage_opportunities` | Risk vs Reward, Profit per TFLOP, Scorecard       |
 
@@ -368,7 +368,7 @@ gpu-arbitrage-monitor/
 │           ├── staging/            # stg_compute_offers, stg_exchange_rates, ...
 │           ├── intermediate/       # int_compute_offers, int_exchange_rates, ...
 │           ├── warehouse/          # fct_compute_offers, dim_exchange_rates, ...
-│           └── marts/              # mart_arbitrage_opportunities, mart_best_offers_by_gpu, ...
+│           └── marts/              # mart_arbitrage_opportunities, mart_gpu_profitability, ...
 │
 ├── infra/
 │   ├── airflow/
