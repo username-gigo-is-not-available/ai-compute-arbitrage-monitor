@@ -1,7 +1,6 @@
--- Test: mart_gpu_forecast matches each hour to the EVN schedule in Macedonian local time, not UTC (ADR-021).
+-- mart_gpu_forecast matches each hour to the EVN schedule in Macedonian local time, not UTC (ADR-021).
 -- Recomputes the local day of week and hour with datetime(), independently of the evn_* macros, and checks the
 -- scheduled tariff window against the schedule at that local hour.
--- If any row's window, day_of_week or hour_of_day disagrees, it will be returned.
 
 with local_hours as (
     select distinct

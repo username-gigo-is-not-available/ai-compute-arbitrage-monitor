@@ -1,8 +1,6 @@
--- Test: mart_arbitrage_opportunities must have one row per (machine snapshot, tariff tier) (ADR-020)
--- This test verifies the offer×tier grain of the mart. The expected tier count is NOT hardcoded —
--- it is derived from dim_electricity_tariff_tiers as of each group's valid_from, so EVN tariff
--- restructures (new blocks / new tariff sets) update the expectation automatically.
--- If any group's count != expected, the test returns those rows.
+-- mart_arbitrage_opportunities must have one row per (machine snapshot, tariff tier) (ADR-020)
+-- The expected tier count is NOT hardcoded — it is derived from dim_electricity_tariff_tiers as of each group's
+-- valid_from, so EVN tariff restructures (new blocks / new tariff sets) update the expectation automatically.
 
 with row_counts as (
     select

@@ -34,6 +34,7 @@ class ElectricityTariffWindowSchedulePipeline(Pipeline):
         return reduce(DataFrame.unionByName, [self.hourly_grid(version) for version in versions])
 
     def hourly_grid(self, version: Row) -> DataFrame:
+        # Weekend low tariff runs from Saturday 22:00 to Monday 07:00: Sunday is all low, Saturday keeps weekday hours
         weekday_text, _ = version["schedule_text"].split(WEEKDAY_WEEKEND_SPLIT)
         low_hours = extract_low_tariff_window_hours(weekday_text)
 

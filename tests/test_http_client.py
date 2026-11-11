@@ -45,11 +45,6 @@ class FakeServer:
         return HttpClient(config, send=self.send, sleep=self.sleeps.append)
 
 
-# ---------------------------------------------------------------------------
-# Retry rules
-# ---------------------------------------------------------------------------
-
-
 def test_a_200_is_returned_without_retrying_and_passes_the_timeout_and_arguments():
     server = FakeServer(FakeResponse(text="ok"))
     response = server.client().get("https://x.test/", params={"q": "1"})
@@ -151,11 +146,6 @@ def test_a_retry_after_missing_or_not_in_seconds_waits_the_delay(headers):
     server = FakeServer(FakeResponse(503, headers=headers), FakeResponse())
     server.client().get("https://x.test/")
     assert server.sleeps == [RETRY_DELAY_SECONDS]
-
-
-# ---------------------------------------------------------------------------
-# What the ingestors still own: reading the response and refusing an empty fetch
-# ---------------------------------------------------------------------------
 
 
 class _EVNTestIngestor(EVNBaseIngestor):

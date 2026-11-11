@@ -54,6 +54,7 @@ class ElectricityTariffTiersIngestor(EVNBaseIngestor[ElectricityTariffTier]):
         for table_specification in table_specifications:
             table_element: Tag = self.select_required(parser, table_specification.selector)
             cells: list[Tag] = table_element.select(self.config.table_cells_selector)
+            # The first row of cells is the table header
             rows = [
                 cells[i : i + table_specification.row_width]
                 for i in range(table_specification.row_width, len(cells), table_specification.row_width)

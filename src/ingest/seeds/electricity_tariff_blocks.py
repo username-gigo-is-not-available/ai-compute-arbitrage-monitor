@@ -31,6 +31,7 @@ class ElectricityTariffBlocksIngestor(EVNBaseIngestor[ElectricityTariffBlock]):
 
         return electricity_tariff_blocks
 
+    # Only household high tariff has consumption blocks (ADR-006)
     def parse(self, row: Tag, valid_from_text: str, ingested_at: datetime) -> ElectricityTariffBlock:
         return ElectricityTariffBlock(
             ingested_at=ingested_at,

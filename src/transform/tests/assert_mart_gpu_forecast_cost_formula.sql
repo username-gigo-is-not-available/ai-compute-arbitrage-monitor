@@ -1,4 +1,4 @@
--- Test: mart_gpu_forecast's cost EXCLUDES the fixed monthly access fee (ADR-007, ADR-025).
+-- mart_gpu_forecast's cost EXCLUDES the fixed monthly access fee (ADR-007, ADR-025).
 -- The forecast answers "should I run my GPU this window?", where the access fee is paid either way.
 -- We recompute the per-GPU cost from the forecast's own columns and assert it matches:
 --   kWh per GPU x (tariff + distribution fee) x (1 + VAT, households only) / USD->MKD rate

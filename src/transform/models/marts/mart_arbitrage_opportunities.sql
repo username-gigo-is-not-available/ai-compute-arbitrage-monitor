@@ -39,11 +39,9 @@ select
     machine_id,
     host_id,
 
-    -- location / host
     country_code,
     reliability_score,
 
-    -- gpu
     gpu_architecture,
     gpu_model_name,
     number_of_machine_gpus,
@@ -54,52 +52,42 @@ select
     gpu_bandwidth_gbytes_per_sec,
     gpu_max_cuda_version_supported,
 
-    -- cpu
     cpu_architecture,
     cpu_model_name,
     number_of_cpu_cores,
     cpu_clock_speed_ghz,
 
-    -- system
     ram_gb,
     disk_space_gb,
     disk_bandwidth_gbytes_per_sec,
 
-    -- pcie
     pcie_generation,
     pcie_bandwidth_gbytes_per_sec,
 
-    -- network
     network_download_mbits_per_sec,
     network_upload_mbits_per_sec,
     network_download_cost_usd_per_gbit,
     network_upload_cost_usd_per_gbit,
 
-    -- efficiency
     kwh_per_tflop,
     deep_learning_score,
     deep_learning_score_per_usd,
 
-    -- pricing
     gpu_price_usd_per_hr,
     minimum_bid_price_usd,
     storage_cost_usd_per_hr,
     revenue_usd_per_hr,
 
-    -- rates
     usd_to_mkd_rate,
 
-    -- tariff tier context
     tariff_tier_skey,
     consumer_category,
     tariff_window_type,
     tariff_block_number,
 
-    -- cost / profit (USD/hr): electricity only, the access fee is paid anyway (ADR-025)
     cost_usd_per_hr,
     profit_usd_per_hr,
 
-    -- cost / profit per TFLOP (USD)
     cost_per_tflop_usd,
     profit_per_tflop_usd,
 

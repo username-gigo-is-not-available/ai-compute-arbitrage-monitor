@@ -10,8 +10,7 @@ from refine.schemas.electricity_tariff_tiers import ELECTRICITY_TARIFF_TIERS_SIL
 from refine.schemas.electricity_tariff_window_schedule import ELECTRICITY_TARIFF_WINDOW_SCHEDULE_SILVER_SCHEMA
 from refine.schemas.exchange_rates import EXCHANGE_RATES_SILVER_SCHEMA
 
-# What each Silver table looks like: its schema and partition (the DDL half; refine.registry is the DML half).
-# Imports only schemas, pyspark types and pyiceberg, never the pipelines.
+# Imports no pipelines, so lakehouse.setup can read it without their libraries
 SILVER_TABLES: dict[DatasetName, SilverTable] = {
     DatasetName.COMPUTE_OFFERS: SilverTable(
         COMPUTE_OFFERS_SILVER_SCHEMA, OverwriteByPartition(Partition("snapshot_at", DayTransform()))

@@ -17,8 +17,7 @@ from ingest.tables import BRONZE_TABLES
 from ingest.write_strategy import BronzeTable
 
 
-# The Bronze side of each dataset that loads data (DML): who fetches it and which table it writes. The table's
-# shape is in ingest.tables; type and settings come from config.datasets.DATASETS.
+# Loading only (DML): the table's shape is in ingest.tables, type and settings in config.datasets
 @dataclass(frozen=True)
 class IngestSpec:
     ingestor: type[Ingestor[Any, Any]]

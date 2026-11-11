@@ -21,7 +21,7 @@ class MartsDagFactory:
 
         with DAG(
             dag_id="ai-compute-arbitrage-monitor__marts",
-            description="Gold layer marts — triggered by new compute offers data",
+            description="Gold layer marts — triggered when any dataset's DAG passes its tests",
             schedule=AssetAny(*pipeline_assets),
             catchup=False,
             default_args=DEFAULT_ARGS,

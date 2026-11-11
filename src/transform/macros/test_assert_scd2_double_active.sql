@@ -1,16 +1,6 @@
--- Generic dbt test: assert_scd2_double_active.
---
--- Flags SCD Type 2 "double active" violations: more than one row sharing the same
--- natural key that is currently active, where "active" is defined by the table's
--- own sentinel literal (active_value), e.g. `date '9999-12-31'` for the five DATE
--- dims and `timestamp '9999-12-31'` for fct_compute_offers.
---
--- Applied via schema.yml model-level tests by natural key, so a single macro
--- serves every SCD table (YAML key drops the test_ prefix, hence assert_*).
---
--- Failure output: the offending rows as the natural key plus BOTH (valid_from,
--- valid_to) pairs of each offending pair of active rows, so the real shape of a
--- violation is visible in the run log.
+-- More than one active row per natural key, where active is the table's own sentinel (active_value), e.g.
+-- `date '9999-12-31'` for the dims and `timestamp '9999-12-31'` for fct_compute_offers.
+-- Used from schema.yml as assert_scd2_double_active: dbt drops the test_ prefix.
 {% macro test_assert_scd2_double_active(
     model,
     natural_key_columns,

@@ -63,7 +63,6 @@ joined as (
     select
         o.*,
 
-        -- dim skeys
         er.exchange_rate_skey,
         r.tariff_tier_skey,
 
@@ -117,24 +116,21 @@ cost_metrics as (
 )
 
 select
-    -- identity / grain (one row per machine per census per tariff tier, ADR-020)
+    -- One row per machine per census per tariff tier (ADR-020)
     machine_id,
     host_id,
     valid_from,
     valid_to,
     processed_at,
 
-    -- dim skeys
     exchange_rate_skey,
     tariff_tier_skey,
 
-    -- host context
     country_code,
     verification_flag,
     rentable_flag,
     reliability_score,
 
-    -- gpu specs
     gpu_architecture,
     gpu_model_name,
     number_of_machine_gpus,
@@ -144,48 +140,40 @@ select
     gpu_max_cuda_version_supported,
     gpu_bandwidth_gbytes_per_sec,
 
-    -- cpu specs
     cpu_architecture,
     cpu_model_name,
     number_of_cpu_cores,
     cpu_clock_speed_ghz,
 
-    -- system specs
     ram_gb,
     disk_model_name,
     disk_space_gb,
     disk_bandwidth_gbytes_per_sec,
 
-    -- pcie
     pcie_generation,
     pcie_bandwidth_gbytes_per_sec,
 
-    -- network
     network_download_mbits_per_sec,
     network_upload_mbits_per_sec,
     network_download_cost_usd_per_gbit,
     network_upload_cost_usd_per_gbit,
 
-    -- performance scores
     deep_learning_score,
     deep_learning_score_per_usd,
 
-    -- pricing
     gpu_price_usd_per_hr,
     minimum_bid_price_usd,
     storage_cost_usd_per_hr,
     revenue_usd_per_hr,
     revenue_per_gpu_usd_per_hr,
 
-    -- derived power / compute
     total_system_kwh_per_hr,
     total_system_tflops,
     kwh_per_tflop,
 
-    -- rates (locked at valid_from)
+    -- The USD→MKD rate on the census day, not today's
     usd_to_mkd_rate,
 
-    -- tariff context
     consumer_category,
     tariff_type,
     tariff_metric,
@@ -193,20 +181,15 @@ select
     tariff_window_type,
     tariff_block_number,
 
-    -- cost inputs
     distribution_fee,
     vat_rate,
 
-    -- costs (USD/hr)
     cost_usd_per_hr,
 
-    -- profits (USD/hr)
     revenue_usd_per_hr - cost_usd_per_hr as profit_usd_per_hr,
 
-    -- cost per TFLOP (USD)
     cost_usd_per_hr / nullif(total_system_tflops, 0) as cost_per_tflop_usd,
 
-    -- profit per TFLOP (USD)
     (revenue_usd_per_hr - cost_usd_per_hr) / nullif(total_system_tflops, 0) as profit_per_tflop_usd
 
 from cost_metrics

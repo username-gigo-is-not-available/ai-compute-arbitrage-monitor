@@ -1,8 +1,7 @@
--- Test: every blocked tier in mart_gpu_forecast carries its block bounds, and no other tier does (ADR-021).
+-- Every blocked tier in mart_gpu_forecast carries its block bounds, and no other tier does (ADR-021).
 -- The app walks the blocks with a running total, so a block row with a null lower bound would break it silently
 -- (the bounds come from a left join to dim_electricity_tariff_blocks). Tiers without a block number (low tariff,
 -- business) must have null bounds. Only the last block may have a null upper bound.
--- If any row breaks these rules, it will be returned.
 
 with blocks as (
     select

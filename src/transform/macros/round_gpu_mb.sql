@@ -1,3 +1,4 @@
+{#- Hosts report a little less than the card's size (24,564 MB for a 24 GB card), so snap to the marketed size. -#}
 {% macro round_gpu_mb(col) %}
 (
     select cast(t as int64)

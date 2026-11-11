@@ -8,8 +8,6 @@ from common.enums import DatasetType, DataStageType
 from config.auth import GCPAuthentication
 
 
-# Where the lakehouse is and what its tables are called. Making a table match its declaration is
-# lakehouse.sync's job.
 class GCPLakehouseConfig(BaseModel):
     REST_ENDPOINT: ClassVar[str] = "https://biglake.googleapis.com/iceberg/v1/restcatalog"
 

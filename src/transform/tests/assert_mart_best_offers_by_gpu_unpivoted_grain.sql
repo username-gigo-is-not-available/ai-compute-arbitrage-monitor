@@ -1,8 +1,6 @@
--- Test: mart_best_offers_by_gpu must have one row per (GPU variant, tariff tier) at a given valid_from
--- This test verifies the offer×tier grain of the mart. The expected tier count is NOT hardcoded —
--- it is derived from dim_electricity_tariff_tiers as of each group's valid_from, so EVM block/tariff
--- structural changes update the test automatically.
--- If any group's count != the expected count, the test returns those rows.
+-- mart_best_offers_by_gpu must have one row per (GPU variant, tariff tier) at a given valid_from
+-- The expected tier count is NOT hardcoded — it is derived from dim_electricity_tariff_tiers as of each group's
+-- valid_from, so EVN block/tariff structural changes update the test automatically.
 
 with row_counts as (
     select

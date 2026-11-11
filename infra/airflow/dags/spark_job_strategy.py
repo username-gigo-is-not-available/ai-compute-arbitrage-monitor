@@ -14,8 +14,7 @@ from config.loader import ConfigLoader
 from pipeline_config import PipelineConfig
 
 
-# Runs a package's main.py with the dataset as its one argument, where pyspark is installed: lakehouse (the setup
-# task) and refine. The DAG starts it as a command and never imports the package (Composer has no pyspark).
+# Started as a command, never imported: lakehouse and refine need pyspark, which Composer does not have
 class SparkJobStrategy(ABC):
     @abstractmethod
     def build_operator(self, pipeline_config: PipelineConfig, package: str, task_id: str) -> BaseOperator:

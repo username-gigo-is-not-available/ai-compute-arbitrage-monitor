@@ -1,8 +1,7 @@
--- Test: mart_gpu_forecast covers every hour of its forecast_days horizon (ADR-021).
+-- mart_gpu_forecast covers every hour of its forecast_days horizon (ADR-021).
 -- The app forecasts up to 30 days ahead, so the mart must hold forecast_days x 24 + 1 consecutive hours (the spine
 -- includes both ends). An hour missing from the EVN schedule would be dropped by the spine's inner join, and an
 -- empty mart would have no hours at all; both fail here.
--- If the hour count or span is wrong, one row describing it will be returned.
 
 with hours as (
     select

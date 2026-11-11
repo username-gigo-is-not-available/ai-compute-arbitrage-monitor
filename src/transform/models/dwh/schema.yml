@@ -403,9 +403,6 @@ models:
   - name: fct_compute_offers
     description: "Core fact table - one row per (Vast.ai machine, census, tariff tier), with electricity cost and profit metrics computed across all EVN tariff scenarios. Grain per ADR-020: (machine_id, valid_from, tariff_tier_skey)."
     columns:
-      # -----------------------------------------------------------------------
-      # identity
-      # -----------------------------------------------------------------------
       - name: machine_id
         description: "Vast.ai machine identifier"
         tests:
@@ -416,9 +413,6 @@ models:
         tests:
           - not_null
 
-      # -----------------------------------------------------------------------
-      # grain / time
-      # -----------------------------------------------------------------------
       - name: valid_from
         description: "Scheduled hour of the census this machine row comes from"
         tests:
@@ -427,17 +421,11 @@ models:
       - name: valid_to
         description: "Census time at which this machine row was superseded - 9999-12-31 means currently active"
 
-      # -----------------------------------------------------------------------
-      # foreign keys to dims
-      # -----------------------------------------------------------------------
       - name: exchange_rate_skey
         description: "Foreign key to dim_exchange_rates"
         tests:
           - not_null
 
-      # -----------------------------------------------------------------------
-      # host context
-      # -----------------------------------------------------------------------
       - name: country_code
         description: "ISO country code extracted from geolocation string e.g. US, DE"
         tests:
@@ -471,9 +459,6 @@ models:
               arguments:
                 expression: "> 0"
 
-      # -----------------------------------------------------------------------
-      # gpu specs
-      # -----------------------------------------------------------------------
       - name: gpu_architecture
         description: "GPU architecture family e.g. nvidia, amd"
         tests:
@@ -527,9 +512,6 @@ models:
               config:
                 severity: warn
 
-      # -----------------------------------------------------------------------
-      # cpu specs
-      # -----------------------------------------------------------------------
       - name: cpu_architecture
         description: "CPU architecture e.g. amd64, arm64"
         tests:
@@ -552,9 +534,6 @@ models:
               config:
                 severity: warn
 
-      # -----------------------------------------------------------------------
-      # system specs
-      # -----------------------------------------------------------------------
       - name: ram_gb
         description: "System RAM in gigabytes"
         tests:
@@ -609,9 +588,6 @@ models:
                 expression: "> 0"
               config:
                 severity: warn
-      # -----------------------------------------------------------------------
-      # network
-      # -----------------------------------------------------------------------
       - name: network_download_mbits_per_sec
         description: "Network download speed in Mbps"
         tests:
@@ -648,9 +624,6 @@ models:
               arguments:
                 expression: ">= 0"
 
-      # -----------------------------------------------------------------------
-      # performance scores
-      # -----------------------------------------------------------------------
       - name: deep_learning_score
         description: "Vast.ai deep learning benchmark score"
         tests:
@@ -666,9 +639,6 @@ models:
               arguments:
                 expression: ">= 0"
 
-      # -----------------------------------------------------------------------
-      # pricing
-      # -----------------------------------------------------------------------
       - name: gpu_price_usd_per_hr
         description: "Base GPU rental cost per hour excluding storage and bandwidth"
         tests:
@@ -706,9 +676,6 @@ models:
               arguments:
                 expression: ">= 0"
 
-      # -----------------------------------------------------------------------
-      # derived power / compute
-      # -----------------------------------------------------------------------
       - name: total_system_kwh_per_hr
         description: "Estimated total system power draw in kWh per hour (gpu_tdp_watts * number_of_machine_gpus / 1000)"
         tests:
@@ -742,9 +709,6 @@ models:
               config:
                 severity: warn
 
-      # -----------------------------------------------------------------------
-      # rates context
-      # -----------------------------------------------------------------------
       - name: usd_to_mkd_rate
         description: "USD to MKD exchange rate applied at ingest time"
         tests:
@@ -757,9 +721,6 @@ models:
               config:
                 severity: warn
 
-      # -----------------------------------------------------------------------
-      # tariff context
-      # -----------------------------------------------------------------------
       - name: tariff_tier_skey
         description: "Foreign key to dim_electricity_tariff_tiers"
         tests:
@@ -801,32 +762,20 @@ models:
         description: "Tariff block number or null for tiers with no block distinction. Authority set is dim_electricity_tariff_blocks (cross-checked by assert_tariff_tiers_blocks_consistency)."
         tests: []
 
-      # -----------------------------------------------------------------------
-      # fees (from dim_electricity_tariff_fees)
-      # -----------------------------------------------------------------------
       - name: distribution_fee
         description: "Per-kWh distribution fee in MKD (from dim_electricity_tariff_fees)"
 
-      # -----------------------------------------------------------------------
-      # block boundaries (from dim_electricity_tariff_blocks)
-      # -----------------------------------------------------------------------
       - name: lower_bound_kwh
         description: "Lower bound of the tariff block in kWh for a 30-day billing period; scales with the period's length (ADR-021)"
 
       - name: upper_bound_kwh
         description: "Upper bound of the tariff block in kWh for a 30-day billing period (null for last block); scales with the period's length (ADR-021)"
 
-      # -----------------------------------------------------------------------
-      # VAT (ADR-021)
-      # -----------------------------------------------------------------------
       - name: vat_rate
-        description: "VAT rate added on top of EVN prices - household_vat_rate for households, 0 for business (a VAT-registered business reclaims it)"
+        description: "VAT rate added on top of EVN prices - household_vat_rate for households, 0 for business (a VAT-registered business reclaims it) (ADR-021)"
 
-      # -----------------------------------------------------------------------
-      # costs (USD/hr) - electricity only, the access fee is paid anyway (ADR-025)
-      # -----------------------------------------------------------------------
       - name: cost_usd_per_hr
-        description: "Cost in USD/hr for this tariff tier - kWh x (tariff + distribution fee) x (1 + VAT); what running the machine adds to the bill"
+        description: "Cost in USD/hr for this tariff tier - kWh x (tariff + distribution fee) x (1 + VAT); what running the machine adds to the bill (ADR-025)"
         tests:
           - not_null:
               config:
@@ -837,15 +786,9 @@ models:
               config:
                 severity: warn
 
-      # -----------------------------------------------------------------------
-      # profits (USD/hr)
-      # -----------------------------------------------------------------------
       - name: profit_usd_per_hr
         description: "Hourly profit in USD for this tariff tier - negative means unprofitable"
 
-      # -----------------------------------------------------------------------
-      # cost per TFLOP (USD)
-      # -----------------------------------------------------------------------
       - name: cost_per_tflop_usd
         description: "Cost per TFLOP in USD for this tariff tier"
         tests:
@@ -855,9 +798,6 @@ models:
               config:
                 severity: warn
 
-      # -----------------------------------------------------------------------
-      # profit per TFLOP (USD)
-      # -----------------------------------------------------------------------
       - name: profit_per_tflop_usd
         description: "Hourly profit per TFLOP in USD for this tariff tier - negative means unprofitable"
 

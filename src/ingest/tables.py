@@ -7,8 +7,7 @@ from ingest.schemas.electricity_tariff_window_schedule import ELECTRICITY_TARIFF
 from ingest.schemas.exchange_rates import EXCHANGE_RATES_BRONZE_SCHEMA
 from ingest.write_strategy import AppendByDay, BronzeTable
 
-# What each Bronze table looks like: its schema and partition (the DDL half; ingest.registry is the DML half).
-# Imports only schemas and pyiceberg, so lakehouse.setup can read it without the ingestors' HTTP libraries.
+# Imports only schemas and pyiceberg, so lakehouse.setup can read it without the ingestors' HTTP libraries
 BRONZE_TABLES: dict[DatasetName, BronzeTable] = {
     DatasetName.COMPUTE_OFFERS: BronzeTable(COMPUTE_OFFERS_BRONZE_SCHEMA, AppendByDay(column="snapshot_at")),
     DatasetName.EXCHANGE_RATES: BronzeTable(EXCHANGE_RATES_BRONZE_SCHEMA, AppendByDay(column="timestamp")),

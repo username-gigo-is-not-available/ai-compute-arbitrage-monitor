@@ -1,10 +1,10 @@
--- Test: Verify that the derived per-GPU cost/profit metrics in mart_gpu_forecast are internally consistent.
+-- Verify that the derived per-GPU cost/profit metrics in mart_gpu_forecast are internally consistent.
 -- These are invariant checks that must hold regardless of the exact cost formula:
 --   1. profit_per_gpu = market_ask_per_gpu - cost_per_gpu
 --   2. cost_per_tflop = cost_per_gpu / tflops_per_gpu
 --   3. profit_per_tflop = profit_per_gpu / tflops_per_gpu
 --   4. cost_per_gpu >= 0 (electricity cost is non-negative)
--- Floats are compared within 1e-9. If any row violates these invariants, it will be returned.
+-- Floats are compared within 1e-9.
 
 select
     gpu_model_name,
