@@ -354,6 +354,10 @@ models:
           - not_null
       - name: market_ask_per_gpu_usd_per_hr
         description: "Median per-GPU ask of the variant's machines in USD/hr - the same measure as mart_gpu_forecast's"
+      - name: available_market_ask_per_gpu_usd_per_hr
+        description: "Median per-GPU ask of the available machines in USD/hr: the competition (null when none are available)"
+      - name: taken_market_ask_per_gpu_usd_per_hr
+        description: "Median per-GPU ask of the taken machines in USD/hr: rented, or switched off (null when none are taken)"
 
       - name: median_profit_per_gpu_usd_per_hr
         description: "Median per-GPU profit in USD/hr for this tariff tier - the typical machine; plot this, not the average"
