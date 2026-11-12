@@ -125,8 +125,8 @@ All read the current fact rows.
 | Mart | Question it answers |
 |---|---|
 | `mart_arbitrage_opportunities` | Which available machines are most profitable per TFLOP, ranked per tariff? |
-| `mart_gpu_profitability` | For each GPU variant, its typical machine's price (all, available, taken), cost and profit per GPU |
-| `mart_gpu_model_summary` | Per GPU model: machines, GPUs, % available, % profitable, price per GPU of available vs taken machines |
+| `mart_gpu_profitability` | For each GPU variant and tier, its typical machine's price (all, available, taken), cost and profit per GPU, % profitable |
+| `mart_gpu_model_summary` | Per GPU variant, no tier: machines, GPUs, % verified, % available, host reliability |
 | `mart_gpu_forecast` | "My GPU over the next hours": median market price per GPU × my GPU count, against the hourly EVN schedule |
 | `mart_gpu_history` | Profit by hour per GPU variant: each census's machines priced at every local hour of its day (#40) |
 

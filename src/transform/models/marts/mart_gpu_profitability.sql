@@ -41,6 +41,7 @@ select
     -- The median of each machine's profit, as in mart_gpu_history, not median revenue minus median cost.
     approx_quantiles(profit_per_gpu_usd_per_hr, 100)[offset(50)] as median_profit_per_gpu_usd_per_hr,
     approx_quantiles(profit_per_tflop_usd, 100)[offset(50)] as median_profit_per_tflop_usd,
+    round(100.0 * countif(profit_usd_per_hr > 0) / count(*), 2) as pct_profitable,
 
     max(valid_from) as valid_from
 from current_machines
