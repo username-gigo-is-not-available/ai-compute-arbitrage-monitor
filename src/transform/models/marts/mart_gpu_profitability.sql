@@ -31,11 +31,11 @@ select
 
     count(*) as number_of_machines,
 
-    approx_quantiles(revenue_per_gpu_usd_per_hr, 100)[offset(50)] as median_revenue_per_gpu_usd_per_hr,
+    approx_quantiles(revenue_per_gpu_usd_per_hr, 100)[offset(50)] as market_ask_per_gpu_usd_per_hr,
     approx_quantiles(if(rentable_flag, revenue_per_gpu_usd_per_hr, null), 100)[offset(50)]
-        as median_available_revenue_per_gpu_usd_per_hr,
+        as available_market_ask_per_gpu_usd_per_hr,
     approx_quantiles(if(not rentable_flag, revenue_per_gpu_usd_per_hr, null), 100)[offset(50)]
-        as median_taken_revenue_per_gpu_usd_per_hr,
+        as taken_market_ask_per_gpu_usd_per_hr,
 
     approx_quantiles(cost_per_gpu_usd_per_hr, 100)[offset(50)] as median_cost_per_gpu_usd_per_hr,
     -- The median of each machine's profit, as in mart_gpu_history, not median revenue minus median cost.

@@ -241,13 +241,13 @@ models:
         tests:
           - not_null
 
-      - name: median_revenue_per_gpu_usd_per_hr
+      - name: market_ask_per_gpu_usd_per_hr
         description: "Median per-GPU ask across all the variant's machines"
 
-      - name: median_available_revenue_per_gpu_usd_per_hr
+      - name: available_market_ask_per_gpu_usd_per_hr
         description: "Median per-GPU ask of the available machines: the competition (null when none are available)"
 
-      - name: median_taken_revenue_per_gpu_usd_per_hr
+      - name: taken_market_ask_per_gpu_usd_per_hr
         description: "Median per-GPU ask of the taken machines: rented, or switched off (null when none are taken)"
 
       - name: median_cost_per_gpu_usd_per_hr
