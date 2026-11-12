@@ -1,24 +1,18 @@
 version: 2
 
 models:
-  - name: mart_arbitrage_opportunities
+  - name: mart_gpu_machines
     description: >
-      Current arbitrage opportunities ranked by profit per TFLOP within each tariff tier (ADR-021).
-      Filtered to verified, available machines with valid compute metrics (ADR-020).
-      One row per (machine, tariff tier). Partitioned rank per tariff_tier_skey.
+      The machines behind mart_gpu_profitability: one row per current machine, so a host can see what machines
+      like theirs (GPU, reliability, CPU, network, country) ask. Every current machine counts: available and
+      taken, verified or not. No tier and no cost, since nothing here depends on the tariff; no rank, since
+      ranking single listings floats unsold overpriced asks to the top (ADR-027).
     tests:
       - dbt_utils.unique_combination_of_columns:
           arguments:
             combination_of_columns:
               - machine_id
-              - valid_from
-              - tariff_tier_skey
     columns:
-      - name: arbitrage_rank
-        description: "Rank by profit_per_tflop_usd descending within tariff_tier_skey - rank 1 is the best opportunity for that tier"
-        tests:
-          - not_null
-
       - name: machine_id
         description: "Vast.ai machine identifier"
         tests:
@@ -39,6 +33,16 @@ models:
       - name: reliability_score
         description: "Vast.ai host reliability score"
 
+      - name: verification_flag
+        description: "Vast.ai host verification status: verified, unverified or deverified"
+        tests:
+          - not_null
+
+      - name: rentable_flag
+        description: "Available: at least one of the machine's offers can be rented now; otherwise taken (rented, or switched off)"
+        tests:
+          - not_null
+
       - name: gpu_architecture
         description: "GPU architecture family e.g. nvidia"
         tests:
@@ -48,6 +52,9 @@ models:
         description: "GPU model name e.g. RTX 4090"
         tests:
           - not_null
+
+      - name: gpu_memory_gb
+        description: "GPU VRAM in gigabytes"
 
       - name: number_of_machine_gpus
         description: "GPUs in the machine, rented or not"
@@ -59,9 +66,6 @@ models:
 
       - name: total_system_tflops
         description: "Total TFLOPS across all GPUs in the machine"
-
-      - name: gpu_memory_gb
-        description: "GPU VRAM in gigabytes"
 
       - name: gpu_tdp_watts
         description: "GPU TDP per GPU in watts"
@@ -120,6 +124,14 @@ models:
       - name: deep_learning_score_per_usd
         description: "DL performance per dollar"
 
+      - name: ask_usd_per_hr
+        description: "What the host asks for the whole machine in USD/hr (the Vast.ai total price)"
+        tests:
+          - not_null
+
+      - name: ask_per_gpu_usd_per_hr
+        description: "ask_usd_per_hr per GPU: the per-machine value behind mart_gpu_profitability's market_ask_per_gpu_usd_per_hr"
+
       - name: gpu_price_usd_per_hr
         description: "Base GPU rental cost in USD/hr"
 
@@ -128,47 +140,6 @@ models:
 
       - name: storage_cost_usd_per_hr
         description: "Storage cost in USD/hr"
-
-      - name: revenue_usd_per_hr
-        description: "Total hourly revenue in USD"
-        tests:
-          - not_null
-
-      - name: usd_to_mkd_rate
-        description: "USD to MKD exchange rate locked at valid_from"
-
-      - name: tariff_tier_skey
-        description: "Surrogate key of the tariff tier this row represents"
-        tests:
-          - not_null
-
-      - name: consumer_category
-        description: "Consumer category for this tier e.g. household, business"
-        tests:
-          - not_null
-
-      - name: tariff_window_type
-        description: "Tariff window type for this tier - low or high"
-        tests:
-          - not_null
-          - accepted_values:
-              arguments:
-                values: [ 'low', 'high' ]
-
-      - name: tariff_block_number
-        description: "Tariff block number within the consumer category (1-4 for household high, null for low/business)"
-
-      - name: cost_usd_per_hr
-        description: "Cost in USD/hr for this tariff tier - electricity + distribution fee (+ household VAT)"
-
-      - name: profit_usd_per_hr
-        description: "Profit in USD/hr for this tariff tier"
-
-      - name: cost_per_tflop_usd
-        description: "Cost per TFLOP in USD for this tariff tier"
-
-      - name: profit_per_tflop_usd
-        description: "Profit per TFLOP in USD for this tariff tier - used for ranking"
 
       - name: valid_from
         description: "Scheduled hour of the census this machine row comes from"

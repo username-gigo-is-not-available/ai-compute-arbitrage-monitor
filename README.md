@@ -11,7 +11,7 @@ rates — then models them into analytical outputs that answer arbitrage questio
 
 | Question                                                                       | Where to look                  |
 |--------------------------------------------------------------------------------|--------------------------------|
-| Which GPU offers on Vast.AI are profitable right now, after electricity costs? | `mart_arbitrage_opportunities` |
+| What do machines like mine ask (GPU, reliability, network, country)?           | `mart_gpu_machines`            |
 | Which GPU is worth hosting, by its typical machine's profit per GPU?           | `mart_gpu_profitability`       |
 | How big and healthy is each GPU's market (machines, verified, available)?      | `mart_gpu_model_summary`       |
 | Does profitability change by time of day (high vs low tariff hours)?           | `mart_gpu_history`             |
@@ -259,25 +259,25 @@ After all four complete, `gpu_arbitrage__marts` will trigger automatically.
 
 ---
 
-### 5. Risk vs Reward — Live Offers
+### 5. Reliability vs Ask — Machines
 
 | Field        | Detail                                                              |
 | :----------- | :------------------------------------------------------------------ |
 | **Chart type**   | Scatter plot                                                    |
-| **Name**         | Arbitrage scatter                                               |
-| **Mart source**  | `mart_arbitrage_opportunities`                                  |
-| **What it shows**| Live offers plotted by risk vs. reward to surface best arbitrage bets |
+| **Name**         | Machines scatter                                                |
+| **Mart source**  | `mart_gpu_machines`                                             |
+| **What it shows**| Each current machine of a GPU variant by reliability vs ask per GPU |
 
 ---
 
-### 6. Profit per TFLOP — Live Offers
+### 6. Profit per TFLOP — GPU Variants
 
 | Field        | Detail                                                              |
 | :----------- | :------------------------------------------------------------------ |
 | **Chart type**   | Bar chart                                                       |
-| **Name**         | Arbitrage bar                                                   |
-| **Mart source**  | `mart_arbitrage_opportunities`                                  |
-| **What it shows**| Compute-normalized profitability ($/TFLOP) across live offers   |
+| **Name**         | Profit per TFLOP bar                                            |
+| **Mart source**  | `mart_gpu_profitability`                                        |
+| **What it shows**| Median profit per TFLOP of each GPU variant                     |
 
 ---
 
@@ -287,8 +287,8 @@ After all four complete, `gpu_arbitrage__marts` will trigger automatically.
 | :----------- | :------------------------------------------------------------------ |
 | **Chart type**   | Scorecard (KPI tile)                                            |
 | **Name**         | Scorecard                                                       |
-| **Mart source**  | `mart_arbitrage_opportunities`                                  |
-| **What it shows**| Count of live offers available right now                        |
+| **Mart source**  | `mart_gpu_machines`                                             |
+| **What it shows**| Count of machines available right now (`rentable_flag`)         |
 
 ---
 
@@ -296,9 +296,9 @@ After all four complete, `gpu_arbitrage__marts` will trigger automatically.
 
 | Mart                         | Used by charts                                      |
 | :--------------------------- | :-------------------------------------------------- |
-| `mart_gpu_profitability`     | GPU Profitability Rate by Tariff, Typical Profit per GPU |
+| `mart_gpu_profitability`     | GPU Profitability Rate by Tariff, Typical Profit per GPU, Profit per TFLOP |
 | `mart_gpu_history`           | Profit Over Time by GPU, Profit by Day and Hour     |
-| `mart_arbitrage_opportunities` | Risk vs Reward, Profit per TFLOP, Scorecard       |
+| `mart_gpu_machines`          | Reliability vs Ask, Available Offers Scorecard      |
 
 ## Data Lineage & Model Docs
 
@@ -367,7 +367,7 @@ gpu-arbitrage-monitor/
 │           ├── staging/            # stg_compute_offers, stg_exchange_rates, ...
 │           ├── intermediate/       # int_compute_offers, int_exchange_rates, ...
 │           ├── warehouse/          # fct_compute_offers, dim_exchange_rates, ...
-│           └── marts/              # mart_arbitrage_opportunities, mart_gpu_profitability, ...
+│           └── marts/              # mart_gpu_profitability, mart_gpu_machines, ...
 │
 ├── infra/
 │   ├── airflow/
