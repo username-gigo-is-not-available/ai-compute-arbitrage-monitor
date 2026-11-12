@@ -76,9 +76,7 @@ market_revenue as (
         gpu_memory_gb,
         approx_quantiles(revenue_per_gpu_usd_per_hr, 100)[offset(50)] as market_ask_per_gpu_usd_per_hr
     from {{ ref('fct_compute_offers') }}
-    where
-        cast(valid_to as date) = date '9999-12-31'
-        and revenue_usd_per_hr > 0
+    where cast(valid_to as date) = date '9999-12-31'
     group by gpu_model_name, gpu_memory_gb
 ),
 
