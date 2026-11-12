@@ -58,6 +58,7 @@ priced as (
         o.tflops_per_gpu,
         o.number_of_machine_gpus,
         o.revenue_per_gpu_usd_per_hr,
+        o.rentable_flag,
         o.profit_usd_per_hr / nullif(o.number_of_machine_gpus, 0) as profit_per_gpu_usd_per_hr,
         o.profit_per_tflop_usd,
         o.tariff_tier_skey,
@@ -93,6 +94,11 @@ select
     sum(number_of_machine_gpus) as total_number_of_machine_gpus,
 
     approx_quantiles(revenue_per_gpu_usd_per_hr, 100)[offset(50)] as market_ask_per_gpu_usd_per_hr,
+    -- A widening gap between the two shows asks that are not selling.
+    approx_quantiles(if(rentable_flag, revenue_per_gpu_usd_per_hr, null), 100)[offset(50)]
+        as available_market_ask_per_gpu_usd_per_hr,
+    approx_quantiles(if(not rentable_flag, revenue_per_gpu_usd_per_hr, null), 100)[offset(50)]
+        as taken_market_ask_per_gpu_usd_per_hr,
 
     -- The median is the typical machine; the average is pulled up by a few overpriced listings (a 4090 at $40/hr
     -- on 10-21).
