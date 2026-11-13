@@ -412,15 +412,19 @@ gpu-arbitrage-monitor/
 - The local Docker Compose setup cannot fully replicate the GCP environment. The `refine` step in each DAG submits a
   PySpark job to a live Dataproc cluster and will fail without one.
 
-- **Data quality**
-- Electricity cost calculations assume GPU TDP (thermal design power) as a proxy for actual power draw. Real consumption
-  varies by workload — TDP is the worst case.
+**Data quality**
+
+- Cost counts only the GPU's power limit (TDP). The GPU itself often draws less, depending on the workload, but the
+  rest of the machine (CPU, board, fans, power-supply losses) isn't counted at all, so cost is understated, most on
+  1-GPU machines (#43).
+- The `business` tariff reads EVN's LV1.1 fee column, which is not yet confirmed as the one small customers pay (#90).
+  Household fees are confirmed.
 - The tariff schedule is hardcoded based on the 2026 regulatory decision. If EVN updates their schedule and the page
   text changes, the seed will stop emitting data until manually reviewed and updated.
 - `geolocation` from Vast.AI is a free-text string (e.g. "Texas, US", "Frankfurt, DE"). Country code extraction splits
   on comma and takes the last element — malformed or unexpected formats will produce NULL country codes.
-- Vast.AI offer data reflects availability at the time of the hourly poll. Offers can appear and disappear between
-  polls; the pipeline does not capture sub-hourly changes.
+- Vast.AI offer data is one census a day (ADR-020). A machine rented and released between two censuses is never seen
+  as taken.
 
 **Exchange rates**
 
@@ -429,6 +433,6 @@ gpu-arbitrage-monitor/
 
 **Scale**
 
-- At 10,000 offers per type × 3 types × ~24 polls/day, `fct_compute_offers` grows by ~720,000 rows/day. BigQuery handles
+- One census is ~8,000 machines × 7 tariff tiers, so `fct_compute_offers` grows by ~56,000 rows/day. BigQuery handles
   this comfortably, but downstream tools connecting directly to the fact table (rather than the marts) should always
   apply date range filters.
