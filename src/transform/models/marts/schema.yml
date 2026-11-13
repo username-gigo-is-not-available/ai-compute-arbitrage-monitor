@@ -221,6 +221,14 @@ models:
       - name: taken_market_ask_per_gpu_usd_per_hr
         description: "Median per-GPU ask of the taken machines: rented, or switched off (null when none are taken)"
 
+      - name: number_of_verified_machines
+        description: "Machines whose host Vast.ai has verified; how solid the verified median is"
+        tests:
+          - not_null
+
+      - name: verified_market_ask_per_gpu_usd_per_hr
+        description: "Median per-GPU ask of the verified machines (null when none are verified)"
+
       - name: median_cost_per_gpu_usd_per_hr
         description: "Median per-GPU electricity cost in USD/hr for this tariff tier"
 
