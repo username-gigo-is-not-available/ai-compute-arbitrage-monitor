@@ -420,6 +420,8 @@ gpu-arbitrage-monitor/
 - Profit per machine is in no mart, because cost depends on the host's tariff tier (ADR-027). A machine's ask minus its
   model's `median_cost_per_gpu_usd_per_hr` is within cents of it: electricity is $0.09–0.45/hr for a B200 against
   asks of $6–13/hr.
+- "Taken" means not rentable now: rented, or switched off. Vast.ai's API can't tell these apart (checked 2026-11-13
+  across all 95 offer fields), so read the share of taken machines as an upper bound on demand.
 
 **Exchange rates**
 
