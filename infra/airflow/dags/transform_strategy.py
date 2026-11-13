@@ -19,7 +19,7 @@ class TransformStrategy(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def build_test_operator(self, tag: str, task_id: str = "test") -> BaseOperator:
+    def build_test_operator(self, tag: str, task_id: str = "test", exclude: str | None = None) -> BaseOperator:
         raise NotImplementedError
 
     @staticmethod
@@ -41,8 +41,8 @@ class LocalTransformStrategy(TransformStrategy):
     def build_run_operator(self, tag: str, task_id: str = "process") -> BaseOperator:
         return BashOperator(task_id=task_id, bash_command=self.dbt_adapter.run(tag))
 
-    def build_test_operator(self, tag: str, task_id: str = "test") -> BaseOperator:
-        return BashOperator(task_id=task_id, bash_command=self.dbt_adapter.test(tag))
+    def build_test_operator(self, tag: str, task_id: str = "test", exclude: str | None = None) -> BaseOperator:
+        return BashOperator(task_id=task_id, bash_command=self.dbt_adapter.test(tag, exclude))
 
 
 class CloudRunTransformStrategy(TransformStrategy):
@@ -69,5 +69,6 @@ class CloudRunTransformStrategy(TransformStrategy):
     def build_run_operator(self, tag: str, task_id: str = "process") -> BaseOperator:
         return self.build_operator(["run", *self.dbt_adapter.base_args, "--select", tag], task_id)
 
-    def build_test_operator(self, tag: str, task_id: str = "test") -> BaseOperator:
-        return self.build_operator(["test", *self.dbt_adapter.base_args, "--select", tag], task_id)
+    def build_test_operator(self, tag: str, task_id: str = "test", exclude: str | None = None) -> BaseOperator:
+        exclude_args = ["--exclude", exclude] if exclude else []
+        return self.build_operator(["test", *self.dbt_adapter.base_args, "--select", tag, *exclude_args], task_id)

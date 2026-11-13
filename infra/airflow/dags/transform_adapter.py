@@ -28,5 +28,6 @@ class DbtAdapter:
     def run(self, tag: str) -> str:
         return f"{self.dbt_bin_directory_path} run{self.base_flags()} --select {tag}"
 
-    def test(self, tag: str) -> str:
-        return f"{self.dbt_bin_directory_path} test{self.base_flags()} --select {tag}"
+    def test(self, tag: str, exclude: str | None = None) -> str:
+        exclude_flag = f" --exclude {exclude}" if exclude else ""
+        return f"{self.dbt_bin_directory_path} test{self.base_flags()} --select {tag}{exclude_flag}"
