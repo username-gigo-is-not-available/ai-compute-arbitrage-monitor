@@ -22,8 +22,8 @@ class _FakeDbtAdapter:
     def run(self, tag: str) -> str:
         return f"dbt run --select {tag}"
 
-    def test(self, tag: str) -> str:
-        return f"dbt test --select {tag}"
+    def test(self, tag: str, exclude: str | None = None) -> str:
+        return f"dbt test --select {tag}" + (f" --exclude {exclude}" if exclude else "")
 
 
 TRANSFORM = LocalTransformStrategy(dbt_adapter=_FakeDbtAdapter())
@@ -42,3 +42,16 @@ def test_marts_dag_waits_on_exactly_the_assets_the_dataset_dags_emit():
 
     assert emitted == awaited
     assert len(emitted) == len(PIPELINE_CONFIGS)
+
+
+def test_dataset_dags_leave_mart_tests_to_the_marts_dag():
+    # A mart test in a dataset DAG sees today's census in fct before the mart has it, fails, and blocks the marts
+    # DAG for good (#62).
+    for config in PIPELINE_CONFIGS:
+        dag = DagFactory(
+            pipeline_config=config, spark_job_strategy=LocalSparkJobStrategy(), transform_strategy=TRANSFORM
+        ).build()
+        assert dag.get_task("test").bash_command == f"dbt test --select {config.dbt_tag} --exclude tag:marts+"
+
+    marts = MartsDagFactory(pipeline_configs=PIPELINE_CONFIGS, transform_strategy=TRANSFORM).build()
+    assert marts.get_task("test").bash_command == "dbt test --select tag:marts"
