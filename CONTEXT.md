@@ -96,6 +96,10 @@ _Avoid_: Renter, consumer, buyer
 The practice of treating competitors' Vast.ai machines as a proxy for what the host can charge for a similar GPU. Taken machines show prices that are being paid; available machines show the competition. The marts compare machines to answer "which GPU config is worth hosting," not to model the host's own listings.
 _Avoid_: Own-inventory, confirmed demand (a taken machine may be offline, not rented)
 
+**Fact / Opinion**:
+The line between the marts and the API. A **fact** has one right answer whoever asks (a GPU's machine count, its median ask) and is computed in dbt. An **opinion** depends on who asks (how many machines are enough to trust, which metric to rank by) and is applied by the API as a parameter. Marts never rank, threshold or hide rows; they keep the counts the API needs to do so (ADR-026).
+_Avoid_: Business logic (too vague to say which side something belongs on)
+
 **Electricity-only cost model**:
 The deliberate scope of the cost model — it covers only the electricity to run the GPU (TDP-based), not hardware capex, maintenance, or placement fees. The host is assumed to already own the GPU; this is not a break-even calculator.
 _Avoid_: Total-cost, ROI, break-even
