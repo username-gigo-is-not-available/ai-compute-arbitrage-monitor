@@ -89,7 +89,7 @@ ranges, enforced by the `assert_scd2_double_active` and `assert_scd2_no_overlapp
 _Avoid_: Closed interval, active period, effective window
 
 **Host**:
-The economic actor this project models — someone who owns GPUs, places them in Macedonia at EVN electricity rates, and rents them out on Vast.ai at the global market price. The cost model is the host's electricity; the revenue is the rental price.
+The economic actor this project models — someone who owns GPUs, places them in Macedonia at EVN electricity rates, and rents them out on Vast.ai at the global market price. The cost model is the host's electricity; the revenue is the rental price. The host is a household or a small customer (under 50 employees and €2M revenue), the only consumers on EVN's regulated universal-supply tariffs; typically 1–4 consumer GPUs. Larger operators buy power on the open market at contract prices the cost model doesn't cover, so the marts' cost for datacenter GPUs (B200, H200) is not what their owners pay.
 _Avoid_: Renter, consumer, buyer
 
 **Market-benchmarking**:
