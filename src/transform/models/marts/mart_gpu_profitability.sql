@@ -36,6 +36,10 @@ select
         as available_market_ask_per_gpu_usd_per_hr,
     approx_quantiles(if(not rentable_flag, revenue_per_gpu_usd_per_hr, null), 100)[offset(50)]
         as taken_market_ask_per_gpu_usd_per_hr,
+    -- A median can't be re-filtered downstream, so the verified-only one is precomputed for the API to choose.
+    countif(verification_flag = 'verified') as number_of_verified_machines,
+    approx_quantiles(if(verification_flag = 'verified', revenue_per_gpu_usd_per_hr, null), 100)[offset(50)]
+        as verified_market_ask_per_gpu_usd_per_hr,
 
     approx_quantiles(cost_per_gpu_usd_per_hr, 100)[offset(50)] as median_cost_per_gpu_usd_per_hr,
     -- The median of each machine's profit, as in mart_gpu_history, not median revenue minus median cost.
