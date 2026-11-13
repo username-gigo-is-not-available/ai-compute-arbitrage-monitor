@@ -396,6 +396,15 @@ gpu-arbitrage-monitor/
 
 ## Known Limitations
 
+**Scope**
+
+- Cost is electricity only: the host already owns the GPU, so its purchase price is left out. The project answers "is
+  my card worth renting out?", not "which card should I buy?"; a payback model needs a source of card prices (future
+  work).
+- The tariffs cover households and small customers (under 50 employees and €2M revenue), the only consumers on EVN's
+  regulated universal supply. Larger operators buy on the open market at private contract prices, so the cost shown for
+  datacenter GPUs (B200, H200) is not what their owners pay.
+
 **Infrastructure**
 
 - The Dataproc cluster must be running before any Silver pipeline can execute. There is no auto-start logic — the
