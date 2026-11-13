@@ -413,6 +413,14 @@ gpu-arbitrage-monitor/
 - Vast.AI offer data reflects availability at the time of the hourly poll. Offers can appear and disappear between
   polls; the pipeline does not capture sub-hourly changes.
 
+**Marts**
+
+- The marts are unranked: ranking is left to the API (ADR-026). Sorting `mart_gpu_profitability` by profit alone puts
+  single-machine GPUs on top (an RTX 4090D asked at $12.92/hr by one host); check `number_of_machines` first.
+- Profit per machine is in no mart, because cost depends on the host's tariff tier (ADR-027). A machine's ask minus its
+  model's `median_cost_per_gpu_usd_per_hr` is within cents of it: electricity is $0.09–0.45/hr for a B200 against
+  asks of $6–13/hr.
+
 **Exchange rates**
 
 - The pipeline tracks a single currency pair (USD → MKD). Multi-currency support would require config changes across the
