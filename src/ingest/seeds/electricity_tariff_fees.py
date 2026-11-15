@@ -25,6 +25,8 @@ class ElectricityTariffFeesIngestor(EVNBaseIngestor[ElectricityTariffFee]):
             parser, self.config.tariff_tiers_valid_from_text_selector
         ).text.strip()
 
+        # Households and small businesses both have an ordinary low-voltage connection, column LV2; LV1.1 is public
+        # lighting and LV1.2 a line straight from a substation (ERC distribution tariff system, art. 2, #90)
         cell_specifications: list[CellSpecification] = [
             CellSpecification(
                 consumer_category=ConsumerCategoryType.HOUSEHOLD,
@@ -36,7 +38,7 @@ class ElectricityTariffFeesIngestor(EVNBaseIngestor[ElectricityTariffFee]):
                 consumer_category=ConsumerCategoryType.BUSINESS,
                 label_idx=13,
                 metric_idx=14,
-                value_idx=18,
+                value_idx=19,
             ),
             CellSpecification(
                 consumer_category=ConsumerCategoryType.HOUSEHOLD,
@@ -48,7 +50,7 @@ class ElectricityTariffFeesIngestor(EVNBaseIngestor[ElectricityTariffFee]):
                 consumer_category=ConsumerCategoryType.BUSINESS,
                 label_idx=28,
                 metric_idx=29,
-                value_idx=33,
+                value_idx=34,
             ),
         ]
 
