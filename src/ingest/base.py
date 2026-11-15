@@ -58,5 +58,13 @@ class Ingestor(ABC, Generic[ConfigT, RecordT]):
         self.logger.info(f"Written {len(rows)} {self.name} records to Bronze")
 
     def run(self) -> None:
+        # Every source serves only its current state, so a past day cannot be fetched (ADR-019); without the skip a
+        # backfill run fetches today's data and Airflow shows a success for a day nothing was fetched for (#61)
+        if self.snapshot.is_backfill():
+            self.logger.warning(
+                f"Skipping {self.name}: snapshot_at {self.snapshot.at.isoformat()} is in the past and the source "
+                f"only serves its current state, so it cannot be backfilled (ADR-019)."
+            )
+            return
         self.logger.info(f"Starting load for {self.name}...")
         self.handle_result(self.load())
