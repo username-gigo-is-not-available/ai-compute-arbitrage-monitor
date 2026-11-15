@@ -6,6 +6,7 @@ locals {
     container_file_system = "containerfilesystem.googleapis.com"
     composer              = "composer.googleapis.com"
     run                   = "run.googleapis.com"
+    secret_manager        = "secretmanager.googleapis.com"
   }
 }
 

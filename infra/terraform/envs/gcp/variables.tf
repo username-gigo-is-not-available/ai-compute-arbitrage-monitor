@@ -32,3 +32,7 @@ variable "gh_repository_uri" {}
 # dbt Cloud Run
 variable "dbt_cloud_run_job_name" {}
 variable "dbt_cloud_run_image_name" {}
+
+# Python Cloud Run: setup and ingest, one job with args per run (ADR-028)
+variable "python_cloud_run_job_name" {}
+variable "python_cloud_run_image_name" {}
