@@ -2,10 +2,11 @@ FROM python:3.12-slim
 
 WORKDIR /app
 
+# pyiceberg-core: the partition transforms pyiceberg needs to write Bronze by day;
 # pyspark only for the Silver StructTypes that setup converts to Iceberg schemas (no JVM, no cluster);
 # google-auth + requests: the BigLake catalog token (config.auth)
 RUN pip install --no-cache-dir \
-    "pyiceberg[pyarrow]==0.12.0" "pyspark==4.1.1" \
+    "pyiceberg[pyarrow,pyiceberg-core]==0.12.0" "pyspark==4.1.1" \
     pydantic pyyaml python-dotenv requests tenacity beautifulsoup4 google-auth
 
 COPY src/common/ ./common/
