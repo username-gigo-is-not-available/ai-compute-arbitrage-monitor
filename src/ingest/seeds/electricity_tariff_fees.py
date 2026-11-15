@@ -25,31 +25,13 @@ class ElectricityTariffFeesIngestor(EVNBaseIngestor[ElectricityTariffFee]):
             parser, self.config.tariff_tiers_valid_from_text_selector
         ).text.strip()
 
+        # Households and small businesses both have an ordinary low-voltage connection, so both pay the LV2 column (#90)
         cell_specifications: list[CellSpecification] = [
             CellSpecification(
-                consumer_category=ConsumerCategoryType.HOUSEHOLD,
-                label_idx=13,
-                metric_idx=14,
-                value_idx=19,
-            ),
-            CellSpecification(
-                consumer_category=ConsumerCategoryType.BUSINESS,
-                label_idx=13,
-                metric_idx=14,
-                value_idx=18,
-            ),
-            CellSpecification(
-                consumer_category=ConsumerCategoryType.HOUSEHOLD,
-                label_idx=28,
-                metric_idx=29,
-                value_idx=34,
-            ),
-            CellSpecification(
-                consumer_category=ConsumerCategoryType.BUSINESS,
-                label_idx=28,
-                metric_idx=29,
-                value_idx=33,
-            ),
+                consumer_category=category, label_idx=label_idx, metric_idx=metric_idx, value_idx=value_idx
+            )
+            for category in (ConsumerCategoryType.HOUSEHOLD, ConsumerCategoryType.BUSINESS)
+            for label_idx, metric_idx, value_idx in ((13, 14, 19), (28, 29, 34))
         ]
 
         electricity_tariff_fees: list[ElectricityTariffFee] = []

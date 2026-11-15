@@ -417,8 +417,6 @@ gpu-arbitrage-monitor/
 - Cost counts only the GPU's power limit (TDP). The GPU itself often draws less, depending on the workload, but the
   rest of the machine (CPU, board, fans, power-supply losses) isn't counted at all, so cost is understated, most on
   1-GPU machines. Counting the whole machine's draw is future work (#43).
-- The `business` tariff reads EVN's LV1.1 fee column, which is not yet confirmed as the one small customers pay (#90).
-  Household fees are confirmed.
 - The tariff schedule is hardcoded based on the 2026 regulatory decision. If EVN updates their schedule and the page
   text changes, the seed will stop emitting data until manually reviewed and updated.
 - `geolocation` from Vast.AI is a free-text string (e.g. "Texas, US", "Frankfurt, DE"). Country code extraction splits

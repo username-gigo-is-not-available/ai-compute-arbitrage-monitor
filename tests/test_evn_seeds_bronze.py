@@ -54,6 +54,17 @@ def test_fees_read_four_cells():
     )
 
 
+def test_households_and_small_businesses_pay_the_same_network_fees():
+    # Both are ordinary low-voltage connections (#90)
+    fees = _load(ElectricityTariffFeesIngestor, DatasetName.ELECTRICITY_TARIFF_FEES)
+    by_category = {
+        category: {f.label: f.value for f in fees if f.consumer_category == category}
+        for category in (ConsumerCategoryType.HOUSEHOLD, ConsumerCategoryType.BUSINESS)
+    }
+    assert by_category[ConsumerCategoryType.BUSINESS] == by_category[ConsumerCategoryType.HOUSEHOLD]
+    assert sorted(by_category[ConsumerCategoryType.BUSINESS].values()) == ["2,0339", "200"]
+
+
 def test_blocks_read_each_block_with_its_kwh_bounds():
     blocks = _load(ElectricityTariffBlocksIngestor, DatasetName.ELECTRICITY_TARIFF_BLOCKS)
     assert len(blocks) == 4
