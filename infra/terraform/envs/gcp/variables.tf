@@ -2,6 +2,11 @@ variable "project_id" {}
 variable "region" { default = "europe-west3" }
 variable "location" { default = "europe-west3" }
 
+# Off by default: Composer bills ~$400+/month even when idle, and the VPC + Cloud NAT exist only for Dataproc and
+# Composer. Cloud Run jobs need neither.
+variable "enable_composer" { default = false }
+variable "enable_network" { default = false }
+
 # Networking
 variable "vpc_name" {}
 variable "subnet_name" {}

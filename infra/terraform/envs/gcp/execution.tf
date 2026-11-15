@@ -1,8 +1,8 @@
 # ── Cloud Run Job ──────────────────────────────────────────────────────────────
 
 resource "google_cloud_run_v2_job" "dbt_transform" {
-  name     = var.dbt_cloud_run_job_name
-  location = var.region
+  name                = var.dbt_cloud_run_job_name
+  location            = var.region
   deletion_protection = false
 
   depends_on = [

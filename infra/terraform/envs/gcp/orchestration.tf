@@ -1,4 +1,6 @@
 resource "google_composer_environment" "composer" {
+  # Composer runs on the VPC, so it needs the network too
+  count  = var.enable_composer && var.enable_network ? 1 : 0
   name   = var.cc_environment_name
   region = var.region
 
@@ -38,8 +40,8 @@ resource "google_composer_environment" "composer" {
 
 
     node_config {
-      network         = google_compute_network.vpc.id
-      subnetwork      = google_compute_subnetwork.subnet.id
+      network         = google_compute_network.vpc[0].id
+      subnetwork      = google_compute_subnetwork.subnet[0].id
       service_account = google_service_account.composer_sa.email
     }
   }
