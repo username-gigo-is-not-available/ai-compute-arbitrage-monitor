@@ -40,7 +40,10 @@ gcp:
     subnetwork_name: "projects/graphic-mission-505412-j7/regions/europe-west3/subnetworks/ai-compute-arbitrage-monitor-subnet"
     service_account_email: "dataproc-sa@graphic-mission-505412-j7.iam.gserviceaccount.com"
   cloud_run:
-    job_name: "ai-compute-arbitrage-monitor-dbt-job"
+    dbt:
+      job_name: "ai-compute-arbitrage-monitor-dbt-job"
+    python:
+      job_name: "ai-compute-arbitrage-monitor-python-job"
   composer:
     runtime_packages: ["common", "config", "ingest"]
   big_lake:

@@ -14,6 +14,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "infra" / "airflow"
 from core_dag_factory import DagFactory
 from marts_dag_factory import MartsDagFactory
 from pipeline_config import PIPELINE_CONFIGS
+from python_job_strategy import LocalPythonJobStrategy
 from spark_job_strategy import LocalSparkJobStrategy
 from transform_strategy import LocalTransformStrategy
 
@@ -33,7 +34,10 @@ def test_marts_dag_waits_on_exactly_the_assets_the_dataset_dags_emit():
     emitted = set()
     for config in PIPELINE_CONFIGS:
         dag = DagFactory(
-            pipeline_config=config, spark_job_strategy=LocalSparkJobStrategy(), transform_strategy=TRANSFORM
+            pipeline_config=config,
+            python_job_strategy=LocalPythonJobStrategy(),
+            spark_job_strategy=LocalSparkJobStrategy(),
+            transform_strategy=TRANSFORM,
         ).build()
         emitted |= {asset.name for task in dag.tasks for asset in task.outlets}
 
@@ -49,7 +53,10 @@ def test_dataset_dags_leave_mart_tests_to_the_marts_dag():
     # DAG for good (#62).
     for config in PIPELINE_CONFIGS:
         dag = DagFactory(
-            pipeline_config=config, spark_job_strategy=LocalSparkJobStrategy(), transform_strategy=TRANSFORM
+            pipeline_config=config,
+            python_job_strategy=LocalPythonJobStrategy(),
+            spark_job_strategy=LocalSparkJobStrategy(),
+            transform_strategy=TRANSFORM,
         ).build()
         assert dag.get_task("test").bash_command == f"dbt test --select {config.dbt_tag} --exclude tag:marts+"
 

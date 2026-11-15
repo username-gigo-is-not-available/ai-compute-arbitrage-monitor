@@ -78,12 +78,12 @@ class ConfigLoader:
             warehouse=f"bl://projects/{project_id}/catalogs/{catalog_id}",
         )
 
-    def get_cloud_run(self) -> CloudRunConfig:
+    def get_cloud_run(self, job: str) -> CloudRunConfig:
         gcp_config: dict[str, Any] = self._raw["gcp"]
         return CloudRunConfig(
             project_id=os.environ["GCP_PROJECT_ID"],
             region_name=gcp_config["region_name"],
-            job_name=gcp_config["cloud_run"]["job_name"],
+            job_name=gcp_config["cloud_run"][job]["job_name"],
         )
 
     def _setup_logging(self) -> None:

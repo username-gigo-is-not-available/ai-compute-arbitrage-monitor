@@ -1,11 +1,13 @@
-from typing import ClassVar
+from typing import TYPE_CHECKING, ClassVar
 
 from pydantic import BaseModel
-from pyiceberg.catalog.rest import RestCatalog
 
 from common.classes import Dataset
 from common.enums import DatasetType, DataStageType
 from config.auth import GCPAuthentication
+
+if TYPE_CHECKING:
+    from pyiceberg.catalog.rest import RestCatalog
 
 
 class GCPLakehouseConfig(BaseModel):
@@ -37,7 +39,10 @@ class GCPLakehouseConfig(BaseModel):
         ns, tbl = self.table_id(stage, dataset)
         return f"{self.catalog_id}.{ns}.{tbl}"
 
-    def open_catalog(self) -> RestCatalog:
+    def open_catalog(self) -> "RestCatalog":
+        # Imported here: the DAG files load this config, and Airflow must not need pyiceberg (ADR-028)
+        from pyiceberg.catalog.rest import RestCatalog
+
         return RestCatalog(
             self.catalog_id,
             **{

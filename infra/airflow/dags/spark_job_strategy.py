@@ -14,7 +14,7 @@ from config.loader import ConfigLoader
 from pipeline_config import PipelineConfig
 
 
-# Started as a command, never imported: lakehouse and refine need pyspark, which Composer does not have
+# Refine: started as a command, never imported, since it needs pyspark (ADR-028)
 class SparkJobStrategy(ABC):
     @abstractmethod
     def build_operator(self, pipeline_config: PipelineConfig, package: str, task_id: str) -> BaseOperator:

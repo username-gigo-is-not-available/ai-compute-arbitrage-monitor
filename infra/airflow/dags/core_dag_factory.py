@@ -1,12 +1,10 @@
 from __future__ import annotations
 
 from airflow import DAG
-from airflow.providers.standard.operators.python import PythonOperator
 from airflow.sdk import Asset
 
-from ingest.registry import run_ingest
-
 from pipeline_config import DAG_TAGS, DEFAULT_ARGS, PipelineConfig
+from python_job_strategy import PythonJobStrategy
 from spark_job_strategy import SparkJobStrategy
 from transform_strategy import TransformStrategy
 
@@ -17,10 +15,12 @@ class DagFactory:
     def __init__(
         self,
         pipeline_config: PipelineConfig,
+        python_job_strategy: PythonJobStrategy,
         spark_job_strategy: SparkJobStrategy,
         transform_strategy: TransformStrategy,
     ) -> None:
         self.pipeline_config = pipeline_config
+        self.python_job_strategy = python_job_strategy
         self.spark_job_strategy = spark_job_strategy
         self.transform_strategy = transform_strategy
 
@@ -38,12 +38,12 @@ class DagFactory:
             max_active_runs=1,
         ) as dag:
             # DDL first: the tables match their declarations before anything loads (ADR-022, #41)
-            t_setup = self.spark_job_strategy.build_operator(config, package="lakehouse", task_id="setup")
+            t_setup = self.python_job_strategy.build_operator(
+                module="lakehouse.main", args=[config.dataset_name], task_id="setup"
+            )
 
-            t_ingest = PythonOperator(
-                task_id="ingest",
-                python_callable=run_ingest,
-                op_kwargs={"dataset": config.dataset_name, "scheduled_at": "{{ data_interval_end }}"},
+            t_ingest = self.python_job_strategy.build_operator(
+                module="ingest.main", args=[config.dataset_name, "{{ data_interval_end }}"], task_id="ingest"
             )
 
             t_refine = self.spark_job_strategy.build_operator(config, package="refine", task_id="refine")
