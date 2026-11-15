@@ -7,7 +7,6 @@ on:
     paths:
       - "src/refine/**"
       - "src/lakehouse/**"
-      - "src/ingest/**"
       - "src/config/**"
       - "src/common/**"
       - "config/settings.yaml"

@@ -47,6 +47,25 @@ resource "google_project_iam_member" "dbt_roles" {
 }
 
 
+# ── Python Cloud Run Service Account ───────────────────────────────────────────────────────────────────────────────
+
+resource "google_service_account" "python_cloud_run_sa" {
+  account_id   = "python-cloud-run-sa"
+  display_name = "Python Cloud Run Service Account"
+}
+
+resource "google_project_iam_member" "python_roles" {
+  for_each = toset([
+    # setup commits table metadata to the Lakehouse Iceberg REST catalog, ingest appends Bronze files
+    "roles/biglake.editor",
+    "roles/storage.objectAdmin",
+  ])
+
+  project = var.project_id
+  role    = each.key
+  member  = "serviceAccount:${google_service_account.python_cloud_run_sa.email}"
+}
+
 # ── Composer Service Account ───────────────────────────────────────────────────
 
 resource "google_service_account" "composer_sa" {
@@ -140,4 +159,12 @@ resource "google_service_account_iam_member" "github_workload_identity_grant" {
   service_account_id = google_service_account.github_actions_sa.name
   role               = "roles/iam.workloadIdentityUser"
   member             = "principalSet://iam.googleapis.com/${google_iam_workload_identity_pool.github_workload_identity_pool.name}/attribute.repository/${var.gh_repository_uri}"
+}
+
+# ── Composer Service Account impersonates Python Cloud Run Service Account ─────────────────────────────────────────
+
+resource "google_service_account_iam_member" "composer_impersonates_python_cloud_run" {
+  service_account_id = google_service_account.python_cloud_run_sa.name
+  role               = "roles/iam.serviceAccountUser"
+  member             = "serviceAccount:${google_service_account.composer_sa.email}"
 }

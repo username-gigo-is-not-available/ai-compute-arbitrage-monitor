@@ -32,7 +32,7 @@ DATAPROC = DataprocSparkJobStrategy(
 )
 
 
-@pytest.mark.parametrize("package", ["lakehouse", "refine"])
+@pytest.mark.parametrize("package", ["refine"])
 def test_dataproc_runs_the_package_entry_script_with_the_dataset_name(package):
     batch = DATAPROC.batch_config(CONFIG, package)["pyspark_batch"]
 
@@ -48,6 +48,6 @@ def test_setup_and_refine_get_different_batch_ids_in_the_same_run():
     assert setup != refine
 
 
-@pytest.mark.parametrize("package", ["lakehouse", "refine"])
+@pytest.mark.parametrize("package", ["refine"])
 def test_local_runs_the_same_entry_script_with_the_dataset_name(package):
     assert LocalSparkJobStrategy.command(CONFIG, package) == f"python -m {package}.main electricity_tariff_fees"

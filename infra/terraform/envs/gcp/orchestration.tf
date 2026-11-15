@@ -1,4 +1,6 @@
 resource "google_composer_environment" "composer" {
+  # Composer runs on the VPC, so it needs the network too
+  count  = var.enable_composer && var.enable_network ? 1 : 0
   name   = var.cc_environment_name
   region = var.region
 
@@ -21,8 +23,11 @@ resource "google_composer_environment" "composer" {
         "core-max_active_runs_per_dag"     = "1"
       }
 
+      # Only what parsing the DAG files needs beyond Airflow's own dependencies; the pipeline runs in the
+      # python Cloud Run job, so its libraries are not installed here (ADR-028)
       pypi_packages = {
-        beautifulsoup4 = "==4.14.3"
+        python-dotenv = "==1.2.4"
+        pyyaml        = "==6.0.3"
       }
 
       env_variables = {
@@ -38,8 +43,8 @@ resource "google_composer_environment" "composer" {
 
 
     node_config {
-      network         = google_compute_network.vpc.id
-      subnetwork      = google_compute_subnetwork.subnet.id
+      network         = google_compute_network.vpc[0].id
+      subnetwork      = google_compute_subnetwork.subnet[0].id
       service_account = google_service_account.composer_sa.email
     }
   }

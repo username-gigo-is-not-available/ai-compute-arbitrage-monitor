@@ -21,10 +21,10 @@ output "artifact_registry_url" {
 
 output "composer_dags_bucket" {
   description = "GCS bucket to upload DAGs and src/ into"
-  value       = google_composer_environment.composer.config[0].dag_gcs_prefix
+  value       = one(google_composer_environment.composer[*].config[0].dag_gcs_prefix)
 }
 
 output "composer_airflow_uri" {
   description = "Airflow web UI URL"
-  value       = google_composer_environment.composer.config[0].airflow_uri
+  value       = one(google_composer_environment.composer[*].config[0].airflow_uri)
 }

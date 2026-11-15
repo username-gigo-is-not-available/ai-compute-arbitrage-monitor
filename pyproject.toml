@@ -64,7 +64,7 @@ extend-immutable-calls = ["lakehouse.partition.Partition"]
 [tool.ruff.lint.isort]
 known-first-party = ["common", "config", "ingest", "lakehouse", "refine", "transform"]
 # The DAG folder's own modules, imported flat because Airflow puts the folder on sys.path.
-known-local-folder = ["core_dag_factory", "marts_dag_factory", "pipeline_config", "spark_job_strategy", "transform_adapter", "transform_strategy"]
+known-local-folder = ["core_dag_factory", "marts_dag_factory", "pipeline_config", "python_job_strategy", "spark_job_strategy", "transform_adapter", "transform_strategy"]
 combine-as-imports = true
 
 [tool.mypy]

@@ -1,0 +1,23 @@
+FROM python:3.12-slim
+
+WORKDIR /app
+
+# pyiceberg-core: the partition transforms pyiceberg needs to write Bronze by day;
+# pyspark only for the Silver StructTypes that setup converts to Iceberg schemas (no JVM, no cluster);
+# google-auth + requests: the BigLake catalog token (config.auth)
+RUN pip install --no-cache-dir \
+    "pyiceberg[pyarrow,pyiceberg-core]==0.12.0" "pyspark==4.1.1" \
+    pydantic pyyaml python-dotenv requests tenacity beautifulsoup4 google-auth
+
+COPY src/common/ ./common/
+COPY src/config/ ./config/
+COPY src/ingest/ ./ingest/
+COPY src/lakehouse/ ./lakehouse/
+COPY src/refine/ ./refine/
+COPY config/settings.yaml ./settings.yaml
+
+ENV SETTINGS_PATH="/app/settings.yaml"
+ENV PYTHONUNBUFFERED=1
+
+# python -m lakehouse.main <dataset>  |  python -m ingest.main <dataset> <scheduled_at>
+ENTRYPOINT ["python", "-m"]
