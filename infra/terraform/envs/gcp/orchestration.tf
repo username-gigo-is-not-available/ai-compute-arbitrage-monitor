@@ -23,8 +23,11 @@ resource "google_composer_environment" "composer" {
         "core-max_active_runs_per_dag"     = "1"
       }
 
+      # Only what parsing the DAG files needs beyond Airflow's own dependencies; the pipeline runs in the
+      # python Cloud Run job, so its libraries are not installed here (ADR-028)
       pypi_packages = {
-        beautifulsoup4 = "==4.14.3"
+        python-dotenv = "==1.2.4"
+        pyyaml        = "==6.0.3"
       }
 
       env_variables = {

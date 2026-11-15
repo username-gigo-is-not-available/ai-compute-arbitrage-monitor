@@ -72,7 +72,7 @@ class DataprocSparkJobStrategy(SparkJobStrategy):
             },
         }
 
-    # The task id is part of it: setup and refine run in the same DAG run, and batch ids must be unique
+    # The task id keeps batch ids unique if another Dataproc task joins refine in the same DAG run
     @staticmethod
     def generate_batch_id(pipeline_config: PipelineConfig, task_id: str) -> str:
         return f"{task_id}-{pipeline_config.dataset_name.replace('_', '-')}-{{{{ ts_nodash | lower }}}}"
