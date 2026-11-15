@@ -55,7 +55,7 @@ def test_fees_read_four_cells():
 
 
 def test_households_and_small_businesses_pay_the_same_network_fees():
-    # Both are ordinary low-voltage connections, column LV2 (#90)
+    # Both are ordinary low-voltage connections (#90)
     fees = _load(ElectricityTariffFeesIngestor, DatasetName.ELECTRICITY_TARIFF_FEES)
     by_category = {
         category: {f.label: f.value for f in fees if f.consumer_category == category}
