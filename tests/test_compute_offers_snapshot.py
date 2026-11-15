@@ -1,7 +1,6 @@
-"""ComputeOffersIngestor stamps offers with the scheduled snapshot_at and refuses backfills (ADR-019)."""
+"""ComputeOffersIngestor stamps offers with the scheduled snapshot_at (ADR-019)."""
 
-from datetime import UTC, datetime, timedelta
-from unittest import mock
+from datetime import UTC, datetime
 
 from fakes import build_ingestor
 
@@ -57,21 +56,3 @@ def test_parse_stamps_scheduled_snapshot_at_and_real_ingested_at():
     assert offer.snapshot_at == snapshot_at
     assert offer.ingested_at == fetched
     assert offer.to_row()["snapshot_at"] == snapshot_at
-
-
-def test_backfill_is_skipped_without_fetching():
-    ingestor = _ingestor(datetime.now(UTC).replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(hours=25))
-    with mock.patch.object(ingestor, "load") as load_mock:
-        ingestor.run()
-    load_mock.assert_not_called()
-
-
-def test_today_runs():
-    ingestor = _ingestor(datetime.now(UTC).replace(hour=0, minute=0, second=0, microsecond=0))
-
-    with (
-        mock.patch.object(ingestor, "load", return_value=[]),
-        mock.patch.object(ingestor, "handle_result") as handle_mock,
-    ):
-        ingestor.run()
-    handle_mock.assert_called_once_with([])

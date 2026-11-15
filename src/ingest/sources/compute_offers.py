@@ -16,15 +16,6 @@ class ComputeOffersIngestor(Ingestor[VastAIConfig, VastAIOffer]):
     rows_used: int = field(init=False, default=0)
     requests: int = field(init=False, default=0)
 
-    def run(self) -> None:
-        if self.snapshot.is_backfill():
-            self.logger.warning(
-                f"Skipping {self.name}: snapshot_at {self.snapshot.at.isoformat()} is in the past and "
-                f"Vast.ai only serves the current market, so it cannot be backfilled (ADR-019)."
-            )
-            return
-        super().run()
-
     def load(self) -> list[VastAIOffer]:
         ingested_at: datetime = datetime.now(UTC)
         rows = self.fetch_census()
