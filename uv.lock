@@ -1271,7 +1271,7 @@ wheels = [
 
 [[package]]
 name = "dbt-bigquery"
-version = "1.12.2"
+version = "1.12.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "dbt-adapters" },
@@ -1285,9 +1285,9 @@ dependencies = [
     { name = "google-cloud-storage" },
     { name = "nbformat" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/48/39/7632574d74524db0eca33000e798e03ee9004674728e925f011a74b6c300/dbt_bigquery-1.12.2.tar.gz", hash = "sha256:c149062dc0008b9cca31fba55f2c8886b0f4a6fcbda8095a39191bc6705a595c", size = 212673, upload-time = "2026-11-05T04:21:38.306Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/e1/f8/6488927b99557c868417f8751acfbaeb0ff79d857073cad2e13d58bba7ff/dbt_bigquery-1.12.3.tar.gz", hash = "sha256:d71352c4a679d3952ca6a6037cb60841004fc6df9b1a1f03cfab211c215a99b8", size = 212932, upload-time = "2026-11-11T05:31:57.686Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/1b/a3/6ee93aa566f54e4b404b7edd8442af7593cd55a5f2a672e76ccce8af9b9b/dbt_bigquery-1.12.2-py3-none-any.whl", hash = "sha256:fb7d62c0a06d7fac61412ed16a6b6432cf0aabe35463ef4096849d23dd0738f3", size = 114611, upload-time = "2026-11-05T04:21:36.718Z" },
+    { url = "https://files.pythonhosted.org/packages/ea/44/610602a3e8d20f76380f8fc9968c4582ab070289bb46191b170a72b16415/dbt_bigquery-1.12.3-py3-none-any.whl", hash = "sha256:5e3aab86e765c3b6e09ea97cc3351bcd8b5805d246005b893021fc8cb9393839", size = 114607, upload-time = "2026-11-11T05:31:56.188Z" },
 ]
 
 [[package]]
@@ -2648,7 +2648,7 @@ wheels = [
 
 [[package]]
 name = "google-cloud-storage"
-version = "3.1.1"
+version = "3.17.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "google-api-core" },
@@ -2658,9 +2658,9 @@ dependencies = [
     { name = "google-resumable-media" },
     { name = "requests" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/27/84/6afc2ffdf31f6247a6bab6ba070e073fb05e0fda56adf59ce52ac591a033/google_cloud_storage-3.1.1.tar.gz", hash = "sha256:f9c8f965cafd1d38509f8e2b070339e0e9e5bf050774653bf36213d4ea6104c0", size = 7668109, upload-time = "2025-06-18T11:06:52.332Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/1d/d8/9d6444c1bc301bd4bad36cc91306524e8aba670cbefcc0d2fc184c88fbea/google_cloud_storage-3.17.1.tar.gz", hash = "sha256:b24df37900f5e0a93518bd7d3a2a7b7b48d8a1e72add8eb57d53a38b8b2b0640", size = 17355234, upload-time = "2026-10-15T17:49:57.847Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/89/4f/b922e919f6e1ea5905f1427fadf1a3f56a85e79e2b0037fec182f6b437dd/google_cloud_storage-3.1.1-py3-none-any.whl", hash = "sha256:ba7e6ae2be5a7a08742f001e23ec6a0c17d78c620f63bf8e0e7c2cbdddb407de", size = 175464, upload-time = "2025-06-18T11:06:51.043Z" },
+    { url = "https://files.pythonhosted.org/packages/09/77/4376bb26f24966008a9522c61bae025d7030baabf443f20c4b795fb58308/google_cloud_storage-3.17.1-py3-none-any.whl", hash = "sha256:287c7919d7bcda710eae6f6b60c756e89140475d9a4daec01b6174e737488ca8", size = 345706, upload-time = "2026-10-15T17:49:27.497Z" },
 ]
 
 [[package]]
@@ -2933,7 +2933,7 @@ requires-dist = [
     { name = "google-cloud-bigquery", specifier = ">=3.41.0" },
     { name = "google-cloud-dataproc", specifier = ">=5.27.0" },
     { name = "google-cloud-pubsub", specifier = ">=2.37.0" },
-    { name = "google-cloud-storage", specifier = ">=2.4,<3.2" },
+    { name = "google-cloud-storage", specifier = ">=2.4,<3.18" },
     { name = "gql", specifier = ">=3.4.1" },
     { name = "grpcio-status", specifier = ">=1.80.0" },
     { name = "httpx", specifier = ">=0.24.0" },
