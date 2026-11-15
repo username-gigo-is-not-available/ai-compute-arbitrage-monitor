@@ -86,7 +86,6 @@ def test_composer_builds_correct_gcs_destinations(env) -> None:
         ("infra/airflow/dags/*", f"gs://{EXPECTED_BUCKET}/dags/"),
         ("src/common/*", f"gs://{EXPECTED_BUCKET}/dags/common/"),
         ("src/config/*", f"gs://{EXPECTED_BUCKET}/dags/config/"),
-        ("src/ingest/*", f"gs://{EXPECTED_BUCKET}/dags/ingest/"),
         ("config/settings.yaml", f"gs://{EXPECTED_BUCKET}/dags/config/settings.yaml"),
     ]
 
