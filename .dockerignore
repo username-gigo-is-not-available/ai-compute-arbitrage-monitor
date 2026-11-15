@@ -1,0 +1,14 @@
+.venv/
+.git/
+.idea/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+**/__pycache__/
+logs/
+.spratch/
+src/transform/target/
+src/transform/dbt_packages/
+src/transform/logs/
+.env
+*.json
