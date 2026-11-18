@@ -36,3 +36,19 @@ variable "dbt_cloud_run_image_name" {}
 # Python Cloud Run: setup and ingest, one job with args per run (ADR-028)
 variable "python_cloud_run_job_name" {}
 variable "python_cloud_run_image_name" {}
+
+# API keys: set TF_VAR_vastai_api_key and TF_VAR_exchange_rate_api_key from .env; ephemeral keeps them out of plan and state
+variable "vastai_api_key" {
+  type      = string
+  sensitive = true
+  ephemeral = true
+}
+variable "exchange_rate_api_key" {
+  type      = string
+  sensitive = true
+  ephemeral = true
+}
+variable "api_keys_version" {
+  type    = number
+  default = 1
+}
