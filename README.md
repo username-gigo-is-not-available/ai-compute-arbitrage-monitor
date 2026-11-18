@@ -173,6 +173,9 @@ cd infra/terraform
 cp terraform.tfvars.example terraform.tfvars
 # Edit terraform.tfvars with your project_id, region, bucket_name, cluster_name
 terraform init
+# The API keys go to Secret Manager write-only, never into Terraform state
+export TF_VAR_vastai_api_key=<VASTAI_API_KEY from .env>
+export TF_VAR_exchange_rate_api_key=<EXCHANGE_RATE_API_KEY from .env>
 terraform apply
 # Wait ~5 minutes for infra to complete
 ```

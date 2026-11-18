@@ -23,8 +23,9 @@ needed pyiceberg and the rest installed; the Composer Terraform installed only b
   (refine). The DAG files import none of the pipeline packages, so Composer needs none of them.
 - **Setup and ingest share one Cloud Run job**, `python`, with different args per run, like the one `dbt` job.
   Images and jobs are named after what runs inside them (`dbt`, `dataproc`, `python`), not after a pipeline step.
-- **The API keys** the ingest job needs live in Secret Manager; Terraform creates the empty secrets and the access
-  rule, and the values are set by hand, so they are in neither Terraform state nor the job's config.
+- **The API keys** the ingest job needs live in Secret Manager. Terraform creates the secrets, the access rule and the
+  versions; the values come from `.env` as ephemeral `TF_VAR_*` variables into write-only `secret_data_wo`, so they
+  are in neither Terraform state nor the job's config. Bump `api_keys_version` to push changed values.
 
 ## Considered Options
 
