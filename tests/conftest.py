@@ -8,7 +8,6 @@ from fakes import FakeCatalog
 from pyspark.sql import SparkSession
 
 from common.enums import DataStageType
-from config.lakehouse import GCPLakehouseConfig
 from ingest.base import Ingestor
 from ingest.tables import BRONZE_TABLES
 from lakehouse.sync import sync_table
@@ -31,7 +30,7 @@ def catalog() -> Iterator[FakeCatalog]:
 @pytest.fixture
 def bronze(monkeypatch, catalog) -> Callable[[Ingestor], pa.Table]:
     """Runs an ingestor into its real declared Bronze table, kept by the fake catalog; returns the table's rows."""
-    monkeypatch.setattr(GCPLakehouseConfig, "open_catalog", lambda self: catalog)
+    monkeypatch.setattr("lakehouse.catalog.open_catalog", lambda lakehouse: catalog)
 
     def run(ingestor: Ingestor) -> pa.Table:
         declared = BRONZE_TABLES[ingestor.dataset.dataset_name]

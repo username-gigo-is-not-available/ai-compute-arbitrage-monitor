@@ -12,6 +12,7 @@ from config.lakehouse import GCPLakehouseConfig
 from ingest.http_client import HttpClient
 from ingest.models.base import BaseRecord
 from ingest.write_strategy import BronzeTable
+from lakehouse import catalog as lakehouse_catalog
 
 ConfigT = TypeVar("ConfigT", bound=DatasetConfig)
 RecordT = TypeVar("RecordT", bound=BaseRecord)
@@ -44,7 +45,7 @@ class Ingestor(ABC, Generic[ConfigT, RecordT]):
 
     def store(self, data: list[RecordT]) -> None:
         # lakehouse.setup has already synced the table to its declaration, so it is not synced here
-        catalog = self.lakehouse_config.open_catalog()
+        catalog = lakehouse_catalog.open_catalog(self.lakehouse_config)
         table = catalog.load_table(self.lakehouse_config.table_id(DataStageType.BRONZE, self.dataset))
         rows = [r.to_row() for r in data]
         schema = table.schema().as_arrow()

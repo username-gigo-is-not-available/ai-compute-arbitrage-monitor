@@ -6,7 +6,6 @@ from pyiceberg.schema import Schema
 
 from common.enums import DatasetName, DatasetType, DataStageType
 from config.apis.exchange_rate import ExchangeRateConfig
-from config.lakehouse import GCPLakehouseConfig
 from ingest.sources.exchange_rates import ExchangeRateIngestor
 from ingest.tables import BRONZE_TABLES
 from lakehouse.sync import sync_table
@@ -34,7 +33,7 @@ def test_run_appends_the_rate_to_bronze(bronze):
 
 def test_records_with_a_column_the_table_lacks_fail_and_write_nothing(monkeypatch, catalog):
     # A field added to the record model but not to the Bronze schema must not be dropped quietly (#41)
-    monkeypatch.setattr(GCPLakehouseConfig, "open_catalog", lambda self: catalog)
+    monkeypatch.setattr("lakehouse.catalog.open_catalog", lambda lakehouse: catalog)
     declared = BRONZE_TABLES[DatasetName.EXCHANGE_RATES]
     without_value = Schema(*[f for f in declared.schema.fields if f.name != "value"])
     ingestor = _ingestor()

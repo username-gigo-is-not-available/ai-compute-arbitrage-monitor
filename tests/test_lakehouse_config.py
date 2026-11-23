@@ -1,5 +1,10 @@
 """GCPLakehouseConfig names namespaces and tables."""
 
+import os
+import subprocess
+import sys
+from pathlib import Path
+
 from common.classes import Dataset
 from common.enums import DatasetName, DatasetType, DataStageType
 from config.lakehouse import GCPLakehouseConfig
@@ -46,3 +51,14 @@ def test_stage_namespace_matches_namespace():
     assert GCPLakehouseConfig.stage_namespace(DataStageType.BRONZE, DatasetType.SOURCES) == CONFIG.namespace(
         DataStageType.BRONZE, COMPUTE_OFFERS
     )
+
+
+def test_the_dag_side_of_config_does_not_import_pyiceberg():
+    # The DAG files import config.datasets, and Airflow has no pyiceberg (ADR-028, #116). A fresh interpreter shows
+    # what importing it really loads.
+    script = "import sys, config.datasets; print('pyiceberg' in sys.modules)"
+    env = {**os.environ, "PYTHONPATH": str(Path(__file__).resolve().parents[1] / "src")}
+
+    result = subprocess.run([sys.executable, "-c", script], env=env, capture_output=True, text=True, check=True)
+
+    assert result.stdout.strip() == "False"
