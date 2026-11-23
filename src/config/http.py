@@ -8,9 +8,10 @@ class HttpConfig(BaseModel):
     retry_count: int
     retry_delay_seconds: int
 
+    # retry_count attempts have one wait fewer between them
     @property
     def retry_budget_seconds(self) -> int:
-        return self.retry_delay_seconds * self.retry_count
+        return self.retry_delay_seconds * (self.retry_count - 1)
 
     @staticmethod
     def retry_after_seconds(headers: Mapping[str, str]) -> int | None:

@@ -25,6 +25,7 @@ VAST_AI = VastAIConfig(
     split_at=500,
     census_parts=4,
     request_interval_seconds=0,
+    api_key="test-key",
 )
 EXCHANGE_RATE = ExchangeRateConfig(
     enabled=True, base_url="https://exchangerate.test/", from_currency="USD", to_currency="MKD", api_key="test-key"
