@@ -62,6 +62,7 @@ class DataprocSparkJobStrategy(SparkJobStrategy):
                 "container_image": self.cluster_config.image_tag,
                 "properties": {
                     "spark.sql.parquet.compression.codec": "snappy",
+                    "spark.jars.packages": ",".join(self.cluster_config.spark_packages),
                 },
             },
             "environment_config": {

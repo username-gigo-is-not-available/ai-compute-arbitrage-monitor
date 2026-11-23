@@ -25,6 +25,7 @@ DATAPROC = DataprocSparkJobStrategy(
         region_name="r",
         image_tag="i",
         runtime_packages=[],
+        spark_packages=["g:runtime:1", "g:bundle:1"],
         subnetwork_name="s",
         service_account_email="sa",
     ),
@@ -38,6 +39,12 @@ def test_dataproc_runs_the_package_entry_script_with_the_dataset_name(package):
 
     assert batch["main_python_file_uri"] == f"gs://bucket/jobs/{package}/main.py"
     assert batch["args"] == ["electricity_tariff_fees"]
+
+
+def test_dataproc_batch_gets_the_iceberg_jars_at_launch():
+    properties = DATAPROC.batch_config(CONFIG, "refine")["runtime_config"]["properties"]
+
+    assert properties["spark.jars.packages"] == "g:runtime:1,g:bundle:1"
 
 
 def test_setup_and_refine_get_different_batch_ids_in_the_same_run():
