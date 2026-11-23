@@ -32,6 +32,10 @@ _Avoid_: Record, row, version
 Whether an offer can be rented right now (Vast.ai's `rentable` flag). **Taken** means not rentable now — usually rented by someone, possibly switched off by its owner; the two cannot be told apart.
 _Avoid_: Rented (Vast.ai's `rented` flag means rented by the API caller, not by anyone)
 
+**Verification**:
+Vast.ai's trust status of a machine: `verified` (passed Vast.ai's reliability checks), `unverified` (not yet checked; every new host starts here) or `deverified` (lost its verification). A market median is computed per verification value and for `all` machines together, since a median can't be split afterwards; `all` is the default comparison for the host.
+_Avoid_: Verified flag, trusted
+
 **Tariff tier**:
 A specific EVN electricity price configuration — a combination of `consumer_category`, `tariff_window_type`, and `tariff_block_number` — valid for a date range. Versioned as SCD Type 2 with `tariff_tier_skey`.
 _Avoid_: Tariff, rate, price tier

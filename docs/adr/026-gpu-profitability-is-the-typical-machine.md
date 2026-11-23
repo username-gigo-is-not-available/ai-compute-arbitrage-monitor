@@ -40,3 +40,13 @@ in the top 10 by median profit per GPU; #1 is a single RTX 4090D 48GB at $12.92 
     use `number_of_machines`.
   - The old BigQuery table `mart_best_offers_by_gpu` is not removed by dbt and must be dropped by
     hand.
+
+## Amendment (2026-11-23, ADR-029)
+
+- **Verification joins the grain.** One row per GPU variant, tariff tier and verification (`all`, `verified`,
+  `unverified`, `deverified`), computed in one pass with `GROUPING SETS`, since a median can't be split afterwards.
+  `number_of_verified_machines` and `verified_market_ask_per_gpu_usd_per_hr` go: the `verified` rows replace them.
+- **The API's defaults:** `verification=all` (every machine counts, as above), `min_machines=5` (on 2026-11-23 it hides
+  40 of 131 variants but only 75 of 8,229 machines), and `rank_by=profit_per_gpu`, highest first, with
+  `profit_per_tflop` and `pct_profitable` as alternatives. This supersedes ADR-021's "market ranking uses marginal
+  profit per TFLOP".
