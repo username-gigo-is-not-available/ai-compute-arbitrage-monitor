@@ -68,6 +68,7 @@ VAST_AI = VastAIConfig(
     split_at=500,
     census_parts=32,
     request_interval_seconds=0,
+    api_key="test-key",
 )
 
 

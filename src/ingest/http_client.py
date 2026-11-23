@@ -56,8 +56,13 @@ class HttpClient:
             sleep=self.sleep,
         )
 
+    # Only a rate limit or a server error can pass on a later attempt; any other 4xx (a bad key) fails now
     def should_retry(self, response: requests.Response) -> bool:
-        return response.status_code != HTTPStatus.OK and not self.config.retry_after_exceeds_budget(response.headers)
+        transient = (
+            response.status_code == HTTPStatus.TOO_MANY_REQUESTS
+            or response.status_code >= HTTPStatus.INTERNAL_SERVER_ERROR
+        )
+        return transient and not self.config.retry_after_exceeds_budget(response.headers)
 
     def wait_before_retry(self, retry_state: RetryCallState) -> int:
         outcome = finished(retry_state)

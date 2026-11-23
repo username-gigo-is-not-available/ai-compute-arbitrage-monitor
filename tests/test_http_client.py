@@ -17,6 +17,7 @@ from fakes import FakeResponse, build_ingestor
 from common.enums import DatasetName, DatasetType
 from config.apis.evn import EVNConfig
 from config.apis.exchange_rate import ExchangeRateConfig
+from config.apis.vast_ai import VastAIConfig
 from config.http import HttpConfig
 from ingest.evn_base import EVNBaseIngestor
 from ingest.http_client import HttpClient
@@ -118,7 +119,7 @@ def test_retry_count_1_is_a_single_attempt_without_sleeping():
 
 
 def test_a_short_retry_after_is_waited_out():
-    # Longer than retry_delay_seconds but within the budget (3 x 60 s): wait what the server asks, then retry
+    # Longer than retry_delay_seconds but within the budget (3 attempts = 2 waits x 60 s): wait it out, then retry
     server = FakeServer(FakeResponse(429, headers={"Retry-After": "90"}), FakeResponse(text="ok"))
     assert server.client(retry_count=3).get("https://x.test/").text == "ok"
     assert server.sleeps == [90]
@@ -146,6 +147,60 @@ def test_a_retry_after_missing_or_not_in_seconds_waits_the_delay(headers):
     server = FakeServer(FakeResponse(503, headers=headers), FakeResponse())
     server.client().get("https://x.test/")
     assert server.sleeps == [RETRY_DELAY_SECONDS]
+
+
+@pytest.mark.parametrize("status", [400, 401, 403, 404])
+def test_a_client_error_fails_at_once_without_retrying(status):
+    # A rejected key or a wrong URL is the same on every attempt; retrying only delays the failure (#113)
+    server = FakeServer(FakeResponse(status))
+    with pytest.raises(requests.HTTPError) as raised:
+        server.client(retry_count=5).get("https://x.test/")
+
+    assert raised.value.response.status_code == status
+    assert len(server.calls) == 1
+    assert server.sleeps == []
+
+
+def test_a_429_without_retry_after_is_retried():
+    server = FakeServer(FakeResponse(429), FakeResponse(text="ok"))
+    assert server.client().get("https://x.test/").text == "ok"
+    assert server.sleeps == [RETRY_DELAY_SECONDS]
+
+
+@pytest.mark.parametrize(("retry_after", "retried"), [("240", True), ("241", False)])
+def test_the_retry_budget_is_the_waits_between_attempts(retry_after, retried):
+    # 5 attempts have 4 waits: 4 x 60 s = 240 s
+    server = FakeServer(FakeResponse(429, headers={"Retry-After": retry_after}), FakeResponse(text="ok"))
+    client = server.client(retry_count=5)
+    if retried:
+        assert client.get("https://x.test/").text == "ok"
+        assert server.sleeps == [240]
+    else:
+        with pytest.raises(requests.HTTPError):
+            client.get("https://x.test/")
+        assert server.sleeps == []
+
+
+def test_a_missing_vast_ai_key_fails_before_any_request():
+    config = VastAIConfig(
+        enabled=True,
+        base_url="https://vast.test",
+        limit=512,
+        split_at=500,
+        census_parts=4,
+        request_interval_seconds=0,
+        api_key="",
+    )
+    with pytest.raises(RuntimeError, match="VASTAI_API_KEY is not set"):
+        _ = config.header
+
+
+def test_a_missing_exchange_rate_key_fails_before_any_request():
+    config = ExchangeRateConfig(
+        enabled=True, base_url="https://exchangerate.test", from_currency="USD", to_currency="MKD", api_key=""
+    )
+    with pytest.raises(RuntimeError, match="EXCHANGE_RATE_API_KEY is not set"):
+        _ = config.url
 
 
 class _EVNTestIngestor(EVNBaseIngestor):

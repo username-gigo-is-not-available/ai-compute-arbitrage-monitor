@@ -4,6 +4,7 @@ import os
 from pydantic import BaseModel, Field
 
 from common.enums import OfferType
+from config.apis.api_key import required_api_key
 
 
 class VastAIConfig(BaseModel):
@@ -21,7 +22,7 @@ class VastAIConfig(BaseModel):
 
     @property
     def header(self) -> dict[str, str]:
-        return {"Authorization": f"Bearer {self.api_key}"}
+        return {"Authorization": f"Bearer {required_api_key(self.api_key, 'VASTAI_API_KEY')}"}
 
     def params(self, start: int, end: int | None) -> dict[str, str]:
         ask_contract_id = {"gte": start} if end is None else {"gte": start, "lt": end}

@@ -2,6 +2,8 @@ import os
 
 from pydantic import BaseModel, Field
 
+from config.apis.api_key import required_api_key
+
 
 class ExchangeRateConfig(BaseModel):
     enabled: bool
@@ -12,4 +14,5 @@ class ExchangeRateConfig(BaseModel):
 
     @property
     def url(self) -> str:
-        return f"{self.base_url}/{self.api_key}/latest/{self.from_currency}"
+        api_key = required_api_key(self.api_key, "EXCHANGE_RATE_API_KEY")
+        return f"{self.base_url}/{api_key}/latest/{self.from_currency}"
