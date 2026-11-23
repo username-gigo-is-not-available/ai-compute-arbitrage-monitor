@@ -23,7 +23,7 @@ SRC = REPO_ROOT / "src"
 def lakehouse(monkeypatch, catalog):
     """run_setup against the fake catalog instead of BigLake."""
     monkeypatch.setenv("GCP_PROJECT_ID", "test")
-    monkeypatch.setattr(GCPLakehouseConfig, "open_catalog", lambda self: catalog)
+    monkeypatch.setattr("lakehouse.catalog.open_catalog", lambda lakehouse: catalog)
     return catalog
 
 

@@ -2,6 +2,7 @@ from common.enums import DatasetName, DataStageType
 from config.datasets import DATASETS
 from config.loader import ConfigLoader
 from ingest.tables import BRONZE_TABLES
+from lakehouse import catalog as lakehouse_catalog
 from lakehouse.sync import sync_table
 from refine.tables import SILVER_TABLES
 
@@ -15,7 +16,7 @@ def run_setup(dataset: str) -> None:
     if not declaration.config(loader).enabled:
         return
     lakehouse = loader.get_lakehouse()
-    catalog = lakehouse.open_catalog()
+    catalog = lakehouse_catalog.open_catalog(lakehouse)
     bronze, silver = BRONZE_TABLES[name], SILVER_TABLES[name]
     sync_table(
         catalog,

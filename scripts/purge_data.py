@@ -18,6 +18,7 @@ from pyiceberg.catalog import Catalog
 from common.enums import DatasetType, DataStageType
 from config.lakehouse import GCPLakehouseConfig
 from config.loader import ConfigLoader
+from lakehouse import catalog as lakehouse_catalog
 
 load_dotenv()
 logger = logging.getLogger(__name__)
@@ -80,7 +81,7 @@ def stage_namespaces(stage: DataStageType) -> list[str]:
 
 def open_catalog() -> Catalog:
     # Module-level seam: tests replace it with a fake catalog.
-    return ConfigLoader().get_lakehouse().open_catalog()
+    return lakehouse_catalog.open_catalog(ConfigLoader().get_lakehouse())
 
 
 def purge_iceberg_stage(catalog: Catalog, bucket: str, stage: DataStageType) -> None:
