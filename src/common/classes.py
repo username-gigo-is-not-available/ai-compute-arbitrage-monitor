@@ -1,4 +1,4 @@
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime, time, timedelta
 from typing import ClassVar
 
 from pydantic import BaseModel, ConfigDict
@@ -30,7 +30,8 @@ class Snapshot(BaseModel):
             moment = datetime.fromisoformat(scheduled_at.strip())
             if moment.tzinfo is None:
                 moment = moment.replace(tzinfo=UTC)
-        return cls(at=moment.astimezone(UTC).replace(hour=0, minute=0, second=0, microsecond=0))
+        utc_day = moment.astimezone(UTC).date()
+        return cls(at=datetime.combine(utc_day, time.min, tzinfo=UTC))
 
     def is_backfill(self, now: datetime | None = None) -> bool:
         return (now or datetime.now(UTC)) - self.at > self.BACKFILL_TOLERANCE
