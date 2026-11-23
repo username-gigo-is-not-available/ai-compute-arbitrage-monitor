@@ -99,10 +99,9 @@ class ConfigLoader:
     def _load_yaml(path: Path) -> dict:
         try:
             with open(path, encoding="utf-8") as f:
-                return yaml.safe_load(f)
+                raw = yaml.safe_load(f)
         except FileNotFoundError:
-            logger.warning(f"Config file not found at {path}, using defaults.")
-            return {}
-        except (OSError, yaml.YAMLError) as e:
-            logger.error(f"Could not load config file {path}: {e}")
-            return {}
+            raise FileNotFoundError(f"Settings file not found at {path.resolve()}; check SETTINGS_PATH") from None
+        if not isinstance(raw, dict):
+            raise TypeError(f"Settings file {path.resolve()} is empty or not a YAML mapping")
+        return raw
