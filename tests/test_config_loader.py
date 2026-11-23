@@ -3,6 +3,7 @@
 import logging
 
 import pytest
+import yaml
 
 from common.enums import ExecutionType
 from config.loader import ConfigLoader
@@ -31,3 +32,25 @@ def test_an_unknown_execution_type_falls_back_to_local(tmp_path, monkeypatch, ca
         assert loader.get_execution_type() == ExecutionType.LOCAL
 
     assert "Unknown execution type 'kubernetes'" in caplog.text
+
+
+def test_a_missing_settings_file_fails_at_once(tmp_path):
+    with pytest.raises(FileNotFoundError, match="no-such-settings.yaml"):
+        ConfigLoader(tmp_path / "no-such-settings.yaml")
+
+
+@pytest.mark.parametrize("content", ["", "just a string"], ids=["empty", "not-a-mapping"])
+def test_an_empty_or_non_mapping_settings_file_fails_at_once(tmp_path, content):
+    path = tmp_path / "settings.yaml"
+    path.write_text(content, encoding="utf-8")
+
+    with pytest.raises(TypeError, match="empty or not a YAML mapping"):
+        ConfigLoader(path)
+
+
+def test_broken_yaml_fails_at_once(tmp_path):
+    path = tmp_path / "settings.yaml"
+    path.write_text("http: [unclosed", encoding="utf-8")
+
+    with pytest.raises(yaml.YAMLError):
+        ConfigLoader(path)
