@@ -18,7 +18,6 @@ from config.http import HttpConfig
 from config.lakehouse import GCPLakehouseConfig
 
 load_dotenv()
-logger = logging.getLogger(__name__)
 
 
 class ConfigLoader:
@@ -31,8 +30,9 @@ class ConfigLoader:
         try:
             return ExecutionType(execution_type)
         except ValueError:
-            logger.warning(f"Unknown execution type '{execution_type}', falling back to local.")
-            return ExecutionType.LOCAL
+            allowed = ", ".join(e.value for e in ExecutionType)
+            # A typo would build local tasks on Composer, which fail far from the cause (#123)
+            raise ValueError(f"Unknown execution_type '{execution_type}' in settings; use one of: {allowed}") from None
 
     def get_evn(self) -> EVNConfig:
         return EVNConfig(**self._raw["apis"]["evn"])
