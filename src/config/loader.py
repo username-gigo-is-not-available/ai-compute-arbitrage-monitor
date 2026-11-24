@@ -50,7 +50,6 @@ class ConfigLoader:
             region_name=gcp_config["region_name"],
             image_tag=gcp_config["dataproc"]["image_tag"],
             runtime_packages=gcp_config["dataproc"]["runtime_packages"],
-            spark_packages=gcp_config["dataproc"]["spark_packages"],
             subnetwork_name=gcp_config["dataproc"]["subnetwork_name"],
             service_account_email=gcp_config["dataproc"]["service_account_email"],
         )

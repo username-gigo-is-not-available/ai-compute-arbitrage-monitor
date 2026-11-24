@@ -37,11 +37,6 @@ gcp:
   dataproc:
     image_tag: "europe-west3-docker.pkg.dev/graphic-mission-505412-j7/ai-compute-arbitrage-monitor-repository/ai-compute-arbitrage-monitor-dataproc-image:latest"
     runtime_packages: ["common", "config", "lakehouse", "refine"]
-    # Runtime 2.2 is Spark 3.5 / Scala 2.13; Iceberg jars must be passed at launch, and only with the shaded gcp-bundle
-    # (spike 0D, docs/specs/0d-spark-iceberg-rest-catalog.md)
-    spark_packages:
-      - "org.apache.iceberg:iceberg-spark-runtime-3.5_2.13:1.10.2"
-      - "org.apache.iceberg:iceberg-gcp-bundle:1.10.2"
     subnetwork_name: "projects/graphic-mission-505412-j7/regions/europe-west3/subnetworks/ai-compute-arbitrage-monitor-subnet"
     service_account_email: "dataproc-sa@graphic-mission-505412-j7.iam.gserviceaccount.com"
   cloud_run:

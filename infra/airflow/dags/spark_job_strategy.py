@@ -10,6 +10,7 @@ from common.enums import ExecutionType
 from config.bucket import GCSBucketConfig
 from config.cluster import GCPClusterConfig
 from config.loader import ConfigLoader
+from config.versions import DATAPROC_RUNTIME_VERSION, DATAPROC_SPARK_PACKAGES
 
 from pipeline_config import PipelineConfig
 
@@ -59,10 +60,11 @@ class DataprocSparkJobStrategy(SparkJobStrategy):
                 ],
             },
             "runtime_config": {
+                "version": DATAPROC_RUNTIME_VERSION,
                 "container_image": self.cluster_config.image_tag,
                 "properties": {
                     "spark.sql.parquet.compression.codec": "snappy",
-                    "spark.jars.packages": ",".join(self.cluster_config.spark_packages),
+                    "spark.jars.packages": ",".join(DATAPROC_SPARK_PACKAGES),
                 },
             },
             "environment_config": {
