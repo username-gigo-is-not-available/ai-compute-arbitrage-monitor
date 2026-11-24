@@ -14,5 +14,8 @@ class ExchangeRateConfig(BaseModel):
 
     @property
     def url(self) -> str:
-        api_key = required_api_key(self.api_key, "EXCHANGE_RATE_API_KEY")
-        return f"{self.base_url}/{api_key}/latest/{self.from_currency}"
+        return f"{self.base_url}/latest/{self.from_currency}"
+
+    @property
+    def header(self) -> dict[str, str]:
+        return {"Authorization": f"Bearer {required_api_key(self.api_key, 'EXCHANGE_RATE_API_KEY')}"}

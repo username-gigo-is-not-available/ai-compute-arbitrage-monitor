@@ -200,7 +200,26 @@ def test_a_missing_exchange_rate_key_fails_before_any_request():
         enabled=True, base_url="https://exchangerate.test", from_currency="USD", to_currency="MKD", api_key=""
     )
     with pytest.raises(RuntimeError, match="EXCHANGE_RATE_API_KEY is not set"):
-        _ = config.url
+        _ = config.header
+
+
+def test_the_exchange_rate_key_is_sent_in_a_header_not_the_url():
+    # A failed request's HTTPError prints the URL, so a key in it would end up in the logs (#122)
+    server = FakeServer(FakeResponse(401))
+    config = ExchangeRateConfig(
+        enabled=True, base_url="https://exchangerate.test", from_currency="USD", to_currency="MKD", api_key="secret"
+    )
+    ingestor = build_ingestor(
+        ExchangeRateIngestor, DatasetName.EXCHANGE_RATES, DatasetType.SOURCES, config, server.send
+    )
+
+    with pytest.raises(requests.HTTPError):
+        ingestor.load()
+
+    [(url, kwargs)] = server.calls
+    assert "secret" not in url
+    assert url == "https://exchangerate.test/latest/USD"
+    assert kwargs["headers"] == {"Authorization": "Bearer secret"}
 
 
 class _EVNTestIngestor(EVNBaseIngestor):
