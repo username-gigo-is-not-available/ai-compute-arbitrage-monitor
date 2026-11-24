@@ -4,6 +4,7 @@ import logging
 
 import pytest
 import yaml
+from pydantic import ValidationError
 
 from common.enums import ExecutionType
 from config.loader import ConfigLoader
@@ -54,3 +55,18 @@ def test_broken_yaml_fails_at_once(tmp_path):
 
     with pytest.raises(yaml.YAMLError):
         ConfigLoader(path)
+
+
+def test_a_misspelled_key_in_a_settings_block_fails(tmp_path):
+    # Without extra="forbid" the typo would be dropped and tariff_blocks_limit would silently stay 4 (#125)
+    path = tmp_path / "settings.yaml"
+    evn = {
+        "enabled": True,
+        "tariff_tiers_url": "https://evn.test",
+        "tariff_system_url": "https://evn.test",
+        "tariff_blocks_limt": 5,
+    }
+    path.write_text(yaml.safe_dump({"apis": {"evn": evn}}), encoding="utf-8")
+
+    with pytest.raises(ValidationError, match="tariff_blocks_limt"):
+        ConfigLoader(path).get_evn()

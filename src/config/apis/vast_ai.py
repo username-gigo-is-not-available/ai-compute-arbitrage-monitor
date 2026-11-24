@@ -1,13 +1,14 @@
 import json
 import os
 
-from pydantic import BaseModel, Field
+from pydantic import Field
 
 from common.enums import OfferType
 from config.apis.api_key import required_api_key
+from config.base import SettingsBlock
 
 
-class VastAIConfig(BaseModel):
+class VastAIConfig(SettingsBlock):
     enabled: bool
     base_url: str
     limit: int
