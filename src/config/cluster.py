@@ -6,6 +6,5 @@ class GCPClusterConfig(BaseModel):
     region_name: str
     image_tag: str
     runtime_packages: list[str]
-    spark_packages: list[str]
     subnetwork_name: str
     service_account_email: str

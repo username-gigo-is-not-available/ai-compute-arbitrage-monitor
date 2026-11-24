@@ -14,6 +14,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "infra" / "airflow"
 from common.enums import DatasetName
 from config.bucket import GCSBucketConfig
 from config.cluster import GCPClusterConfig
+from config.versions import DATAPROC_RUNTIME_VERSION, DATAPROC_SPARK_PACKAGES
 
 from pipeline_config import PipelineConfig
 from spark_job_strategy import DataprocSparkJobStrategy, LocalSparkJobStrategy
@@ -25,7 +26,6 @@ DATAPROC = DataprocSparkJobStrategy(
         region_name="r",
         image_tag="i",
         runtime_packages=[],
-        spark_packages=["g:runtime:1", "g:bundle:1"],
         subnetwork_name="s",
         service_account_email="sa",
     ),
@@ -41,10 +41,19 @@ def test_dataproc_runs_the_package_entry_script_with_the_dataset_name(package):
     assert batch["args"] == ["electricity_tariff_fees"]
 
 
-def test_dataproc_batch_gets_the_iceberg_jars_at_launch():
-    properties = DATAPROC.batch_config(CONFIG, "refine")["runtime_config"]["properties"]
+def test_dataproc_batch_gets_the_iceberg_jars_at_launch_on_the_pinned_runtime():
+    runtime = DATAPROC.batch_config(CONFIG, "refine")["runtime_config"]
 
-    assert properties["spark.jars.packages"] == "g:runtime:1,g:bundle:1"
+    assert runtime["version"] == DATAPROC_RUNTIME_VERSION
+    assert runtime["properties"]["spark.jars.packages"] == ",".join(DATAPROC_SPARK_PACKAGES)
+
+
+def test_the_dataproc_image_is_built_on_the_pinned_runtime():
+    # The jars are chosen for the runtime; an image on another runtime would not match them (#124)
+    dockerfile = Path(__file__).resolve().parents[1] / "infra" / "docker" / "Dockerfile.dataproc"
+    base = next(line for line in dockerfile.read_text(encoding="utf-8").splitlines() if line.startswith("FROM "))
+
+    assert base.endswith(f"/dataproc_{DATAPROC_RUNTIME_VERSION}")
 
 
 def test_setup_and_refine_get_different_batch_ids_in_the_same_run():

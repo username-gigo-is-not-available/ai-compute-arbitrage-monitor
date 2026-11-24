@@ -3,12 +3,7 @@ from pyspark.sql import SparkSession
 from common.enums import ExecutionType
 from config.auth import GCPAuthentication
 from config.lakehouse import GCPLakehouseConfig
-
-_ICEBERG_VERSION = "1.11.0"
-_ICEBERG_PACKAGES = (
-    f"org.apache.iceberg:iceberg-spark-runtime-4.1_2.13:{_ICEBERG_VERSION},"
-    f"org.apache.iceberg:iceberg-gcp-bundle:{_ICEBERG_VERSION}"
-)
+from config.versions import LOCAL_SPARK_PACKAGES
 
 
 def configure_spark(
@@ -22,7 +17,7 @@ def configure_spark(
         builder = builder.config(f"spark.sql.catalog.{catalog_id}.{key}", value)
     if execution_type == ExecutionType.LOCAL:
         builder = (
-            builder.config("spark.jars.packages", _ICEBERG_PACKAGES)
+            builder.config("spark.jars.packages", ",".join(LOCAL_SPARK_PACKAGES))
             .config(f"spark.sql.catalog.{catalog_id}.token", GCPAuthentication().access_token)
             .config("spark.driver.memory", "4g")
         )
