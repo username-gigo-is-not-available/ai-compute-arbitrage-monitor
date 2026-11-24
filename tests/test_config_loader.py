@@ -1,5 +1,7 @@
 """ConfigLoader reads settings.yaml into the typed configs."""
 
+import logging
+
 import pytest
 import yaml
 from pydantic import ValidationError
@@ -63,3 +65,29 @@ def test_a_misspelled_key_in_a_settings_block_fails(tmp_path):
 
     with pytest.raises(ValidationError, match="tariff_blocks_limt"):
         ConfigLoader(path).get_evn()
+
+
+def test_building_a_loader_leaves_logging_alone(tmp_path):
+    # Airflow builds ConfigLoaders while parsing the DAGs; that must not reset its handlers (#126)
+    path = tmp_path / "settings.yaml"
+    path.write_text("logging: {level: DEBUG}", encoding="utf-8")
+    root = logging.getLogger()
+    before = (list(root.handlers), root.level)
+
+    ConfigLoader(path)
+
+    assert (list(root.handlers), root.level) == before
+
+
+def test_setup_logging_uses_the_settings(tmp_path, monkeypatch):
+    # basicConfig itself is replaced: with force=True it would remove pytest's log capture handler
+    calls = []
+    monkeypatch.setattr(logging, "basicConfig", lambda **kwargs: calls.append(kwargs))
+    path = tmp_path / "settings.yaml"
+    path.write_text("logging: {level: DEBUG}", encoding="utf-8")
+
+    ConfigLoader(path).setup_logging()
+
+    [kwargs] = calls
+    assert kwargs["level"] == "DEBUG"
+    assert kwargs["force"] is True

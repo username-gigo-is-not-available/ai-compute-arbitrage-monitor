@@ -23,7 +23,6 @@ load_dotenv()
 class ConfigLoader:
     def __init__(self, config_path: Path | None = None) -> None:
         self._raw = self._load_yaml(config_path or Path(os.getenv("SETTINGS_PATH", "settings.yaml")))
-        self._setup_logging()
 
     def get_execution_type(self) -> ExecutionType:
         execution_type = self._raw.get("execution_type", "local")
@@ -86,7 +85,8 @@ class ConfigLoader:
             job_name=gcp_config["cloud_run"][job]["job_name"],
         )
 
-    def _setup_logging(self) -> None:
+    # Called once by each entry point, never on construction: Airflow builds ConfigLoaders while parsing DAGs (#126)
+    def setup_logging(self) -> None:
         log_config = self._raw.get("logging", {})
         logging.basicConfig(
             level=log_config.get("level", "INFO"),
