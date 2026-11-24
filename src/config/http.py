@@ -1,9 +1,9 @@
 from collections.abc import Mapping
 
-from pydantic import BaseModel
+from config.base import SettingsBlock
 
 
-class HttpConfig(BaseModel):
+class HttpConfig(SettingsBlock):
     timeout_seconds: int
     retry_count: int
     retry_delay_seconds: int

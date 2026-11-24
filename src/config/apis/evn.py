@@ -1,7 +1,7 @@
-from pydantic import BaseModel
+from config.base import SettingsBlock
 
 
-class EVNConfig(BaseModel):
+class EVNConfig(SettingsBlock):
     enabled: bool
 
     tariff_tiers_url: str

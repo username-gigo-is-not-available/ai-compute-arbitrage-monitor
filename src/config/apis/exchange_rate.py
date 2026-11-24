@@ -1,11 +1,12 @@
 import os
 
-from pydantic import BaseModel, Field
+from pydantic import Field
 
 from config.apis.api_key import required_api_key
+from config.base import SettingsBlock
 
 
-class ExchangeRateConfig(BaseModel):
+class ExchangeRateConfig(SettingsBlock):
     enabled: bool
     base_url: str
     from_currency: str
