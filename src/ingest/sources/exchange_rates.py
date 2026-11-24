@@ -16,7 +16,7 @@ class ExchangeRateIngestor(Ingestor[ExchangeRateConfig, ExchangeRate]):
         self.timestamp_format = "%a, %d %b %Y %H:%M:%S %z"
 
     def load(self) -> list[ExchangeRate]:
-        data: dict[str, Any] = self.http.get(self.config.url).json()
+        data: dict[str, Any] = self.http.get(self.config.url, headers=self.config.header).json()
         return [self.parse(data=data)]
 
     def parse(self, data: dict[str, Any]) -> ExchangeRate:
