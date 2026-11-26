@@ -379,6 +379,9 @@ models:
               - tariff_window_type
               - tariff_block_number
               - valid_from
+      - dbt_utils.expression_is_true:
+          arguments:
+            expression: "(tariff_block_number is not null) = (consumer_category = 'household' and tariff_window_type = 'high')"
 
   - name: int_electricity_tariff_fees
     description: "Intermediate electricity tariff fees with fee_type assignment"
@@ -562,7 +565,9 @@ models:
         tests:
           - not_null
       - name: distribution_fee
-        description: "Per-kWh distribution fee in MKD in force for the whole period (from dim_electricity_tariff_fees)"
+        description: "Per-kWh distribution fee in MKD in force for the whole period (from dim_electricity_tariff_fees); null when EVN's distribution fee row is missing, so the test fails instead of pricing it at 0 (#136)"
+        tests:
+          - not_null
       - name: vat_rate
         description: "household_vat_rate for households, 0 for business (a VAT-registered business reclaims it)"
       - name: valid_from
@@ -654,3 +659,20 @@ unit_tests:
         - {tariff_tier_skey: high_1, tariff_value: 6.5, distribution_fee: 1.4, lower_bound_kwh: 0, upper_bound_kwh: 350, vat_rate: 0.18, valid_from: "2026-03-01 00:00:00", valid_to: "9999-12-31 00:00:00"}
         - {tariff_tier_skey: low, tariff_value: 3.0, distribution_fee: 1.2, lower_bound_kwh: null, upper_bound_kwh: null, vat_rate: 0.18, valid_from: "2026-01-01 00:00:00", valid_to: "2026-03-01 00:00:00"}
         - {tariff_tier_skey: low, tariff_value: 3.0, distribution_fee: 1.4, lower_bound_kwh: null, upper_bound_kwh: null, vat_rate: 0.18, valid_from: "2026-03-01 00:00:00", valid_to: "9999-12-31 00:00:00"}
+
+  # EVN's page lost the distribution fee: only the access fee row arrived. The fee must come out null, not 0, so the
+  # not_null test on distribution_fee fails instead of pricing electricity ~30% too cheap (#136).
+  - name: int_electricity_tariff_rates_missing_distribution_fee_is_null
+    model: int_electricity_tariff_rates
+    given:
+      - input: ref('dim_electricity_tariff_tiers')
+        rows:
+          - {skey: low, consumer_category: household, tariff_type: low, metric: MKD/kWh, value: 3.0, tariff_window_type: low, tariff_block_number: null, valid_from: "2026-01-01 00:00:00", valid_to: "9999-12-31 00:00:00"}
+      - input: ref('dim_electricity_tariff_fees')
+        rows:
+          - {consumer_category: household, fee_type: access, value: 100.0, valid_from: "2026-01-01 00:00:00", valid_to: "9999-12-31 00:00:00"}
+      - input: ref('dim_electricity_tariff_blocks')
+        rows: []
+    expect:
+      rows:
+        - {tariff_tier_skey: low, tariff_value: 3.0, distribution_fee: null}

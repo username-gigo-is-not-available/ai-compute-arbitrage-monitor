@@ -249,8 +249,6 @@ models:
           - dbt_utils.expression_is_true:
               arguments:
                 expression: ">= 0 and pct_profitable <= 100"
-              config:
-                severity: warn
 
       - name: valid_from
         description: "Timestamp of the latest census for this GPU variant and tier"
@@ -419,8 +417,6 @@ models:
           - dbt_utils.expression_is_true:
               arguments:
                 expression: ">= 0 and pct_verified <= 100"
-              config:
-                severity: warn
 
       - name: pct_available
         description: "Percentage of the variant's GPUs that are free (an offer that can be rented now lists them); the rest are taken (ADR-030)"
@@ -428,8 +424,6 @@ models:
           - dbt_utils.expression_is_true:
               arguments:
                 expression: ">= 0 and pct_available <= 100"
-              config:
-                severity: warn
 
       - name: avg_reliability_score
         description: "Average host reliability score"
@@ -447,7 +441,7 @@ models:
       blocks with a running total from their billing-period consumption, and scales by their GPU count and ask
       price. Revenue is the current market ask (median per-GPU ask of the variant's machines in the latest census). TDP, TFLOPS,
       bandwidth and CUDA version are the medians of the variant's current machines, like mart_gpu_history (#53). Cost is electricity only:
-      kWh x (tariff_value + distribution_fee) x (1 + household VAT), excluding the fixed access fee.
+      kWh x (tariff_value + distribution_fee) x (1 + VAT; households only, business reclaims it), excluding the fixed access fee.
       Covers the next forecast_days (default 32) days.
       One row per (gpu_model_name, gpu_memory_gb, forecast_hour, tariff_tier_skey).
     tests:
