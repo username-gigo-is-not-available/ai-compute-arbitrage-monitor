@@ -6,6 +6,7 @@ on:
       - master
     paths:
       - "pyproject.toml"
+      - "uv.lock"
       - "infra/docker/Dockerfile.dbt"
       - "src/transform/**"
 

@@ -5,6 +5,8 @@ on:
     branches:
       - master
     paths:
+      - "pyproject.toml"
+      - "uv.lock"
       - "infra/docker/Dockerfile.python"
       - "src/common/**"
       - "src/config/**"

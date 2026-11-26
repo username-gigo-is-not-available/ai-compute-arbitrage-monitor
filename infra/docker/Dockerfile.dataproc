@@ -7,9 +7,15 @@ WORKDIR /app
 RUN conda create -n spark_env python=3.11 -y && \
     conda clean -afy
 
+# Exact versions from uv.lock (it resolves for Python 3.11 too); Spark itself comes from the base image
+COPY pyproject.toml uv.lock ./
+RUN /opt/conda/envs/spark_env/bin/pip install --no-cache-dir uv && \
+    /opt/conda/envs/spark_env/bin/uv export --frozen --no-dev --no-install-project --no-hashes -o /tmp/constraints.txt && \
+    /opt/conda/envs/spark_env/bin/pip uninstall -y uv
+
 # pyiceberg[pyarrow]: table sync and the Iceberg schema conversion (lakehouse, refine);
 # google-auth + requests: the BigLake catalog token (config.auth)
-RUN /opt/conda/envs/spark_env/bin/pip install --no-cache-dir \
+RUN /opt/conda/envs/spark_env/bin/pip install --no-cache-dir -c /tmp/constraints.txt \
     pyyaml pydantic python-dotenv "pyiceberg[pyarrow]" google-auth requests
 
 ENV SETTINGS_PATH="settings.yaml"
