@@ -106,5 +106,5 @@ class ComputeOffersIngestor(Ingestor[VastAIConfig, VastAIOffer]):
                 rented_flag=data.get("rented"),
             )
         except (KeyError, ValueError, TypeError, ValidationError) as e:
-            self.logger.warning(f"Could not parse offer {data.get('id')}: {e}")
+            self.logger.warning(f"Could not parse offer {data.get('ask_contract_id')}: {e}")
             return None
