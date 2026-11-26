@@ -1,7 +1,7 @@
 """Silver idempotency for compute_offers on snapshot_at (ADR-019)."""
 
 from pyiceberg.transforms import DayTransform
-from pyspark.sql import DataFrame, SparkSession
+from pyspark.sql import DataFrame, SparkSession, functions as F
 
 from common.classes import Dataset
 from common.enums import DatasetName, DatasetType
@@ -73,6 +73,15 @@ def test_silver_keeps_the_slice_of_the_machine(spark):
         "array(CAST(55783 AS BIGINT), CAST(55784 AS BIGINT)) AS gpu_ids, "
         "CAST('2026-10-03 12:00:00' AS TIMESTAMP) AS snapshot_at, "
         "CAST('2026-10-03 12:00:04' AS TIMESTAMP) AS ingested_at"
+    )
+    # Real Bronze has every column; the ones this test doesn't care about are null.
+    bronze = bronze.select(
+        "*",
+        *[
+            F.lit(None).cast(f.dataType).alias(f.name)
+            for f in COMPUTE_OFFERS_SILVER_SCHEMA.fields
+            if f.name not in bronze.columns and f.name != "processed_at"
+        ],
     )
     pipeline = ComputeOffersPipeline(
         session=spark,
