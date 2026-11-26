@@ -6,6 +6,10 @@ with source as (
     select * from {{ ref('int_electricity_tariff_tiers') }}
 ),
 
+versioned as (
+    {{ with_snapshot_valid_to('source') }}
+),
+
 scd as (
     select
         {{ dbt_utils.generate_surrogate_key(
@@ -20,12 +24,9 @@ scd as (
         tariff_window_type,
         tariff_block_number,
         valid_from,
-        coalesce(
-            {{ valid_to('valid_from', 'consumer_category, tariff_window_type, tariff_block_number') }},
-            timestamp '9999-12-31'
-        ) as valid_to,
-        {{ is_latest('valid_from', 'consumer_category, tariff_window_type, tariff_block_number') }} as is_latest
-    from source
+        valid_to,
+        valid_to = timestamp '9999-12-31' as is_latest
+    from versioned
 )
 
 select * from scd
