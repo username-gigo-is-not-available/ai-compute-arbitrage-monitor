@@ -89,7 +89,8 @@ Renames and types the columns. Still one row per offer.
    returned was 4. Every slice gives the same answer. A machine whose slices disagree on GPU model, size
    or per-GPU price (13–20 per census, e.g. a 5090 next to four 4090s) is dropped; the test
    `assert_stg_compute_offers_machine_slices_agree` warns with them.
-3. **Specs from the biggest slice** (CPU, RAM, disk).
+3. **Specs from the biggest slice** (CPU, RAM, disk), scaled to the whole machine when that slice is only
+   part of it (here ×5/4). The DL score doesn't grow in step with GPUs, so it is left blank then (#134).
 4. **Price for the whole machine:** $0.40 per GPU × 5 = **$2.00/hr**. The per-GPU price is the same on
    every slice; the same test checks it.
 5. **Free GPUs:** the distinct `gpu_ids` listed by slices that can be rented now. The rest are taken

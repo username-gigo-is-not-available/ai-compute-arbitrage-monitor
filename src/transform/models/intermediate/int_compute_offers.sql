@@ -75,7 +75,10 @@ transformed as (
 
         total_price_per_gpu_usd_per_hr * number_of_machine_gpus as total_price_usd_per_hr,
         base_price_per_gpu_usd_per_hr * number_of_machine_gpus as gpu_price_usd_per_hr,
-        deep_learning_score_per_usd,
+        -- The largest offer may be a slice of the machine (#134). CPU, RAM and disk grow with the slice, so they
+        -- scale to the machine; the DL score does not grow linearly, so it is unknown for a slice and left null.
+        if(number_of_offer_gpus = number_of_machine_gpus, deep_learning_score_per_usd, null)
+            as deep_learning_score_per_usd,
         lowest_minimum_bid_price_per_gpu_usd * number_of_machine_gpus as minimum_bid_price_usd,
         storage_cost_usd_per_hr,
         network_upload_cost_usd_per_gbit,
@@ -93,12 +96,13 @@ transformed as (
 
         cpu_architecture,
         cpu_model_name,
-        number_of_cpu_cores,
+        cast(round(number_of_cpu_cores * number_of_machine_gpus / number_of_offer_gpus) as int64)
+            as number_of_cpu_cores,
         cpu_clock_speed_ghz,
 
-        {{ mb_to_gb('ram_mb') }} as ram_gb,
+        {{ mb_to_gb('ram_mb') }} * number_of_machine_gpus / number_of_offer_gpus as ram_gb,
         disk_model_name,
-        disk_space_gb,
+        disk_space_gb * number_of_machine_gpus / number_of_offer_gpus as disk_space_gb,
         {{ mb_to_gb('disk_bandwidth_mbytes_per_sec') }} as disk_bandwidth_gbytes_per_sec,
 
         pcie_generation,
@@ -108,7 +112,7 @@ transformed as (
         network_upload_mbits_per_sec,
 
         reliability_score,
-        deep_learning_score,
+        if(number_of_offer_gpus = number_of_machine_gpus, deep_learning_score, null) as deep_learning_score,
 
         {{ extract_country_code('geolocation') }} as country_code,
 

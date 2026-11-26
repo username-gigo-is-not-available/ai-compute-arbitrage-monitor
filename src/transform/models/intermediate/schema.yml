@@ -37,9 +37,8 @@ models:
                 expression: "<= total_price_usd_per_hr"
 
       - name: deep_learning_score_per_usd
-        description: "DL performance per dollar - pre-computed by Vast.ai"
+        description: "DL performance per dollar - pre-computed by Vast.ai; null when the machine's largest listed offer is a slice of it, since the score does not scale with GPUs (#134)"
         tests:
-          - not_null
           - dbt_utils.expression_is_true:
               arguments:
                 expression: ">= 0"
@@ -158,7 +157,7 @@ models:
                 severity: warn
 
       - name: number_of_cpu_cores
-        description: "Effective number of CPU cores available"
+        description: "Effective number of CPU cores available; for the whole machine, scaled up from the largest listed offer when that is a slice (#134)"
         tests:
           - not_null
           - dbt_utils.expression_is_true:
@@ -180,7 +179,7 @@ models:
                 severity: warn
 
       - name: ram_gb
-        description: "System RAM in gigabytes (converted from ram_mb in staging)"
+        description: "System RAM in gigabytes (converted from ram_mb in staging); for the whole machine, scaled up from the largest listed offer when that is a slice (#134)"
         tests:
           - not_null
           - dbt_utils.expression_is_true:
@@ -195,7 +194,7 @@ models:
                 severity: warn
 
       - name: disk_space_gb
-        description: "Available disk space in gigabytes"
+        description: "Available disk space in gigabytes; for the whole machine, scaled up from the largest listed offer when that is a slice (#134)"
         tests:
           - not_null
           - dbt_utils.expression_is_true:
@@ -263,11 +262,7 @@ models:
                 expression: "> 0"
 
       - name: deep_learning_score
-        description: "Vast.ai deep learning benchmark score"
-        tests:
-          - not_null:
-              config:
-                severity: warn
+        description: "Vast.ai deep learning benchmark score; null when the machine's largest listed offer is a slice of it, since the score does not scale with GPUs (#134)"
 
       - name: country_code
         description: "ISO country code extracted from geolocation string e.g. US, DE"
