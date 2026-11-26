@@ -6,7 +6,7 @@ resource "google_cloud_run_v2_job" "dbt_transform" {
   deletion_protection = false
 
   depends_on = [
-    google_project_service.enabled_services["composer"],
+    google_project_service.enabled_services["run"],
     google_service_account.dbt_cloud_run_sa,
   ]
 
