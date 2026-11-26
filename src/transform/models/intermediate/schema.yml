@@ -289,10 +289,13 @@ models:
               arguments:
                 values: [ 'verified', 'unverified', 'deverified' ]
 
-      - name: rentable_flag
-        description: "Available: at least one of the machine's offers can be rented now. False means taken (rented, or switched off by its owner)"
+      - name: number_of_free_gpus
+        description: "GPUs that an offer which can be rented now lists (available); the rest are taken: rented, switched off, or listed in no offer (ADR-030)"
         tests:
           - not_null
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: "between 0 and number_of_machine_gpus"
 
       - name: valid_from
         description: "Scheduled hour of the census this machine row comes from"

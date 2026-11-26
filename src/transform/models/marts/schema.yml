@@ -38,10 +38,13 @@ models:
         tests:
           - not_null
 
-      - name: rentable_flag
-        description: "Available: at least one of the machine's offers can be rented now; otherwise taken (rented, or switched off)"
+      - name: number_of_free_gpus
+        description: "GPUs that an offer which can be rented now lists (available); the rest are taken: rented, switched off, or listed in no offer (ADR-030)"
         tests:
           - not_null
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: "between 0 and number_of_machine_gpus"
 
       - name: gpu_architecture
         description: "GPU architecture family e.g. nvidia"
@@ -216,10 +219,10 @@ models:
         description: "Median per-GPU ask across all the variant's machines"
 
       - name: available_market_ask_per_gpu_usd_per_hr
-        description: "Median per-GPU ask of the available machines: the competition (null when none are available)"
+        description: "Median per-GPU ask of the machines with a free GPU: the competition (null when none are available). A partly rented machine counts here and in the taken median (ADR-030)"
 
       - name: taken_market_ask_per_gpu_usd_per_hr
-        description: "Median per-GPU ask of the taken machines: rented, or switched off (null when none are taken)"
+        description: "Median per-GPU ask of the machines with a taken GPU: rented, or switched off (null when none are taken). A partly rented machine counts here and in the available median (ADR-030)"
 
       - name: number_of_verified_machines
         description: "Machines whose host Vast.ai has verified; how solid the verified median is"
@@ -334,9 +337,9 @@ models:
       - name: market_ask_per_gpu_usd_per_hr
         description: "Median per-GPU ask of the variant's machines in USD/hr - the same measure as mart_gpu_forecast's"
       - name: available_market_ask_per_gpu_usd_per_hr
-        description: "Median per-GPU ask of the available machines in USD/hr: the competition (null when none are available)"
+        description: "Median per-GPU ask of the machines with a free GPU in USD/hr: the competition (null when none are available). A partly rented machine counts here and in the taken median (ADR-030)"
       - name: taken_market_ask_per_gpu_usd_per_hr
-        description: "Median per-GPU ask of the taken machines in USD/hr: rented, or switched off (null when none are taken)"
+        description: "Median per-GPU ask of the machines with a taken GPU in USD/hr: rented, or switched off (null when none are taken). A partly rented machine counts here and in the available median (ADR-030)"
 
       - name: median_profit_per_gpu_usd_per_hr
         description: "Median per-GPU profit in USD/hr for this tariff tier - the typical machine; plot this, not the average"
@@ -420,7 +423,7 @@ models:
                 severity: warn
 
       - name: pct_available
-        description: "Percentage of machines available (any offer rentable now); the rest are taken"
+        description: "Percentage of the variant's GPUs that are free (an offer that can be rented now lists them); the rest are taken (ADR-030)"
         tests:
           - dbt_utils.expression_is_true:
               arguments:

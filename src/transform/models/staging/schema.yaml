@@ -130,6 +130,9 @@ models:
               arguments:
                 expression: "> 0 and gpu_fraction_of_machine <= 1"
 
+      - name: gpu_ids
+        description: "Vast.ai ids of the machine GPUs this offer rents; the free GPUs of a machine are the ids its rentable offers list (ADR-030)"
+
       - name: gpu_max_cuda_version_supported
         description: "Maximum CUDA version supported by the GPU driver"
 

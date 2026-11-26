@@ -291,7 +291,7 @@ After all four complete, `gpu_arbitrage__marts` will trigger automatically.
 | **Chart type**   | Scorecard (KPI tile)                                            |
 | **Name**         | Scorecard                                                       |
 | **Mart source**  | `mart_gpu_machines`                                             |
-| **What it shows**| Count of machines available right now (`rentable_flag`)         |
+| **What it shows**| Count of machines with a free GPU right now (`number_of_free_gpus > 0`) |
 
 ---
 
@@ -434,8 +434,10 @@ gpu-arbitrage-monitor/
 - Profit per machine is in no mart, because cost depends on the host's tariff tier (ADR-027). A machine's ask minus its
   model's `median_cost_per_gpu_usd_per_hr` is within cents of it: electricity is $0.09–0.45/hr for a B200 against
   asks of $6–13/hr.
-- "Taken" means not rentable now: rented, or switched off. Vast.ai's API can't tell these apart (checked 2026-11-13
-  across all 95 offer fields), so read the share of taken machines as an upper bound on demand.
+- A GPU is "taken" when no offer that can be rented now lists it: rented, switched off, or listed in no offer. Vast.ai's
+  API can't tell rented from switched off (checked 2026-11-13 across all 95 offer fields), so read the share of taken
+  GPUs as an upper bound on demand. A partly rented machine counts in both the available and the taken median
+  (ADR-030).
 
 **Exchange rates**
 

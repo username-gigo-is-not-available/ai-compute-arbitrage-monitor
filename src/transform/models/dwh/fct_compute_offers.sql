@@ -128,7 +128,7 @@ select
 
     country_code,
     verification_flag,
-    rentable_flag,
+    number_of_free_gpus,
     reliability_score,
 
     gpu_architecture,

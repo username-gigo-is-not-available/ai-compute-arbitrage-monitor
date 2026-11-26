@@ -58,7 +58,7 @@ priced as (
         o.tflops_per_gpu,
         o.number_of_machine_gpus,
         o.revenue_per_gpu_usd_per_hr,
-        o.rentable_flag,
+        o.number_of_free_gpus,
         o.profit_usd_per_hr / nullif(o.number_of_machine_gpus, 0) as profit_per_gpu_usd_per_hr,
         o.profit_per_tflop_usd,
         o.tariff_tier_skey,
@@ -95,10 +95,12 @@ select
 
     approx_quantiles(revenue_per_gpu_usd_per_hr, 100)[offset(50)] as market_ask_per_gpu_usd_per_hr,
     -- A widening gap between the two shows asks that are not selling.
-    approx_quantiles(if(rentable_flag, revenue_per_gpu_usd_per_hr, null), 100)[offset(50)]
+    -- A partly rented machine counts in both: its free GPUs compete, its taken GPUs are paid that price (ADR-030).
+    approx_quantiles(if(number_of_free_gpus > 0, revenue_per_gpu_usd_per_hr, null), 100)[offset(50)]
         as available_market_ask_per_gpu_usd_per_hr,
-    approx_quantiles(if(not rentable_flag, revenue_per_gpu_usd_per_hr, null), 100)[offset(50)]
-        as taken_market_ask_per_gpu_usd_per_hr,
+    approx_quantiles(
+        if(number_of_free_gpus < number_of_machine_gpus, revenue_per_gpu_usd_per_hr, null), 100
+    )[offset(50)] as taken_market_ask_per_gpu_usd_per_hr,
 
     -- The median is the typical machine; the average is pulled up by a few overpriced listings (a 4090 at $40/hr
     -- on 10-21).

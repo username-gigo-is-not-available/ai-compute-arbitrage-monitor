@@ -92,12 +92,13 @@ Renames and types the columns. Still one row per offer.
 3. **Specs from the biggest slice** (CPU, RAM, disk).
 4. **Price for the whole machine:** $0.40 per GPU × 5 = **$2.00/hr**. The per-GPU price is the same on
    every slice; the same test checks it.
-5. **Available or taken:** available if any slice can be rented now, otherwise taken (rented, or switched
-   off by its owner; the data cannot tell these apart).
+5. **Free GPUs:** the distinct `gpu_ids` listed by slices that can be rented now. The rest are taken
+   (rented, switched off by its owner, or in no listed slice; the data cannot tell these apart). A machine
+   with some GPUs free and some taken counts as both available and taken (ADR-030).
 
-| machine_id | GPU | GPUs | price/hr | available |
+| machine_id | GPU | GPUs | price/hr | free GPUs |
 |---|---|---|---|---|
-| 15489 | RTX 4090 | 5 | $2.00 | yes |
+| 15489 | RTX 4090 | 5 | $2.00 | 5 |
 
 On 2026-10-05: 13,069 offers → **7,338 machines**, 23,362 GPUs (19 mixed machines dropped).
 

@@ -13,7 +13,7 @@ select distinct
     country_code,
     reliability_score,
     verification_flag,
-    rentable_flag,
+    number_of_free_gpus,
 
     gpu_architecture,
     gpu_model_name,
