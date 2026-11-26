@@ -3,9 +3,12 @@
 Needs Airflow (the dev dependency group): skipped without it; CI runs it in the Airflow DAGs job.
 """
 
+import re
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 
+import jinja2
 import pytest
 
 pytest.importorskip("airflow")
@@ -60,8 +63,29 @@ def test_setup_and_refine_get_different_batch_ids_in_the_same_run():
     setup = DataprocSparkJobStrategy.generate_batch_id(CONFIG, "setup")
     refine = DataprocSparkJobStrategy.generate_batch_id(CONFIG, "refine")
 
-    assert setup == "setup-electricity-tariff-fees-{{ ts_nodash | lower }}"
+    assert setup == "setup-electricity-tariff-fees-{{ ts_nodash | lower }}-{{ ti.try_number }}"
     assert setup != refine
+
+
+def render_batch_id(dataset_name: DatasetName, try_number: int) -> str:
+    template = DataprocSparkJobStrategy.generate_batch_id(PipelineConfig(dataset_name=dataset_name), "refine")
+    return jinja2.Template(template).render(ts_nodash="20261126T000000", ti=SimpleNamespace(try_number=try_number))
+
+
+def test_a_retry_gets_its_own_batch_id():
+    first = render_batch_id(DatasetName.COMPUTE_OFFERS, try_number=1)
+    retry = render_batch_id(DatasetName.COMPUTE_OFFERS, try_number=2)
+
+    assert first == "refine-compute-offers-20261126t000000-1"
+    assert retry == "refine-compute-offers-20261126t000000-2"
+
+
+# Dataproc batch ids: lowercase letters, digits and hyphens, 4-63 characters
+@pytest.mark.parametrize("dataset_name", list(DatasetName))
+def test_batch_id_is_valid_for_dataproc(dataset_name):
+    batch_id = render_batch_id(dataset_name, try_number=10)
+
+    assert re.fullmatch(r"[a-z0-9-]{4,63}", batch_id), batch_id
 
 
 @pytest.mark.parametrize("package", ["refine"])
