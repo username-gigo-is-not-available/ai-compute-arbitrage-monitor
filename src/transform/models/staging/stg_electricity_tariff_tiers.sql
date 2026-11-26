@@ -1,6 +1,6 @@
 {{ config(
     materialized = 'incremental',
-    unique_key = 'valid_from',
+    unique_key = ['consumer_category', 'tariff_tier', 'valid_from'],
     tags = ['electricity_tariff_tiers']
 ) }}
 
@@ -26,5 +26,6 @@ select *
 from renamed
 
 {% if is_incremental() %}
-    where valid_from > (select max(valid_from) from {{ this }})
+    -- >= re-merges the current version, so a same-date EVN correction updates it (#132)
+    where valid_from >= (select max(valid_from) from {{ this }})
 {% endif %}
