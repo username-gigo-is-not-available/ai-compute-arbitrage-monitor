@@ -29,7 +29,7 @@ The market as of a scheduled day, built from one complete census, one row per of
 _Avoid_: Record, row, version
 
 **Available / Taken**:
-Whether an offer can be rented right now (Vast.ai's `rentable` flag). **Taken** means not rentable now — usually rented by someone, possibly switched off by its owner; the two cannot be told apart.
+A **GPU** is available when an offer that can be rented right now lists it (Vast.ai's `rentable` flag); otherwise it is **taken** — usually rented by someone, possibly switched off by its owner (the two cannot be told apart), or listed in no offer. A **machine** is available when any of its GPUs is and taken when any of its GPUs is, so a partly rented machine is both. `pct_available` counts GPUs, not machines (ADR-030).
 _Avoid_: Rented (Vast.ai's `rented` flag means rented by the API caller, not by anyone)
 
 **Verification**:

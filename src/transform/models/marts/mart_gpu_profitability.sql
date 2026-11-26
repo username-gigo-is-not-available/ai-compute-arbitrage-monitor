@@ -32,10 +32,12 @@ select
     count(*) as number_of_machines,
 
     approx_quantiles(revenue_per_gpu_usd_per_hr, 100)[offset(50)] as market_ask_per_gpu_usd_per_hr,
-    approx_quantiles(if(rentable_flag, revenue_per_gpu_usd_per_hr, null), 100)[offset(50)]
+    -- A partly rented machine counts in both: its free GPUs compete, its taken GPUs are paid that price (ADR-030).
+    approx_quantiles(if(number_of_free_gpus > 0, revenue_per_gpu_usd_per_hr, null), 100)[offset(50)]
         as available_market_ask_per_gpu_usd_per_hr,
-    approx_quantiles(if(not rentable_flag, revenue_per_gpu_usd_per_hr, null), 100)[offset(50)]
-        as taken_market_ask_per_gpu_usd_per_hr,
+    approx_quantiles(
+        if(number_of_free_gpus < number_of_machine_gpus, revenue_per_gpu_usd_per_hr, null), 100
+    )[offset(50)] as taken_market_ask_per_gpu_usd_per_hr,
     -- A median can't be re-filtered downstream, so the verified-only one is precomputed for the API to choose.
     countif(verification_flag = 'verified') as number_of_verified_machines,
     approx_quantiles(if(verification_flag = 'verified', revenue_per_gpu_usd_per_hr, null), 100)[offset(50)]

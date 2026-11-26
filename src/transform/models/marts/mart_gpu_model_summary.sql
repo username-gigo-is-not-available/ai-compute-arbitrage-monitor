@@ -16,7 +16,7 @@ with current_machines as (
         number_of_machine_gpus,
         kwh_per_tflop,
         verification_flag,
-        rentable_flag,
+        number_of_free_gpus,
         reliability_score,
         valid_from
     from {{ ref('fct_compute_offers') }}
@@ -39,7 +39,8 @@ select
 
     round(100.0 * countif(verification_flag = 'verified') / nullif(count(*), 0), 2)
         as pct_verified,
-    round(100.0 * countif(rentable_flag) / nullif(count(*), 0), 2) as pct_available,
+    -- Share of GPUs, not machines: a partly rented machine is only partly available (ADR-030).
+    round(100.0 * sum(number_of_free_gpus) / nullif(sum(number_of_machine_gpus), 0), 2) as pct_available,
     avg(reliability_score) as avg_reliability_score,
 
     max(valid_from) as last_seen_at

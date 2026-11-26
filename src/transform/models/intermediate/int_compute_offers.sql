@@ -35,12 +35,22 @@ offers as (
     inner join single_type_machines using (machine_id, snapshot_at)
 ),
 
+free_gpus as (
+    -- A GPU is free when an offer that can be rented now lists it; GPUs no offer lists count as taken (ADR-030).
+    select
+        machine_id,
+        snapshot_at,
+        count(distinct gpu_id) as number_of_free_gpus
+    from offers, unnest(gpu_ids) as gpu_id
+    where rentable_flag
+    group by machine_id, snapshot_at
+),
+
 machines as (
     -- One row per machine: its largest offer carries the specs. The window columns see all of its offers,
     -- because qualify filters after they are computed.
     select
         *,
-        logical_or(rentable_flag) over machine_census as any_offer_rentable,
         min(minimum_bid_price_per_gpu_usd) over machine_census as lowest_minimum_bid_price_per_gpu_usd
     from offers
     qualify
@@ -48,6 +58,14 @@ machines as (
             partition by machine_id, snapshot_at order by number_of_offer_gpus desc, offer_id asc
         ) = 1
     window machine_census as (partition by machine_id, snapshot_at)
+),
+
+machines_with_free_gpus as (
+    select
+        m.*,
+        coalesce(f.number_of_free_gpus, 0) as number_of_free_gpus
+    from machines as m
+    left join free_gpus as f using (machine_id, snapshot_at)
 ),
 
 transformed as (
@@ -94,15 +112,14 @@ transformed as (
 
         {{ extract_country_code('geolocation') }} as country_code,
 
-        -- Available when any of its offers can be rented now; otherwise taken (CONTEXT.md)
         verification_flag,
-        any_offer_rentable as rentable_flag,
+        number_of_free_gpus,
 
         snapshot_at as valid_from,
         cast('9999-12-31' as timestamp) as valid_to,
         processed_at
 
-    from machines
+    from machines_with_free_gpus
 )
 
 select * from transformed
