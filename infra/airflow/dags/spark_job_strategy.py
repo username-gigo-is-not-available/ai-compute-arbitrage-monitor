@@ -75,10 +75,13 @@ class DataprocSparkJobStrategy(SparkJobStrategy):
             },
         }
 
-    # The task id keeps batch ids unique if another Dataproc task joins refine in the same DAG run
+    # The task id keeps batch ids unique if another Dataproc task joins refine in the same DAG run. The try number
+    # gives a retry its own batch: on the same id Dataproc says AlreadyExists and the operator re-attaches to the
+    # failed batch, so the retry would never rerun refine.
     @staticmethod
     def generate_batch_id(pipeline_config: PipelineConfig, task_id: str) -> str:
-        return f"{task_id}-{pipeline_config.dataset_name.replace('_', '-')}-{{{{ ts_nodash | lower }}}}"
+        dataset = pipeline_config.dataset_name.replace("_", "-")
+        return f"{task_id}-{dataset}-{{{{ ts_nodash | lower }}}}-{{{{ ti.try_number }}}}"
 
     def build_operator(self, pipeline_config: PipelineConfig, package: str, task_id: str) -> BaseOperator:
         return DataprocCreateBatchOperator(
