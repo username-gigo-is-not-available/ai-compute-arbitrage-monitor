@@ -820,3 +820,20 @@ models:
             natural_key_columns:
               - machine_id
               - tariff_tier_skey
+
+unit_tests:
+  # EVN version B (2027) drops block 4. Block 4's 2026 row must end where version B starts, not stay active forever
+  # next to version B's blocks (#143).
+  - name: dim_electricity_tariff_blocks_dropped_key_ends_at_next_version
+    model: dim_electricity_tariff_blocks
+    given:
+      - input: ref('int_electricity_tariff_blocks')
+        rows:
+          - {consumer_category: household, tariff_window_type: high, tariff_block_number: 1, lower_bound_kwh: 0, upper_bound_kwh: 210, valid_from: "2026-01-01 00:00:00"}
+          - {consumer_category: household, tariff_window_type: high, tariff_block_number: 4, lower_bound_kwh: 1100, upper_bound_kwh: null, valid_from: "2026-01-01 00:00:00"}
+          - {consumer_category: household, tariff_window_type: high, tariff_block_number: 1, lower_bound_kwh: 0, upper_bound_kwh: 250, valid_from: "2027-01-01 00:00:00"}
+    expect:
+      rows:
+        - {tariff_block_number: 1, valid_from: "2026-01-01 00:00:00", valid_to: "2027-01-01 00:00:00", is_latest: false}
+        - {tariff_block_number: 4, valid_from: "2026-01-01 00:00:00", valid_to: "2027-01-01 00:00:00", is_latest: false}
+        - {tariff_block_number: 1, valid_from: "2027-01-01 00:00:00", valid_to: "9999-12-31 00:00:00", is_latest: true}
