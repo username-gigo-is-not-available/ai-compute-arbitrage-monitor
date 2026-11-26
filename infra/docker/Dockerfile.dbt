@@ -2,7 +2,12 @@ FROM python:3.12-slim
 
 WORKDIR /app
 
-RUN pip install --no-cache-dir dbt-bigquery==1.12.2
+# Exact versions from uv.lock, the ones the tests ran on; the list below only says which packages this image needs
+COPY pyproject.toml uv.lock ./
+RUN pip install --no-cache-dir uv && \
+    uv export --frozen --no-dev --no-install-project --no-hashes -o /tmp/constraints.txt && \
+    pip uninstall -y uv
+RUN pip install --no-cache-dir -c /tmp/constraints.txt dbt-bigquery
 
 COPY src/transform/ ./transform/
 
