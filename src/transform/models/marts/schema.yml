@@ -86,16 +86,16 @@ models:
         description: "CPU model name"
 
       - name: number_of_cpu_cores
-        description: "Number of CPU cores"
+        description: "Number of CPU cores; for the whole machine, scaled up from the largest listed offer when that is a slice (#134)"
 
       - name: cpu_clock_speed_ghz
         description: "CPU clock speed in GHz"
 
       - name: ram_gb
-        description: "System RAM in gigabytes"
+        description: "System RAM in gigabytes; for the whole machine, scaled up from the largest listed offer when that is a slice (#134)"
 
       - name: disk_space_gb
-        description: "Available disk space in gigabytes"
+        description: "Available disk space in gigabytes; for the whole machine, scaled up from the largest listed offer when that is a slice (#134)"
 
       - name: disk_bandwidth_gbytes_per_sec
         description: "Disk bandwidth in GB/s"
@@ -122,10 +122,10 @@ models:
         description: "Energy efficiency ratio - kWh per TFLOP"
 
       - name: deep_learning_score
-        description: "Vast.ai deep learning benchmark score"
+        description: "Vast.ai deep learning benchmark score; null when the machine's largest listed offer is a slice of it, since the score does not scale with GPUs (#134)"
 
       - name: deep_learning_score_per_usd
-        description: "DL performance per dollar"
+        description: "DL performance per dollar; null when the machine's largest listed offer is a slice of it, since the score does not scale with GPUs (#134)"
 
       - name: ask_usd_per_hr
         description: "What the host asks for the whole machine in USD/hr (the Vast.ai total price)"
