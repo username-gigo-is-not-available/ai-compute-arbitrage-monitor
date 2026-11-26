@@ -11,7 +11,7 @@ with expected as (
         vat_rate,
         cost_usd_per_hr,
         case when consumer_category = 'household' then {{ var('household_vat_rate') }} else 0 end as expected_vat_rate,
-        total_system_kwh_per_hr * (tariff_value + coalesce(distribution_fee, 0)) as energy_mkd_per_hr,
+        total_system_kwh_per_hr * (tariff_value + distribution_fee) as energy_mkd_per_hr,
         usd_to_mkd_rate
     from {{ ref('fct_compute_offers') }}
 )

@@ -11,7 +11,7 @@ with expected as (
         tariff_tier_skey,
         consumer_category,
         cost_per_gpu_usd_per_hr,
-        (gpu_tdp_watts / 1000.0 * (tariff_value + coalesce(distribution_fee, 0)))
+        (gpu_tdp_watts / 1000.0 * (tariff_value + distribution_fee))
         * (1 + case when consumer_category = 'household' then {{ var('household_vat_rate') }} else 0 end)
         / nullif(usd_to_mkd_rate, 0) as expected_cost
     from {{ ref('mart_gpu_forecast') }}
