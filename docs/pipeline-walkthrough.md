@@ -127,7 +127,7 @@ All read the current fact rows.
 | Mart | Question it answers |
 |---|---|
 | `mart_gpu_machines` | The machines behind each GPU variant, one row each, no tier: specs, reliability, ask, available or taken |
-| `mart_gpu_profitability` | For each GPU variant and tier, its typical machine's price (all, available, taken), cost and profit per GPU, % profitable |
+| `mart_gpu_profitability` | For each GPU variant, tier and verification (plus all machines), its typical machine's price (all, available, taken), cost and profit per GPU, % profitable |
 | `mart_gpu_model_summary` | Per GPU variant, no tier: machines, GPUs, % verified, % available, host reliability |
 | `mart_gpu_forecast` | "My GPU over the next hours": median market price per GPU × my GPU count, against the hourly EVN schedule |
 | `mart_gpu_history` | Profit by hour per GPU variant: each census's machines priced at every local hour of its day (#40) |
