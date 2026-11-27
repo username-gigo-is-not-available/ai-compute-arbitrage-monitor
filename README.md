@@ -410,10 +410,9 @@ gpu-arbitrage-monitor/
 
 **Infrastructure**
 
-- The Dataproc cluster must be running before any Silver pipeline can execute. There is no auto-start logic — the
-  cluster must be started manually or pre-provisioned.
-- The local Docker Compose setup cannot fully replicate the GCP environment. The `refine` step in each DAG submits a
-  PySpark job to a live Dataproc cluster and will fail without one.
+- dbt's unit and data tests don't run in CI: they need BigQuery, so CI only parses the project and lints the SQL.
+  They run in each DAG's dbt step and by hand. Workload Identity Federation already exists in GCP, so a CI job could
+  log in to a test dataset (future work).
 
 **Data quality**
 
@@ -424,6 +423,9 @@ gpu-arbitrage-monitor/
   text changes, the seed will stop emitting data until manually reviewed and updated.
 - `geolocation` from Vast.AI is a free-text string (e.g. "Texas, US", "Frankfurt, DE"). Country code extraction splits
   on comma and takes the last element — malformed or unexpected formats will produce NULL country codes.
+- A census priced on a day when the EVN or exchange-rate data is broken keeps a null cost in `fct_compute_offers`:
+  the incremental run only reads newer censuses, so fixing the data later doesn't reprice it. Run
+  `dbt build --full-refresh` after such a fix. (A fix, if it ever matters: re-read the last 3 days on each run.)
 - Vast.AI offer data is one census a day (ADR-020). A machine rented and released between two censuses is never seen
   as taken.
 
