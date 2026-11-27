@@ -6,7 +6,8 @@
 -- Which GPU is worth hosting: the typical machine of each variant, not its best listing, since the best is often an
 -- unsold overpriced ask (a 4090 at $40/hr on 10-21). Available and taken machines both count, as do unverified ones;
 -- a new host starts unverified. Ranking is left to the reader (the API), with number_of_machines to judge how solid
--- each median is.
+-- each median is. One row per verification value and one for all machines, since a median can't be split afterwards
+-- (ADR-026 amendment).
 with current_machines as (
     select
         *,
@@ -24,6 +25,8 @@ select
     consumer_category,
     tariff_window_type,
     tariff_block_number,
+    -- The second grouping set leaves verification_flag null: those are the all-machines rows
+    if(grouping(verification_flag) = 1, 'all', verification_flag) as verification,
 
     -- A reported 0 is no value; the machine still counts for price and profit.
     approx_quantiles(nullif(tflops_per_gpu, 0), 100)[offset(50)] as tflops_per_gpu,
@@ -38,10 +41,6 @@ select
     approx_quantiles(
         if(number_of_free_gpus < number_of_machine_gpus, revenue_per_gpu_usd_per_hr, null), 100
     )[offset(50)] as taken_market_ask_per_gpu_usd_per_hr,
-    -- A median can't be re-filtered downstream, so the verified-only one is precomputed for the API to choose.
-    countif(verification_flag = 'verified') as number_of_verified_machines,
-    approx_quantiles(if(verification_flag = 'verified', revenue_per_gpu_usd_per_hr, null), 100)[offset(50)]
-        as verified_market_ask_per_gpu_usd_per_hr,
 
     approx_quantiles(cost_per_gpu_usd_per_hr, 100)[offset(50)] as median_cost_per_gpu_usd_per_hr,
     -- The median of each machine's profit, as in mart_gpu_history, not median revenue minus median cost.
@@ -51,11 +50,24 @@ select
 
     max(valid_from) as valid_from
 from current_machines
-group by
-    gpu_architecture,
-    gpu_model_name,
-    gpu_memory_gb,
-    tariff_tier_skey,
-    consumer_category,
-    tariff_window_type,
-    tariff_block_number
+group by grouping sets (
+    (
+        gpu_architecture,
+        gpu_model_name,
+        gpu_memory_gb,
+        tariff_tier_skey,
+        consumer_category,
+        tariff_window_type,
+        tariff_block_number,
+        verification_flag
+    ),
+    (
+        gpu_architecture,
+        gpu_model_name,
+        gpu_memory_gb,
+        tariff_tier_skey,
+        consumer_category,
+        tariff_window_type,
+        tariff_block_number
+    )
+)

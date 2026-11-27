@@ -155,7 +155,8 @@ models:
       with the medians of its machines rather than its best listing (a single listing is often an unsold
       overpriced ask). Every current machine counts: available and taken, verified or not. No rank: the reader
       orders the rows, using number_of_machines to judge how solid each median is. Cost is electricity only
-      (ADR-025).
+      (ADR-025). Each variant and tier has a row per verification value its machines have, plus an 'all' row
+      (ADR-026 amendment).
     tests:
       - dbt_utils.unique_combination_of_columns:
           arguments:
@@ -164,6 +165,7 @@ models:
               - gpu_model_name
               - gpu_memory_gb
               - tariff_tier_skey
+              - verification
     columns:
 
       - name: gpu_architecture
@@ -200,6 +202,14 @@ models:
       - name: tariff_block_number
         description: "Tariff block number within the consumer category"
 
+      - name: verification
+        description: "Which machines the row's medians cover: 'all', or one Vast.ai verification value"
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [ 'all', 'verified', 'unverified', 'deverified' ]
+
       - name: tflops_per_gpu
         description: "Median TFLOPS per GPU across the variant's machines; a reported 0 is left out"
         tests:
@@ -223,14 +233,6 @@ models:
 
       - name: taken_market_ask_per_gpu_usd_per_hr
         description: "Median per-GPU ask of the machines with a taken GPU: rented, or switched off (null when none are taken). A partly rented machine counts here and in the available median (ADR-030)"
-
-      - name: number_of_verified_machines
-        description: "Machines whose host Vast.ai has verified; how solid the verified median is"
-        tests:
-          - not_null
-
-      - name: verified_market_ask_per_gpu_usd_per_hr
-        description: "Median per-GPU ask of the verified machines (null when none are verified)"
 
       - name: median_cost_per_gpu_usd_per_hr
         description: "Median per-GPU electricity cost in USD/hr for this tariff tier"
